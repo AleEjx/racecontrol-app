@@ -329,7 +329,7 @@
 <div class="screen" id="screen-settings">
   <div class="scroll-body">
     <div style="font-size:13px;font-weight:800;color:var(--text);">Settings</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+    <div id="s-api-card" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px;flex-direction:column;gap:8px;">
       <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">API Connection</div>
       <input type="url" id="s-api" placeholder="https://xxx.trycloudflare.com"/>
     </div>
@@ -358,9 +358,9 @@
 </div>
 
 <!-- Update banner -->
-<div id="update-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(0,230,118,0.12);border-top:1px solid rgba(0,230,118,0.4);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:1000;">
-  <div style="font-size:11px;color:var(--green);font-weight:700;" id="update-text">🔄 Update available!</div>
-  <button onclick="installUpdate()" style="background:var(--green);border:none;color:#000;font-family:'Oxanium',sans-serif;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:pointer;">Install & Restart</button>
+<div id="update-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(0,230,118,0.12);border-top:1px solid rgba(0,230,118,0.4);padding:8px 14px;align-items:center;justify-content:space-between;gap:10px;z-index:1000;">
+  <div style="font-size:11px;color:var(--green);font-weight:700;" id="update-text">🔄 Downloading update...</div>
+  <button id="update-install-btn" onclick="installUpdate()" disabled style="background:var(--muted);border:none;color:#000;font-family:'Oxanium',sans-serif;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:not-allowed;opacity:0.5;transition:all 0.2s;">Install & Restart</button>
 </div>
 
 <div id="toast"></div>
@@ -437,8 +437,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   window.api.onCooldownEnd(()       => stopCooldown());
   window.api.onPitStateChanged(v    => updatePitBtn(v));
   window.api.onFlagEvent(d          => onFlagEvent(d.flag));
-  window.api.onUpdateAvailable(v    => { document.getElementById("update-text").textContent = `🔄 Update v${v} downloading...`; document.getElementById("update-banner").style.display = "flex"; });
-  window.api.onUpdateDownloaded(v   => { document.getElementById("update-text").textContent = `✅ Update v${v} ready!`; document.getElementById("update-banner").style.display = "flex"; });
+  window.api.onUpdateAvailable(v => {
+    document.getElementById("update-text").textContent = `🔄 Downloading v${v}...`;
+    const btn = document.getElementById("update-install-btn");
+    btn.disabled = true; btn.style.cursor = "not-allowed"; btn.style.opacity = "0.5"; btn.style.background = "var(--muted)";
+    document.getElementById("update-banner").style.display = "flex";
+  });
+  window.api.onUpdateDownloaded(v => {
+    document.getElementById("update-text").textContent = `✅ v${v} ready — click to install!`;
+    const btn = document.getElementById("update-install-btn");
+    btn.disabled = false; btn.style.cursor = "pointer"; btn.style.opacity = "1"; btn.style.background = "var(--green)";
+    document.getElementById("update-banner").style.display = "flex";
+  });
 
   if (config.keybinds) window.api.registerHotkeys(config.keybinds);
 
@@ -605,6 +615,9 @@ function switchPanel(panel) {
     document.getElementById("kb-blue_flag").value = config.keybinds?.blue_flag || "F1";
     document.getElementById("kb-next_lap").value  = config.keybinds?.next_lap  || "F2";
     document.getElementById("kb-pitting").value   = config.keybinds?.pitting   || "F3";
+    // Only devs/admins can see and change the API URL
+    const apiCard = document.getElementById("s-api-card");
+    apiCard.style.display = hasDev ? "flex" : "none";
     showScreen("screen-settings");
   }
 }
@@ -891,7 +904,8 @@ function startCooldown(secs) {
 function stopCooldown() { document.getElementById("cooldown-bar").style.display="none"; }
 
 async function saveSettings() {
-  const newApi = document.getElementById("s-api").value.trim();
+  // Non-devs can't see the API field — keep whatever is already saved
+  const newApi = hasDev ? document.getElementById("s-api").value.trim() : (config.apiUrl || apiUrl);
   apiUrl = newApi;
   const keybinds = {
     blue_flag: document.getElementById("kb-blue_flag").value || "F1",
