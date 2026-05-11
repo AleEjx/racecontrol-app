@@ -3,9 +3,8 @@ const path = require("path");
 const fs   = require("fs");
 const { autoUpdater } = require("electron-updater");
 
-// Store app data on D: drive to save space on C:
+// Store app data on D: drive
 app.setPath("userData", "D:\\RaceLeagueData\\racecontrol-driver");
-
 const CONFIG_FILE = path.join(app.getPath("userData"), "config.json");
 
 function loadConfig() {
@@ -24,7 +23,6 @@ let onCooldown = false;
 const http = require("http");
 const OAUTH_PORT = 7823;
 let oauthResolve = null;
-
 const oauthServer = http.createServer((req, res) => {
   const url  = new URL(req.url, `http://localhost:${OAUTH_PORT}`);
   const code = url.searchParams.get("code");
@@ -39,30 +37,17 @@ app.whenReady().then(() => {
   createTray();
   setupAutoUpdater();
 });
-app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
+
+// ── Fully quit when all windows closed ───────────────────────────────────
+app.on("window-all-closed", () => app.quit());
 
 function setupAutoUpdater() {
-  autoUpdater.autoDownload    = true;
+  autoUpdater.autoDownload         = true;
   autoUpdater.autoInstallOnAppQuit = false;
-
-  autoUpdater.on("update-available", (info) => {
-    mainWindow?.webContents.send("update-available", info.version);
-    console.log(`[Updater] Update available: v${info.version}`);
-  });
-
-  autoUpdater.on("update-downloaded", (info) => {
-    mainWindow?.webContents.send("update-downloaded", info.version);
-    console.log(`[Updater] Update downloaded: v${info.version}`);
-  });
-
-  autoUpdater.on("error", (err) => {
-    console.log("[Updater] Error:", err.message);
-  });
-
-  // Check for updates 5 seconds after launch
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(() => {});
-  }, 5000);
+  autoUpdater.on("update-available",  (info) => { mainWindow?.webContents.send("update-available",  info.version); console.log(`[Updater] Available: v${info.version}`); });
+  autoUpdater.on("update-downloaded", (info) => { mainWindow?.webContents.send("update-downloaded", info.version); console.log(`[Updater] Downloaded: v${info.version}`); });
+  autoUpdater.on("error", (err) => console.log("[Updater] Error:", err.message));
+  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 5000);
 }
 
 function createWindow() {
@@ -70,11 +55,24 @@ function createWindow() {
     width: 440, height: 740, minWidth: 380, minHeight: 500,
     alwaysOnTop: config.alwaysOnTop,
     frame: false, transparent: false, backgroundColor: "#0a0a0f",
-    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, autoplayPolicy: "no-user-gesture-required" },
-    icon: path.join(__dirname, "../assets/icon.png"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      autoplayPolicy: "no-user-gesture-required",
+    },
+    icon:  path.join(__dirname, "../assets/icon.png"),
     title: "RaceLeague Control",
   });
+
   mainWindow.loadFile(path.join(__dirname, "renderer.html"));
+
+  // ── Close button fully quits ──────────────────────────────────────────
+  mainWindow.on("close", () => {
+    globalShortcut.unregisterAll();
+    app.quit();
+  });
+
   mainWindow.on("closed", () => { mainWindow = null; });
 }
 
@@ -83,14 +81,21 @@ function createTray() {
   const icon = fs.existsSync(iconPath)
     ? nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
     : nativeImage.createEmpty();
+
   tray = new Tray(icon);
   tray.setToolTip("RaceLeague Control");
+
   const menu = Menu.buildFromTemplate([
-    { label: "Show",         click: () => { mainWindow?.show(); mainWindow?.focus(); } },
-    { label: "Always on Top", type: "checkbox", checked: config.alwaysOnTop, click: (item) => { config.alwaysOnTop = item.checked; mainWindow?.setAlwaysOnTop(item.checked); saveConfig(config); } },
+    { label: "Show", click: () => { mainWindow?.show(); mainWindow?.focus(); } },
+    { label: "Always on Top", type: "checkbox", checked: config.alwaysOnTop, click: (item) => {
+      config.alwaysOnTop = item.checked;
+      mainWindow?.setAlwaysOnTop(item.checked);
+      saveConfig(config);
+    }},
     { type: "separator" },
-    { label: "Quit", click: () => app.quit() },
+    { label: "Quit", click: () => { globalShortcut.unregisterAll(); app.quit(); } },
   ]);
+
   tray.setContextMenu(menu);
   tray.on("click", () => { mainWindow?.show(); mainWindow?.focus(); });
 }
@@ -108,12 +113,27 @@ function registerHotkeys(keybinds) {
 }
 
 async function sendDriverAction(action) {
-  if (!config.apiUrl || !config.driver) { mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" }); return; }
-  if (onCooldown) { mainWindow?.webContents.send("toast", { msg: "⏳ Cooldown active", type: "err" }); return; }
+  if (!config.apiUrl || !config.driver) {
+    mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" });
+    return;
+  }
+  if (onCooldown) {
+    mainWindow?.webContents.send("toast", { msg: "⏳ Cooldown active", type: "err" });
+    return;
+  }
   try {
     const res = await fetch(`${config.apiUrl}/driver/action`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, driver: config.driver, callsign: config.callsign, number: config.number, discordId: config.discordId, username: config.driver, engineer: config.engineer || false }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action,
+        driver:    config.driver,
+        callsign:  config.callsign,
+        number:    config.number,
+        discordId: config.discordId,
+        username:  config.driver,
+        engineer:  config.engineer || false,
+      }),
     });
     if (res.ok) {
       const labels = { blue_flag:"🔵 Blue Flag", next_lap:"🏁 Next Lap", pitting:"🔧 Pitting", in_race:"🏎️ Back on Track" };
@@ -122,43 +142,41 @@ async function sendDriverAction(action) {
       mainWindow?.webContents.send("cooldown-start", 7);
       setTimeout(() => { onCooldown = false; mainWindow?.webContents.send("cooldown-end"); }, 7000);
     }
-  } catch { mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" }); }
+  } catch {
+    mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" });
+  }
 }
 
 // ── OAuth window ──────────────────────────────────────────────────────────
 ipcMain.handle("open-oauth", (_, _url) => {
   return new Promise((resolve) => {
     oauthResolve = (code) => { if (authWin && !authWin.isDestroyed()) authWin.destroy(); resolve(code); };
-
-    // Build URL with local redirect
-    const CLIENT_ID   = "1467595519718195473";
-    const REDIRECT    = encodeURIComponent(`http://localhost:${OAUTH_PORT}`);
-    const discordUrl  = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT}&response_type=code&scope=identify`;
-
+    const CLIENT_ID  = "1467595519718195473";
+    const REDIRECT   = encodeURIComponent(`http://localhost:${OAUTH_PORT}`);
+    const discordUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT}&response_type=code&scope=identify`;
     const authWin = new BrowserWindow({
       width: 520, height: 720, show: true, alwaysOnTop: true,
       webPreferences: { nodeIntegration: false, contextIsolation: true },
       title: "Login with Discord", autoHideMenuBar: true,
     });
-
     authWin.loadURL(discordUrl);
-    authWin.show();
-    authWin.focus();
+    authWin.show(); authWin.focus();
     authWin.on("closed", () => { if (oauthResolve) { oauthResolve = null; resolve(null); } });
   });
 });
 
-// IPC handlers
-ipcMain.handle("get-config",      () => config);
-ipcMain.handle("save-config",     (_, cfg) => { config = { ...config, ...cfg }; saveConfig(config); if (cfg.keybinds) registerHotkeys(cfg.keybinds); return true; });
-ipcMain.handle("send-action",     (_, action) => sendDriverAction(action));
-ipcMain.handle("toggle-pitting",  () => { inPits = !inPits; sendDriverAction(inPits ? "pitting" : "in_race"); mainWindow?.webContents.send("pit-state-changed", inPits); return inPits; });
-ipcMain.handle("minimize-app",    () => mainWindow?.minimize());
-ipcMain.handle("close-app",       () => mainWindow?.hide());
-ipcMain.handle("toggle-top",      () => { config.alwaysOnTop = !config.alwaysOnTop; mainWindow?.setAlwaysOnTop(config.alwaysOnTop); saveConfig(config); return config.alwaysOnTop; });
-ipcMain.handle("open-devtools",   () => mainWindow?.webContents.openDevTools());
-ipcMain.handle("install-update",  () => autoUpdater.quitAndInstall());
-ipcMain.handle("check-version",   () => app.getVersion());
-ipcMain.handle("flag-broadcast",  (_, data) => mainWindow?.webContents.send("flag-event", data));
+// ── IPC handlers ──────────────────────────────────────────────────────────
+ipcMain.handle("get-config",     ()      => config);
+ipcMain.handle("save-config",    (_, cfg) => { config = { ...config, ...cfg }; saveConfig(config); if (cfg.keybinds) registerHotkeys(cfg.keybinds); return true; });
+ipcMain.handle("send-action",    (_, action) => sendDriverAction(action));
+ipcMain.handle("toggle-pitting", () => { inPits = !inPits; sendDriverAction(inPits ? "pitting" : "in_race"); mainWindow?.webContents.send("pit-state-changed", inPits); return inPits; });
+ipcMain.handle("minimize-app",   () => mainWindow?.minimize());
+ipcMain.handle("close-app",      () => { globalShortcut.unregisterAll(); app.quit(); });
+ipcMain.handle("toggle-top",     () => { config.alwaysOnTop = !config.alwaysOnTop; mainWindow?.setAlwaysOnTop(config.alwaysOnTop); saveConfig(config); return config.alwaysOnTop; });
+ipcMain.handle("open-devtools",  () => mainWindow?.webContents.openDevTools());
+ipcMain.handle("install-update", () => autoUpdater.quitAndInstall());
+ipcMain.handle("check-version",  () => app.getVersion());
+ipcMain.handle("flag-broadcast", (_, data) => mainWindow?.webContents.send("flag-event", data));
+ipcMain.handle("register-hotkeys", (_, keybinds) => { registerHotkeys(keybinds); return true; });
 
 app.on("will-quit", () => globalShortcut.unregisterAll());
