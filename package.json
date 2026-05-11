@@ -6,7 +6,8 @@
   "author": "AleEjx",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --publish never"
+    "build": "electron-builder --win --publish never",
+    "dist": "electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.raceleague.driver",
