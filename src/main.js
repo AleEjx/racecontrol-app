@@ -19,6 +19,17 @@ let tray       = null;
 let inPits     = false;
 let onCooldown = false;
 
+// ── Single instance lock — kill previous zombie if already running ────────
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  // Another instance is running — focus it and quit this one
+  app.quit();
+  process.exit(0);
+}
+app.on("second-instance", () => {
+  if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
+});
+
 // ── Local OAuth redirect server ───────────────────────────────────────────
 const http = require("http");
 const OAUTH_PORT = 7823;
@@ -29,6 +40,17 @@ const oauthServer = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/html" });
   res.end("<html><body style='background:#0a0a0f;color:#e8e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'><h2>✅ Logged in! You can close this window.</h2></body></html>");
   if (code && oauthResolve) { oauthResolve(code); oauthResolve = null; }
+});
+
+// Start OAuth server — handle port conflict gracefully instead of crashing
+oauthServer.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.warn(`[OAuth] Port ${OAUTH_PORT} already in use — another instance may be running.`);
+    // Still usable; the existing server on that port belongs to the old instance
+    // which the single-instance lock above should have already prevented.
+  } else {
+    console.error("[OAuth] Server error:", err.message);
+  }
 });
 oauthServer.listen(OAUTH_PORT);
 
