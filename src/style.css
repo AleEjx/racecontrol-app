@@ -1515,11 +1515,18 @@ textarea:focus {
   flex-shrink: 0;
 }
 
+.setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
 .num-input {
-  width: 50px;
+  width: 40px;
   font-size: 10px;
   text-align: center;
-  padding: 4px 6px;
+  padding: 3px 4px;
   flex-shrink: 0;
 }
 
