@@ -5,1413 +5,7 @@
   <meta charset="UTF-8" />
   <title>RaceLeague Control</title>
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --border: #1e1e2a;
-      --text: #e8e8f0;
-      --muted: #50506a;
-      --green: #00e676;
-      --red: #ff1744;
-      --blue: #2979ff;
-      --yellow: #ffd600;
-      --orange: #ff6d00;
-      --discord: #5865F2;
-      --radius: 6px;
-    }
-
-    html,
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Oxanium', sans-serif;
-      height: 100%;
-      overflow: hidden;
-      user-select: none;
-    }
-
-    .titlebar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 10px;
-      height: 36px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      -webkit-app-region: drag;
-      flex-shrink: 0;
-    }
-
-    .titlebar-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .tl-logo {
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #fff;
-    }
-
-    .tl-logo span {
-      color: var(--red);
-    }
-
-    .tl-badge {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 2px 7px;
-      border-radius: 10px;
-    }
-
-    .tl-badge.driver {
-      background: rgba(41, 121, 255, 0.15);
-      color: var(--blue);
-      border: 1px solid rgba(41, 121, 255, 0.3);
-    }
-
-    .tl-badge.marshal {
-      background: rgba(255, 214, 0, 0.12);
-      color: var(--yellow);
-      border: 1px solid rgba(255, 214, 0, 0.3);
-    }
-
-    .tl-badge.dev {
-      background: rgba(255, 23, 68, 0.12);
-      color: var(--red);
-      border: 1px solid rgba(255, 23, 68, 0.3);
-    }
-
-    .snd-pick-btn {
-      font-size: 9px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      color: var(--muted);
-      cursor: pointer;
-      font-family: 'Oxanium', sans-serif;
-    }
-
-    .tb-btns {
-      display: flex;
-      gap: 2px;
-      -webkit-app-region: no-drag;
-    }
-
-    .tb-btn {
-      width: 26px;
-      height: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      border-radius: 3px;
-      cursor: pointer;
-      border: none;
-      background: none;
-      color: var(--muted);
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .tb-btn:hover {
-      background: var(--border);
-      color: var(--text);
-    }
-
-    .tb-btn.close-btn:hover {
-      background: var(--red);
-      color: #fff;
-    }
-
-    .lb-name {
-      font-size: calc(11px * var(--font-scale, 1));
-    }
-
-    .lb-call {
-      font-size: calc(8px * var(--font-scale, 1));
-    }
-
-    .lb-lap {
-      font-size: calc(9px * var(--font-scale, 1));
-    }
-
-    .lb-pos {
-      font-size: calc(11px * var(--font-scale, 1));
-    }
-
-    .a-name {
-      font-size: calc(9px * var(--font-scale, 1));
-    }
-
-    .a-icon {
-      font-size: calc(17px * var(--font-scale, 1));
-    }
-
-    .fc-title {
-      font-size: calc(13px * var(--font-scale, 1));
-    }
-
-    .fc-sub {
-      font-size: calc(9px * var(--font-scale, 1));
-    }
-
-    .flag-btn .fn {
-      font-size: calc(9px * var(--font-scale, 1));
-    }
-
-    .flag-btn .fi {
-      font-size: calc(18px * var(--font-scale, 1));
-    }
-
-    .status-label {
-      font-size: calc(10px * var(--font-scale, 1));
-    }
-
-    .sec-label {
-      font-size: calc(9px * var(--font-scale, 1));
-    }
-
-    .dev-title {
-      font-size: calc(11px * var(--font-scale, 1));
-    }
-
-    .dev-stat {
-      font-size: calc(9px * var(--font-scale, 1));
-    }
-
-    .setup-label {
-      font-size: calc(11px * var(--font-scale, 1));
-    }
-
-    .sector-btn {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      cursor: pointer;
-      color: var(--text);
-      font-family: 'Oxanium', sans-serif;
-      transition: border-color 0.15s, background 0.15s;
-      width: 100%;
-    }
-
-    .sector-btn:hover {
-      border-color: var(--yellow);
-      background: rgba(255, 214, 0, 0.07);
-    }
-
-    .sector-btn:active {
-      transform: scale(0.97);
-    }
-
-    @keyframes arrowPop {
-      0% {
-        transform: translateY(4px);
-        opacity: 0;
-      }
-
-      60% {
-        transform: translateY(-2px);
-        opacity: 1;
-      }
-
-      100% {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
-    #panel-switcher {
-      display: none;
-      align-items: center;
-      gap: 4px;
-      -webkit-app-region: no-drag;
-    }
-
-    .switch-btn {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 3px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: none;
-      color: var(--muted);
-      font-family: 'Oxanium', sans-serif;
-      transition: all 0.15s;
-    }
-
-    .switch-btn.active {
-      color: var(--text);
-      border-color: var(--blue);
-      background: rgba(41, 121, 255, 0.1);
-    }
-
-    .screen {
-      display: none;
-      flex-direction: column;
-      height: calc(100vh - 36px);
-    }
-
-    .screen.active {
-      display: flex;
-    }
-
-    .scroll-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .stab {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 10px 12px;
-      border: none;
-      border-bottom: 2px solid transparent;
-      background: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-family: 'Oxanium', sans-serif;
-      white-space: nowrap;
-      transition: color 0.15s, border-color 0.15s;
-    }
-
-    .stab:hover {
-      color: var(--text);
-    }
-
-    .stab.active {
-      color: var(--text);
-      border-bottom-color: var(--red);
-    }
-
-    .stab-panel {
-      display: none;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    .stab-panel.active {
-      display: flex;
-    }
-
-    .s-section-title {
-      font-size: 9px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 6px;
-      margin-top: 2px;
-    }
-
-    .s-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .s-kb-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .s-kb-row:last-child {
-      border: none;
-      padding-bottom: 0;
-    }
-
-    .s-kb-row .settings-label {
-      font-size: 11px;
-    }
-
-    .s-sound-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .s-sound-row:last-child {
-      border: none;
-      padding-bottom: 0;
-    }
-
-    .s-sound-label {
-      font-size: 11px;
-    }
-
-    .snd-reset-btn {
-      font-size: 9px;
-      padding: 3px 6px;
-      border-radius: 4px;
-      border: 1px solid rgba(255, 23, 68, 0.3);
-      background: rgba(255, 23, 68, 0.08);
-      color: var(--red);
-      cursor: pointer;
-      font-family: 'Oxanium', sans-serif;
-    }
-
-    .s-danger-btn {
-      width: 100%;
-      padding: 9px;
-      background: rgba(255, 23, 68, 0.08);
-      border: 1px solid rgba(255, 23, 68, 0.25);
-      color: var(--red);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .s-danger-btn:hover {
-      background: rgba(255, 23, 68, 0.16);
-    }
-
-    .theme-tile {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 6px;
-      background: var(--surface);
-      border: 2px solid transparent;
-      border-radius: 8px;
-      cursor: pointer;
-      font-family: 'Oxanium', sans-serif;
-      transition: border-color 0.15s;
-    }
-
-    .theme-tile.active {
-      border-color: var(--red);
-    }
-
-    .theme-tile:hover {
-      border-color: var(--border);
-    }
-
-    .theme-preview {
-      width: 100%;
-      height: 38px;
-      border-radius: 5px;
-      padding: 8px 7px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .theme-label {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .login-logo {
-      font-size: 28px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #fff;
-    }
-
-    .login-logo span {
-      color: var(--red);
-    }
-
-    .login-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      width: 100%;
-      max-width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .discord-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: var(--discord);
-      color: #fff;
-      font-family: 'Oxanium', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border: none;
-      padding: 11px;
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-
-    .discord-btn:hover {
-      opacity: 0.85;
-    }
-
-    .login-error {
-      font-size: 10px;
-      color: var(--red);
-      text-align: center;
-      min-height: 14px;
-    }
-
-    .pw-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      width: 100%;
-      max-width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .user-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 6px 12px 6px 6px;
-    }
-
-    .user-pill img {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-    }
-
-    .uname {
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .vrfd {
-      font-size: 9px;
-      color: var(--green);
-    }
-
-    input[type=password],
-    input[type=text],
-    input[type=url],
-    select {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 12px;
-      padding: 8px 10px;
-      border-radius: var(--radius);
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    input:focus,
-    select:focus {
-      border-color: var(--blue);
-    }
-
-    .pw-btn {
-      width: 100%;
-      padding: 10px;
-      background: rgba(255, 23, 68, 0.15);
-      border: 1px solid rgba(255, 23, 68, 0.4);
-      color: var(--red);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-radius: var(--radius);
-      cursor: pointer;
-    }
-
-    .pw-btn:hover {
-      background: rgba(255, 23, 68, 0.25);
-    }
-
-    .pw-error {
-      font-size: 10px;
-      color: var(--red);
-      text-align: center;
-      min-height: 14px;
-    }
-
-    :root.light-mode {
-      --bg: #f0f0f5;
-      --surface: #ffffff;
-      --border: #d0d0e0;
-      --text: #111118;
-      --muted: #7070a0;
-      --green: #00a854;
-      --red: #e0112d;
-      --blue: #1a5fd4;
-      --yellow: #c9a000;
-      --orange: #d45a00;
-    }
-
-    :root.transparent-mode {
-      --bg: rgba(0, 0, 0, 0);
-      --surface: rgba(10, 10, 15, 0.45);
-      --border: rgba(255, 255, 255, 0.08);
-      --text: #e8e8f0;
-      --muted: #70708a;
-      --green: #00e676;
-      --red: #ff1744;
-      --blue: #2979ff;
-      --yellow: #ffd600;
-      --orange: #ff6d00;
-      --radius: 6px;
-    }
-
-    :root.transparent-mode body {
-      background: transparent !important;
-    }
-
-    :root.transparent-mode .titlebar {
-      background: rgba(10, 10, 15, 0.5);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    :root.transparent-mode .screen,
-    :root.transparent-mode .scroll-body {
-      background: transparent;
-    }
-
-    :root.transparent-mode .lb-row,
-    :root.transparent-mode .action-btn,
-    :root.transparent-mode .flag-btn,
-    :root.transparent-mode .status-row,
-    :root.transparent-mode .dev-card,
-    :root.transparent-mode .login-card,
-    :root.transparent-mode .pw-card {
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    :root.transparent-mode .lb-name,
-    :root.transparent-mode .lb-call,
-    :root.transparent-mode .lb-lap,
-    :root.transparent-mode .lb-pos,
-    :root.transparent-mode .lb-num,
-    :root.transparent-mode .status-label,
-    :root.transparent-mode .sec-label,
-    :root.transparent-mode .fc-title,
-    :root.transparent-mode .fc-sub,
-    :root.transparent-mode .a-name,
-    :root.transparent-mode .a-icon {
-      text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.6);
-    }
-
-    .theme-flash {
-      animation: themeFlash 0.35s ease forwards;
-    }
-
-    @keyframes themeFlash {
-      0% {
-        opacity: 1;
-      }
-
-      40% {
-        opacity: 0;
-      }
-
-      100% {
-        opacity: 1;
-      }
-    }
-
-    .sec-label {
-      font-size: 9px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 5px;
-    }
-
-    .flag-card {
-      border-radius: 8px;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border: 1.5px solid;
-      animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateY(-8px);
-        opacity: 0
-      }
-
-      to {
-        transform: translateY(0);
-        opacity: 1
-      }
-    }
-
-    .flag-card.green {
-      background: rgba(0, 230, 118, 0.08);
-      border-color: rgba(0, 230, 118, 0.5);
-      color: var(--green);
-    }
-
-    .flag-card.yellow {
-      background: rgba(255, 214, 0, 0.08);
-      border-color: rgba(255, 214, 0, 0.5);
-      color: var(--yellow);
-    }
-
-    .flag-card.red {
-      background: rgba(255, 23, 68, 0.08);
-      border-color: rgba(255, 23, 68, 0.5);
-      color: var(--red);
-    }
-
-    .flag-card.blue {
-      background: rgba(41, 121, 255, 0.08);
-      border-color: rgba(41, 121, 255, 0.5);
-      color: var(--blue);
-    }
-
-    .flag-card.orange {
-      background: rgba(255, 109, 0, 0.08);
-      border-color: rgba(255, 109, 0, 0.5);
-      color: var(--orange);
-    }
-
-    .flag-card.white {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.3);
-      color: #fff;
-    }
-
-    .fc-emoji {
-      font-size: 24px;
-      flex-shrink: 0;
-    }
-
-    .fc-title {
-      font-size: 13px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .fc-sub {
-      font-size: 9px;
-      opacity: 0.7;
-      margin-top: 2px;
-    }
-
-    @keyframes holo-border {
-      0% {
-        border-color: #ff0080;
-        box-shadow: 0 0 10px #ff008066, 0 0 22px #ff008033;
-      }
-
-      16% {
-        border-color: #ff8800;
-        box-shadow: 0 0 10px #ff880066, 0 0 22px #ff880033;
-      }
-
-      33% {
-        border-color: #ffff00;
-        box-shadow: 0 0 10px #ffff0066, 0 0 22px #ffff0033;
-      }
-
-      50% {
-        border-color: #00ff80;
-        box-shadow: 0 0 10px #00ff8066, 0 0 22px #00ff8033;
-      }
-
-      66% {
-        border-color: #00ffff;
-        box-shadow: 0 0 10px #00ffff66, 0 0 22px #00ffff33;
-      }
-
-      83% {
-        border-color: #8800ff;
-        box-shadow: 0 0 10px #8800ff66, 0 0 22px #8800ff33;
-      }
-
-      100% {
-        border-color: #ff0080;
-        box-shadow: 0 0 10px #ff008066, 0 0 22px #ff008033;
-      }
-    }
-
-    @keyframes holo-text {
-      0% {
-        color: #ff0080;
-      }
-
-      16% {
-        color: #ff8800;
-      }
-
-      33% {
-        color: #ffff00;
-      }
-
-      50% {
-        color: #00ff80;
-      }
-
-      66% {
-        color: #00ffff;
-      }
-
-      83% {
-        color: #8800ff;
-      }
-
-      100% {
-        color: #ff0080;
-      }
-    }
-
-    .flag-card-holo {
-      animation: holo-border 4s linear infinite;
-      border: 2px solid #ff0080;
-      border-radius: 10px;
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: rgba(255, 0, 128, 0.05);
-      will-change: border-color, box-shadow;
-    }
-
-    .flag-card-holo .fc-emoji {
-      font-size: 2em;
-    }
-
-    .flag-card-holo .fc-title {
-      animation: holo-text 4s linear infinite;
-      font-weight: bold;
-      font-size: 1.1em;
-      will-change: color;
-    }
-
-    .lb-row {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 7px 9px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-    }
-
-    .lb-row.is-me {
-      border-color: rgba(41, 121, 255, 0.4);
-      background: rgba(41, 121, 255, 0.06);
-    }
-
-    .lb-row.is-me2 {
-      border-color: rgba(0, 230, 118, 0.4);
-      background: rgba(0, 230, 118, 0.06);
-    }
-
-    .lb-row.in-pits {
-      border-color: rgba(255, 214, 0, 0.4);
-      background: rgba(255, 214, 0, 0.06);
-    }
-
-    .lb-pos {
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--muted);
-      width: 18px;
-      text-align: center;
-      flex-shrink: 0;
-      font-family: 'Arial', sans-serif;
-    }
-
-    .lb-pos.p1 {
-      color: var(--yellow);
-    }
-
-    .lb-pos.p2 {
-      color: #c0c0c0;
-    }
-
-    .lb-pos.p3 {
-      color: #cd7f32;
-    }
-
-    .lb-num {
-      width: 24px;
-      height: 24px;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8px;
-      font-weight: 800;
-      flex-shrink: 0;
-      font-family: 'Arial', sans-serif;
-    }
-
-    .lb-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .lb-name {
-      font-size: 11px;
-      font-weight: 700;
-      font-family: 'Arial', sans-serif;
-    }
-
-    .lb-call {
-      font-size: 8px;
-      color: var(--muted);
-      font-family: 'Arial', sans-serif;
-    }
-
-    .lb-lap {
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--text);
-      text-align: right;
-      flex-shrink: 0;
-      font-family: 'Arial', sans-serif;
-    }
-
-    .action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px;
-    }
-
-    .action-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 11px 5px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      cursor: pointer;
-      font-family: 'Oxanium', sans-serif;
-      color: var(--text);
-      transition: transform 0.1s, border-color 0.15s;
-      position: relative;
-    }
-
-    .action-btn:active {
-      transform: scale(0.93);
-    }
-
-    .action-btn:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-
-    .action-btn .a-key {
-      position: absolute;
-      top: 4px;
-      right: 5px;
-      font-size: 7px;
-      color: var(--muted);
-      background: var(--border);
-      padding: 1px 3px;
-      border-radius: 2px;
-    }
-
-    .action-btn .a-icon {
-      font-size: 17px;
-    }
-
-    .action-btn .a-name {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      text-align: center;
-    }
-
-    .action-btn.pit-active {
-      border-color: rgba(255, 214, 0, 0.5);
-      background: rgba(255, 214, 0, 0.07);
-      color: var(--yellow);
-    }
-
-    .action-btn.fired {
-      animation: btnPop 0.25s ease;
-    }
-
-    @keyframes btnPop {
-      0% {
-        transform: scale(1)
-      }
-
-      40% {
-        transform: scale(0.88)
-      }
-
-      100% {
-        transform: scale(1)
-      }
-    }
-
-    .flag-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 5px;
-    }
-
-    .flag-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      padding: 9px 4px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      color: var(--text);
-      font-family: 'Oxanium', sans-serif;
-      transition: transform 0.1s, border-color 0.15s;
-    }
-
-    .flag-btn:active {
-      transform: scale(0.93);
-    }
-
-    .flag-btn .fi {
-      font-size: 18px;
-    }
-
-    .flag-btn .fn {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-
-    .flag-btn.green:hover {
-      border-color: var(--green);
-      background: rgba(0, 230, 118, 0.07);
-    }
-
-    .flag-btn.yellow:hover {
-      border-color: var(--yellow);
-      background: rgba(255, 214, 0, 0.07);
-    }
-
-    .flag-btn.red:hover {
-      border-color: var(--red);
-      background: rgba(255, 23, 68, 0.07);
-    }
-
-    .flag-btn.blue:hover {
-      border-color: var(--blue);
-      background: rgba(41, 121, 255, 0.07);
-    }
-
-    .flag-btn.orange:hover {
-      border-color: var(--orange);
-      background: rgba(255, 109, 0, 0.07);
-    }
-
-    .flag-btn.white:hover {
-      border-color: #fff;
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .bf-notif {
-      background: rgba(41, 121, 255, 0.08);
-      border: 1.5px solid rgba(41, 121, 255, 0.5);
-      border-radius: 6px;
-      padding: 8px 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .bf-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--blue);
-    }
-
-    .bf-sub {
-      font-size: 9px;
-      color: rgba(255, 255, 255, 0.5);
-      margin-top: 2px;
-    }
-
-    .bf-dismiss {
-      background: rgba(41, 121, 255, 0.15);
-      border: 1px solid rgba(41, 121, 255, 0.3);
-      color: var(--blue);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 9px;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .wm-notif {
-      background: rgba(255, 23, 68, 0.12);
-      border: 1.5px solid rgba(255, 23, 68, 0.75);
-      border-radius: 6px;
-      padding: 9px 11px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      animation: wmPulse 1s ease-in-out infinite;
-    }
-
-    @keyframes wmPulse {
-
-      0%,
-      100% {
-        box-shadow: 0 0 6px rgba(255, 23, 68, 0.35);
-      }
-
-      50% {
-        box-shadow: 0 0 18px rgba(255, 23, 68, 0.8);
-      }
-    }
-
-    .wm-title {
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--red);
-      letter-spacing: 0.3px;
-    }
-
-    .wm-sub {
-      font-size: 9px;
-      color: rgba(255, 255, 255, 0.6);
-      margin-top: 2px;
-    }
-
-    .wm-btns {
-      display: flex;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
-    .wm-dismiss {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 9px;
-      font-weight: 700;
-      padding: 4px 9px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .wm-action {
-      background: rgba(255, 23, 68, 0.3);
-      border: 1px solid var(--red);
-      color: #fff;
-      font-family: 'Oxanium', sans-serif;
-      font-size: 9px;
-      font-weight: 800;
-      padding: 4px 9px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .status-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-    }
-
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--muted);
-    }
-
-    .status-dot.live {
-      background: var(--green);
-      box-shadow: 0 0 5px var(--green);
-    }
-
-    .status-label {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--muted);
-    }
-
-    .status-label.live {
-      color: var(--green);
-    }
-
-    .setup-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .setup-label {
-      font-size: 11px;
-      color: var(--text);
-    }
-
-    .num-input {
-      width: 65px;
-      text-align: center;
-      flex: 0 0 auto;
-    }
-
-    .race-btn {
-      flex: 1;
-      padding: 8px;
-      font-family: 'Oxanium', sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-radius: 4px;
-      cursor: pointer;
-      border: 1px solid;
-    }
-
-    .race-btn.start {
-      background: rgba(0, 230, 118, 0.12);
-      border-color: rgba(0, 230, 118, 0.4);
-      color: var(--green);
-    }
-
-    .race-btn.reset {
-      background: var(--bg);
-      border-color: var(--border);
-      color: var(--muted);
-    }
-
-    .dev-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .dev-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .dev-btn {
-      padding: 7px 10px;
-      background: rgba(255, 23, 68, 0.1);
-      border: 1px solid rgba(255, 23, 68, 0.3);
-      color: var(--red);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      border-radius: 4px;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    .dev-stat {
-      font-size: 9px;
-      color: var(--muted);
-      display: flex;
-      justify-content: space-between;
-      padding: 3px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .dev-stat span {
-      color: var(--text);
-      font-weight: 700;
-    }
-
-    #cooldown-bar {
-      display: none;
-      height: 3px;
-      background: var(--border);
-      flex-shrink: 0;
-    }
-
-    #cooldown-fill {
-      height: 100%;
-      background: var(--red);
-      width: 100%;
-    }
-
-    .settings-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .settings-label {
-      font-size: 11px;
-      color: var(--text);
-    }
-
-    .kb-input {
-      width: 60px;
-      text-align: center;
-      cursor: pointer;
-      color: var(--blue);
-      font-weight: 700;
-    }
-
-    .kb-input.listening {
-      border-color: var(--blue);
-      color: var(--yellow);
-    }
-
-    .save-btn {
-      width: 100%;
-      padding: 10px;
-      background: rgba(0, 230, 118, 0.12);
-      border: 1px solid rgba(0, 230, 118, 0.4);
-      color: var(--green);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-radius: var(--radius);
-      cursor: pointer;
-    }
-
-    .save-btn:hover {
-      background: rgba(0, 230, 118, 0.22);
-    }
-
-    .divider {
-      height: 1px;
-      background: var(--border);
-    }
-
-    .action-notice {
-      font-size: 10px;
-      color: var(--muted);
-      text-align: center;
-      padding: 8px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-    }
-
-    /* FIX: volume slider styling */
-    .vol-slider {
-      width: 100%;
-      accent-color: var(--blue);
-      cursor: pointer;
-      height: 4px;
-    }
-
-    #toast {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%) translateY(30px);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-size: 11px;
-      font-weight: 700;
-      padding: 7px 16px;
-      border-radius: 20px;
-      opacity: 0;
-      transition: transform 0.2s, opacity 0.2s;
-      white-space: nowrap;
-      pointer-events: none;
-      z-index: 999;
-    }
-
-    #toast.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-
-    #toast.ok {
-      border-color: var(--green);
-      color: var(--green);
-    }
-
-    #toast.err {
-      border-color: var(--red);
-      color: var(--red);
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
@@ -1420,11 +14,11 @@
   <div class="titlebar">
     <div class="titlebar-left">
       <div class="tl-logo">Race<span>Control</span></div>
-      <span class="tl-badge" id="mode-badge" style="display:none;"></span>
+      <span id="mode-badge" class="tl-badge hidden"></span>
       <div id="panel-switcher">
         <button class="switch-btn" id="sw-driver" onclick="switchPanel('driver')">🏎️ Driver</button>
         <button class="switch-btn" id="sw-marshal" onclick="switchPanel('marshal')">🏁 Marshal 🔒</button>
-        <button class="switch-btn" id="sw-dev" onclick="switchPanel('dev')" style="display:none;">⚙️ Dev</button>
+        <button id="sw-dev" onclick="switchPanel('dev')" class="switch-btn hidden">⚙️ Dev</button>
       </div>
     </div>
     <div class="tb-btns">
@@ -1438,12 +32,11 @@
   </div>
 
   <!-- LOGIN -->
-  <div class="screen active" id="screen-login" style="align-items:center;justify-content:center;gap:14px;padding:24px;">
+  <div id="screen-login" class="screen active screen-centered">
     <div class="login-logo">Race<span>Control</span></div>
-    <div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);">Race Management System
-    </div>
+    <div class="small-heading">Race Management System</div>
     <div class="login-card">
-      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">Sign in to continue
+      <div class="small-meta">Sign in to continue
       </div>
       <button class="discord-btn" id="btn-discord-login">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff">
@@ -1452,22 +45,20 @@
         </svg>
         Login with Discord
       </button>
-      <div id="api-url-display" style="display:none;"></div>
-      <button id="change-url-btn" onclick="resetApiUrl()"
-        style="display:none;background:none;border:none;color:var(--blue);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;">Change
-        API URL</button>
+      <div id="api-url-display" class="hidden"></div>
+      <button id="change-url-btn" onclick="resetApiUrl()" class="button-link hidden">Change API URL</button>
       <div class="login-error" id="login-error"></div>
     </div>
   </div>
 
   <!-- PASSWORD -->
-  <div class="screen" id="screen-password" style="align-items:center;justify-content:center;gap:14px;padding:24px;">
+  <div id="screen-password" class="screen screen-centered">
     <div class="login-logo">Race<span>Control</span></div>
     <div class="pw-card">
-      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">Marshal Authentication
+      <div class="small-meta">Marshal Authentication
       </div>
       <div class="user-pill">
-        <img id="pw-avatar" src="" style="width:28px;height:28px;border-radius:50%;" />
+        <img id="pw-avatar" src="" />
         <div>
           <div class="uname" id="pw-username"></div>
           <div class="vrfd">✓ Discord verified</div>
@@ -1481,29 +72,29 @@
 
   <!-- DRIVER PANEL -->
   <div class="screen" id="screen-driver">
-    <div id="flag-notif-driver" style="padding:8px 12px 0;"></div>
-    <div id="ac-driver-prompt" style="display:none;padding:0 12px 0;"></div>
+    <div id="flag-notif-driver" class="pt-8 px-12 pb-0"></div>
+    <div id="ac-driver-prompt" class="hidden panel-padding-x"></div>
     <div id="cooldown-bar">
       <div id="cooldown-fill"></div>
     </div>
     <div class="scroll-body">
       <div class="status-row">
-        <div style="display:flex;align-items:center;gap:6px;">
+        <div class="flex-row-gap-6">
           <div class="status-dot" id="d-status-dot"></div>
           <span class="status-label" id="d-status-label">Connecting...</span>
         </div>
-        <div id="d-race-pill" style="font-size:10px;color:var(--muted);">● Waiting</div>
+        <div id="d-race-pill" class="text-muted-sm">● Waiting</div>
       </div>
       <div>
         <div class="sec-label">Leaderboard</div>
         <div id="d-leaderboard">
-          <div style="font-size:11px;color:var(--muted);text-align:center;padding:12px;">Waiting for race...</div>
+          <div class="placeholder-text">Waiting for race...</div>
         </div>
       </div>
-      <div id="d-actions-section" style="display:none;">
+      <div id="d-actions-section" class="hidden">
         <div class="sec-label">Quick Actions</div>
-        <div id="d-action-notice" class="action-notice" style="display:none;"></div>
-        <div class="action-grid" style="margin-top:6px;">
+        <div id="d-action-notice" class="action-notice hidden"></div>
+        <div class="action-grid mt-6">
           <button class="action-btn" id="btn-blue_flag" onclick="doAction('blue_flag')">
             <span class="a-key" id="key-blue_flag">F1</span><span class="a-icon">🔵</span><span class="a-name">Blue
               Flag</span>
@@ -1516,16 +107,15 @@
             <span class="a-key" id="key-pitting">F3</span><span class="a-icon" id="pit-icon">🔧</span><span
               class="a-name" id="pit-label">Pitting</span>
           </button>
-          <button class="action-btn" id="btn-dnf" onclick="confirmDNF()"
-            style="border-color:rgba(255,23,68,0.4);color:var(--red);">
+          <button id="btn-dnf" onclick="confirmDNF()" class="action-btn text-red border-red">
             <span class="a-key" id="key-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
           </button>
         </div>
       </div>
-      <div id="d-actions-section2" style="display:none;">
-        <div class="sec-label" style="margin-top:4px;" id="d-driver2-label">Driver 2 — Quick Actions</div>
-        <div id="d-action-notice2" class="action-notice" style="display:none;"></div>
-        <div class="action-grid" style="margin-top:6px;">
+      <div id="d-actions-section2" class="hidden">
+        <div id="d-driver2-label" class="sec-label mt-4">Driver 2 — Quick Actions</div>
+        <div id="d-action-notice2" class="action-notice hidden"></div>
+        <div class="action-grid mt-6">
           <button class="action-btn" id="btn2-blue_flag" onclick="doAction2('blue_flag')">
             <span class="a-key" id="key2-blue_flag">F4</span><span class="a-icon">🔵</span><span class="a-name">Blue
               Flag</span>
@@ -1538,34 +128,29 @@
             <span class="a-key" id="key2-pitting">F6</span><span class="a-icon" id="pit2-icon">🔧</span><span
               class="a-name" id="pit2-label">Pitting</span>
           </button>
-          <button class="action-btn" id="btn2-dnf" onclick="confirmDNF2()"
-            style="border-color:rgba(255,23,68,0.4);color:var(--red);">
+          <button id="btn2-dnf" onclick="confirmDNF2()" class="action-btn text-red border-red">
             <span class="a-key" id="key2-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
           </button>
         </div>
       </div>
-      <div id="d-keybind-info" style="display:none;">
+      <div id="d-keybind-info" class="hidden">
         <div class="sec-label">Keybinds (global)</div>
-        <div
-          style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
-          <div
-            style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);">
-            <span style="font-size:11px;">🔵 Blue Flag</span>
-            <span style="font-size:11px;font-weight:700;color:var(--blue);" id="kb-display-blue_flag">F1</span>
+        <div class="panel-card">
+          <div class="list-row">
+            <span class="font-11">🔵 Blue Flag</span>
+            <span class="info-blue" id="kb-display-blue_flag">F1</span>
           </div>
-          <div
-            style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);">
-            <span style="font-size:11px;">🏁 Next Lap</span>
-            <span style="font-size:11px;font-weight:700;color:var(--blue);" id="kb-display-next_lap">F2</span>
+          <div class="list-row">
+            <span class="font-11">🏁 Next Lap</span>
+            <span class="info-blue" id="kb-display-next_lap">F2</span>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-            <span style="font-size:11px;">🔧 Pit / Back on Track</span>
-            <span style="font-size:11px;font-weight:700;color:var(--blue);" id="kb-display-pitting">F3</span>
+          <div class="list-row">
+            <span class="font-11">🔧 Pit / Back on Track</span>
+            <span class="info-blue" id="kb-display-pitting">F3</span>
           </div>
-          <div
-            style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-top:1px solid var(--border);margin-top:2px;">
-            <span style="font-size:11px;">🚫 DNF</span>
-            <span style="font-size:11px;font-weight:700;color:var(--blue);" id="kb-display-dnf">F8</span>
+          <div class="list-row no-border-bottom">
+            <span class="font-11">🚫 DNF</span>
+            <span class="info-blue" id="kb-display-dnf">F8</span>
           </div>
         </div>
       </div>
@@ -1574,26 +159,26 @@
 
   <div class="screen" id="screen-marshal">
     <div class="scroll-body">
-      <div id="flag-notif-marshal" style="padding:0 0 4px 0;"></div>
+      <div id="flag-notif-marshal" class="pb-4"></div>
       <div class="status-row">
-        <div style="display:flex;align-items:center;gap:6px;">
+        <div class="flex-row-gap-6">
           <div class="status-dot live" id="m-status-dot"></div>
           <span class="status-label live" id="m-status-label">App Active</span>
         </div>
-        <div id="m-race-pill" style="font-size:10px;color:var(--muted);">● Waiting</div>
+        <div id="m-race-pill" class="text-muted-sm">● Waiting</div>
       </div>
-      <div id="m-wm-container" style="display:flex;flex-direction:column;gap:4px;"></div>
-      <div id="m-bf-container" style="display:flex;flex-direction:column;gap:4px;"></div>
+      <div id="m-wm-container" class="flex-col-gap-4"></div>
+      <div id="m-bf-container" class="flex-col-gap-4"></div>
       <div id="m-leaderboard-section">
-        <div class="sec-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="sec-label flex-row-between">
           <span>Leaderboard</span>
-          <span id="m-lap-counter" style="font-size:9px;color:var(--muted);font-weight:700;"></span>
+          <span id="m-lap-counter" class="font-9 fw-700 text-muted"></span>
         </div>
         <input type="text" id="m-lb-search" placeholder="Search driver..."
-          style="width:100%;font-size:10px;padding:5px 8px;margin-bottom:4px;"
+          class="input-full"
           oninput="filterMarshalLeaderboard(this.value)" />
         <div id="m-leaderboard">
-          <div style="font-size:11px;color:var(--muted);text-align:center;padding:12px;">Waiting for race...</div>
+          <div class="placeholder-text">Waiting for race...</div>
         </div>
       </div>
       <div>
@@ -1607,7 +192,7 @@
               class="fn">Yellow</span></button>
           <button class="flag-btn yellow" onclick="triggerFlag('fcy')"><span class="fi">🟡</span><span
               class="fn">FCY</span></button>
-          <button class="flag-btn blue" onclick="openBlueFlagModal()" style="grid-column:span 2;"><span
+          <button onclick="openBlueFlagModal()" class="flag-btn blue grid-span-2"><span
               class="fi">🔵</span><span class="fn">Blue Flag</span></button>
         </div>
       </div>
@@ -1626,30 +211,29 @@
         </div>
       </div>
       <div class="divider"></div>
-      <div id="m-race-setup" style="display:none;">
+      <div id="m-race-setup" class="hidden">
         <div class="sec-label">🏁 Race Setup</div>
         <div
-          style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:7px;">
+          class="panel-card">
           <div class="setup-row"><span class="setup-label">Total Laps</span><input type="number" class="num-input"
               id="m-laps" min="1" max="99" value="10" /></div>
           <div class="setup-row">
             <div>
               <div class="setup-label">Mandatory Pits</div>
-              <div style="font-size:9px;color:var(--muted);">0 = off</div>
+              <div class="small-note">0 = off</div>
             </div><input type="number" class="num-input" id="m-pits" min="0" max="9" value="0" />
           </div>
           <div class="setup-row">
             <div>
               <div class="setup-label">Lap Cooldown</div>
-              <div style="font-size:9px;color:var(--muted);">seconds</div>
+              <div class="small-note">seconds</div>
             </div><input type="number" class="num-input" id="m-interval" min="0" max="3600" value="0" />
           </div>
-          <div style="display:flex;gap:6px;">
+          <div class="flex-row-gap-6">
             <button class="race-btn start" onclick="marshalStartRace()">🏁 Start</button>
-            <button class="race-btn reset" onclick="marshalResetRace()"
-              style="flex:0 0 auto;padding:8px 12px;">Reset</button>
+            <button class="race-btn reset no-grow" onclick="marshalResetRace()">Reset</button>
           </div>
-          <div id="m-race-status" style="font-size:10px;color:var(--muted);text-align:center;min-height:12px;"></div>
+          <div id="m-race-status" class="font-10 text-muted text-center min-h-12"></div>
         </div>
       </div>
 
@@ -1657,19 +241,18 @@
       <div>
         <div class="sec-label">Audio Check</div>
         <div
-          style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:7px;">
-          <div style="font-size:10px;color:var(--muted);">Sends a flag-style notification to all drivers with a Yes/No
+          class="panel-card">
+          <div class="text-muted-sm">Sends a flag-style notification to all drivers with a Yes/No
             vote. Results appear here live.</div>
-          <button class="race-btn start" style="width:100%;" onclick="sendAudioCheck()">🎙️ Send Audio Check</button>
-          <div id="ac-results" style="display:none;flex-direction:column;gap:4px;margin-top:4px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-size:10px;font-weight:700;color:var(--text);">Responses</span>
-              <button onclick="clearAudioCheck()"
-                style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'Oxanium',sans-serif;">Clear</button>
+          <button onclick="sendAudioCheck()" class="race-btn start w-full">🎙️ Send Audio Check</button>
+          <div id="ac-results" class="hidden flex-col-gap-4 mt-4">
+            <div class="list-row">
+              <span class="font-10 fw-700">Responses</span>
+              <button onclick="clearAudioCheck()" class="btn-small">Clear</button>
             </div>
-            <div id="ac-yes-list" style="display:flex;flex-direction:column;gap:3px;"></div>
-            <div id="ac-no-list" style="display:flex;flex-direction:column;gap:3px;"></div>
-            <div id="ac-summary" style="font-size:10px;color:var(--muted);text-align:center;padding:4px 0;"></div>
+            <div id="ac-yes-list" class="flex-col-gap-3"></div>
+            <div id="ac-no-list" class="flex-col-gap-3"></div>
+            <div id="ac-summary" class="font-10 text-muted text-center py-0"></div>
           </div>
         </div>
       </div>
@@ -1677,7 +260,7 @@
       <div class="divider"></div>
       <div>
         <div class="sec-label">Attendance</div>
-        <div id="m-attendance" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <div id="m-attendance" class="flex-col-gap-4"></div>
       </div>
     </div>
   </div>
@@ -1685,86 +268,71 @@
 
   <div class="screen" id="screen-dev">
     <div class="scroll-body">
-      <div style="font-size:14px;font-weight:800;color:var(--red);">⚙️ Developer Panel</div>
+      <div class="dev-heading">⚙️ Developer Panel</div>
 
       <div class="dev-card">
         <div class="dev-title">Panel Controls</div>
-        <div style="display:flex;gap:6px;margin-top:4px;">
-          <button class="dev-btn" onclick="devTogglePanel('driver',true)"
-            style="background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);font-size:9px;">Enable
+        <div class="flex-row-gap-6 mt-4">
+          <button onclick="devTogglePanel('driver',true)" class="dev-btn success-small">Enable
             Driver</button>
-          <button class="dev-btn" onclick="devTogglePanel('driver',false)" style="font-size:9px;">Disable
+          <button onclick="devTogglePanel('driver',false)" class="dev-btn font-9">Disable
             Driver</button>
         </div>
-        <div style="display:flex;gap:6px;margin-top:4px;">
-          <button class="dev-btn" onclick="devTogglePanel('marshal',true)"
-            style="background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);font-size:9px;">Enable
+        <div class="flex-row-gap-6 mt-4">
+          <button onclick="devTogglePanel('marshal',true)" class="dev-btn success-small">Enable
             Marshal</button>
-          <button class="dev-btn" onclick="devTogglePanel('marshal',false)" style="font-size:9px;">Disable
+          <button onclick="devTogglePanel('marshal',false)" class="dev-btn font-9">Disable
             Marshal</button>
         </div>
-        <div style="display:flex;gap:6px;margin-top:4px;">
-          <button class="dev-btn" onclick="devTogglePanel('both',true)"
-            style="background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);font-size:9px;">Enable
+        <div class="flex-row-gap-6 mt-4">
+          <button onclick="devTogglePanel('both',true)" class="dev-btn success-small">Enable
             All</button>
-          <button class="dev-btn" onclick="devTogglePanel('both',false)" style="font-size:9px;">Disable All</button>
+          <button onclick="devTogglePanel('both',false)" class="dev-btn font-9">Disable All</button>
         </div>
-        <div id="dev-panel-status" style="font-size:9px;color:var(--muted);margin-top:4px;"></div>
+        <div id="dev-panel-status" class="text-muted-sm mt-4"></div>
       </div>
 
       <div class="dev-card" id="dev-watchmarshal">
         <div class="dev-title">WatchMarshal</div>
-        <div style="font-size:9px;color:var(--muted);margin-bottom:8px;">Use this section to show or hide the WatchMarshal controls from the toolbox.</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;
-    background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-          <span style="font-size:11px;">👁️ WatchMarshal monitoring</span>
-          <button id="watchmarshal-toggle-btn" onclick="toggleWatchMarshal()" style="font-size:9px;font-weight:800;padding:3px 10px;border-radius:4px;border:1px solid;
-        cursor:pointer;font-family:'Oxanium',sans-serif;">
-          </button>
+        <div class="text-muted-note">Use this section to show or hide the WatchMarshal controls from the toolbox.</div>
+        <div class="card-row-between">
+          <span class="font-11">👁️ WatchMarshal monitoring</span>
+          <button id="watchmarshal-toggle-btn" onclick="toggleWatchMarshal()" class="toggle-button"></button>
         </div>
-        <div id="watchmarshal-status" style="font-size:9px;color:var(--muted);margin-top:4px;"></div>
+        <div id="watchmarshal-status" class="text-muted-sm mt-4"></div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Action Logging</div>
-        <div style="font-size:9px;color:var(--muted);margin-bottom:8px;">
+        <div class="text-muted-note">
           Posts a message in the marshalling channel when a driver logs a lap, pit, or returns to track.
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;
-    background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-          <span style="font-size:11px;">📋 Log laps &amp; pits to Discord</span>
-          <button id="action-log-toggle-btn" onclick="toggleActionLogging()" style="font-size:9px;font-weight:800;padding:3px 10px;border-radius:4px;border:1px solid;
-        cursor:pointer;font-family:'Oxanium',sans-serif;">
-          </button>
+        <div class="card-row-between">
+          <span class="font-11">📋 Log laps &amp; pits to Discord</span>
+          <button id="action-log-toggle-btn" onclick="toggleActionLogging()" class="toggle-button"></button>
         </div>
-        <div id="action-log-status" style="font-size:9px;color:var(--muted);margin-top:4px;"></div>
+        <div id="action-log-status" class="text-muted-sm mt-4"></div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Engineering Assignments</div>
-        <div id="dev-engineers"
-          style="display:flex;flex-direction:column;gap:4px;margin-top:4px;font-size:10px;color:var(--muted);">
+        <div id="dev-engineers" class="flex-col-gap-4 mt-4 font-10 text-muted">
           Loading...</div>
-        <button class="dev-btn" onclick="clearLocalEngineers()" style="margin-top:4px;font-size:9px;">🗑️ Clear Local
-          Engineers</button>
+        <button class="dev-btn mt-4 font-9 no-grow" onclick="clearLocalEngineers()">🗑️ Clear Local Engineers</button>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Tab Visibility</div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+        <div class="flex-col-gap-6 mt-4">
           <div
-            style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-            <span style="font-size:11px;">🏎️ Driver Tab</span>
-            <button id="dev-toggle-driver-tab" onclick="devToggleTab('driver')"
-              style="font-size:9px;font-weight:800;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;font-family:'Oxanium',sans-serif;">
-            </button>
+            class="panel-row-compact">
+            <span class="font-11">🏎️ Driver Tab</span>
+            <button id="dev-toggle-driver-tab" onclick="devToggleTab('driver')" class="toggle-button"></button>
           </div>
           <div
-            style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-            <span style="font-size:11px;">🏁 Marshal Tab</span>
-            <button id="dev-toggle-marshal-tab" onclick="devToggleTab('marshal')"
-              style="font-size:9px;font-weight:800;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;font-family:'Oxanium',sans-serif;">
-            </button>
+            class="panel-row-compact">
+            <span class="font-11">🏁 Marshal Tab</span>
+            <button id="dev-toggle-marshal-tab" onclick="devToggleTab('marshal')" class="toggle-button"></button>
           </div>
         </div>
       </div>
@@ -1778,157 +346,133 @@
 
       <div class="dev-card">
         <div class="dev-title">Voice Channels</div>
-        <div id="dev-vcs" style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">Loading...</div>
+        <div id="dev-vcs" class="flex-col-gap-4 mt-4">Loading...</div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Blacklist</div>
-        <div id="dev-blacklist"
-          style="display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:120px;overflow-y:auto;">Loading...
+        <div id="dev-blacklist" class="flex-col-gap-4 mt-4 overflow-card-120">Loading...
         </div>
-        <div style="display:flex;gap:6px;margin-top:6px;">
-          <input type="text" id="dev-bl-input" placeholder="Discord ID or username"
-            style="flex:1;font-size:10px;padding:5px 8px;" />
-          <button class="dev-btn" onclick="devAddBlacklist()"
-            style="flex:0 0 auto;width:auto;padding:5px 10px;font-size:9px;">+ Add</button>
+        <div class="flex-row-gap-6 mt-6">
+          <input type="text" id="dev-bl-input" placeholder="Discord ID or username" class="input-inline" />
+          <button class="dev-btn no-grow font-9" onclick="devAddBlacklist()">+ Add</button>
         </div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Driver Panel Logins</div>
-        <div id="dev-driver-logins" style="max-height:120px;overflow-y:auto;font-size:10px;color:var(--muted);">
+        <div id="dev-driver-logins" class="overflow-card-120 font-10 text-muted">
           Loading...</div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Play Custom Audio</div>
         <div id="dev-audio-drop" onclick="document.getElementById('dev-audio-input').click()"
-          style="border:1px dashed var(--border);border-radius:6px;padding:16px;text-align:center;cursor:pointer;font-size:10px;color:var(--muted);margin-top:4px;">
+          class="upload-drop mt-4">
           🎵 Click or drop audio file here
         </div>
-        <input type="file" id="dev-audio-input" accept="audio/*,video/mp4" style="display:none;"
+        <input type="file" id="dev-audio-input" accept="audio/*,video/mp4" class="hidden"
           onchange="devPlayAudio(this.files[0])" />
-        <div id="dev-audio-status" style="font-size:9px;color:var(--muted);margin-top:4px;"></div>
-        <button class="dev-btn" onclick="devStopAudio()" style="margin-top:4px;">⏹ Stop Audio</button>
+        <div id="dev-audio-status" class="text-muted-sm mt-4"></div>
+        <button onclick="devStopAudio()" class="dev-btn mt-4">⏹ Stop Audio</button>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Mock Leaderboard</div>
-        <div id="dev-mock-lb"
-          style="display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:200px;overflow-y:auto;"></div>
-        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
-          <button class="dev-btn" onclick="devAddMockDriver()"
-            style="background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);font-size:9px;flex:1;">+
+        <div id="dev-mock-lb" class="flex-col-gap-4 mt-4 overflow-card-200"></div>
+        <div class="flex-row-wrap mt-6">
+          <button onclick="devAddMockDriver()" class="dev-btn pill-btn-green flex-1 font-9">+
             Add Driver</button>
-          <button class="dev-btn" onclick="devPushMockLb()"
-            style="background:rgba(41,121,255,0.1);border-color:rgba(41,121,255,0.3);color:var(--blue);font-size:9px;flex:1;">⬆
+          <button onclick="devPushMockLb()" class="dev-btn pill-btn-blue flex-1 font-9">⬆
             Push to Race</button>
-          <button class="dev-btn" onclick="devClearMockLb()" style="font-size:9px;flex:0 0 auto;padding:7px 10px;">✕
+          <button class="dev-btn no-grow font-9" onclick="devClearMockLb()">✕
             Clear</button>
         </div>
-        <div id="dev-mock-status" style="font-size:9px;color:var(--muted);margin-top:2px;"></div>
+        <div id="dev-mock-status" class="font-9 text-muted mt-2"></div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Custom Flag Notification</div>
         <input type="text" id="dev-flag-text" placeholder="Flag name e.g. Purple Flag"
-          style="margin-top:4px;font-size:11px;" />
-        <div style="display:flex;gap:6px;margin-top:6px;">
+          class="mt-4 font-11" />
+        <div class="flex-row-gap-6 mt-6">
           <input type="text" id="dev-flag-emoji" placeholder="🏴" maxlength="2"
-            style="width:50px;text-align:center;font-size:18px;padding:4px;flex:0 0 auto;" />
+            class="fixed-square input-emoji no-grow" />
           <input type="color" id="dev-flag-hex" value="#ff00ff"
-            style="width:50px;height:36px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;padding:2px;flex:0 0 auto;" />
-          <button id="dev-holo-btn" onclick="toggleHoloMode()"
-            style="flex:0 0 auto;height:36px;padding:0 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:0.5px;">🌈
+            class="fixed-square color-input no-grow" />
+          <button id="dev-holo-btn" onclick="toggleHoloMode()" class="btn-small no-grow">🌈
             HOLO</button>
-          <div id="dev-flag-preview"
-            style="flex:1;border-radius:var(--radius);border:1px solid var(--border);padding:6px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
+          <div id="dev-flag-preview" class="flag-preview">
             Preview</div>
         </div>
-        <div id="dev-flag-bg-drop"
-          style="margin-top:6px;border:1px dashed var(--border);border-radius:var(--radius);padding:10px;text-align:center;font-size:9px;color:var(--muted);cursor:pointer;transition:border-color 0.2s;"
+        <div id="dev-flag-bg-drop" class="upload-drop mt-6"
           onclick="document.getElementById('dev-flag-bg-input').click()">
           🖼️ Drop or click to set background image
         </div>
-        <input type="file" id="dev-flag-bg-input" accept="image/*" style="display:none;"
+        <input type="file" id="dev-flag-bg-input" accept="image/*" class="hidden"
           onchange="loadFlagBgImage(this.files[0])" />
-        <div id="dev-flag-bg-preview" style="display:none;margin-top:4px;position:relative;">
-          <img id="dev-flag-bg-img"
-            style="width:100%;height:48px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);" />
-          <button onclick="clearFlagBgImage()"
-            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.7);border:none;color:#fff;font-size:9px;border-radius:3px;padding:2px 5px;cursor:pointer;">✕
+        <div id="dev-flag-bg-preview" class="position-relative mt-4 hidden">
+          <img id="dev-flag-bg-img" class="img-full" />
+          <button onclick="clearFlagBgImage()" class="overlay-close-btn">✕
             Remove</button>
         </div>
-        <div style="display:flex;gap:6px;margin-top:6px;">
-          <button class="dev-btn" onclick="devSendCustomFlag()"
-            style="background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);font-size:9px;">Send
+        <div class="flex-row-gap-6 mt-6">
+          <button onclick="devSendCustomFlag()" class="dev-btn success-small">Send
             to Drivers</button>
         </div>
-        <div id="dev-flag-status" style="font-size:9px;color:var(--muted);margin-top:4px;"></div>
+        <div id="dev-flag-status" class="text-muted-sm mt-4"></div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Audit Log</div>
-        <div id="dev-audit" style="max-height:150px;overflow-y:auto;font-size:10px;color:var(--muted);">Loading...</div>
+        <div id="dev-audit" class="overflow-card-150 font-10 text-muted">Loading...</div>
       </div>
 
       <div class="dev-card" id="dev-drivers-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="flex-row-between">
           <div class="dev-title">Driver Database</div>
-          <span id="dev-drivers-badge"
-            style="font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:10px;background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);color:var(--green);">0
-            drivers</span>
+          <span id="dev-drivers-badge" class="badge-pill badge-pill-green">0 drivers</span>
         </div>
-        <div style="display:flex;gap:4px;margin-top:2px;">
-          <input type="text" id="dev-drivers-search" placeholder="Search..."
-            style="flex:1;font-size:10px;padding:5px 8px;" oninput="renderDriverDB()" />
-          <button class="dev-btn" onclick="openDriverModal()"
-            style="width:auto;padding:5px 12px;font-size:9px;background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);">+
+        <div class="flex-row-gap-4 mt-2">
+          <input type="text" id="dev-drivers-search" placeholder="Search..." class="input-inline" oninput="renderDriverDB()" />
+          <button class="dev-btn btn-outline-green no-grow" onclick="openDriverModal()">+
             Add</button>
         </div>
-        <div id="dev-driver-list"
-          style="display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto;margin-top:2px;"></div>
-        <div style="display:flex;gap:4px;margin-top:2px;">
-          <button class="dev-btn" onclick="devPushDriverDB()"
-            style="flex:1;font-size:9px;background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);">⬆
+        <div id="dev-driver-list" class="flex-col-gap-3 overflow-card-220 mt-2"></div>
+        <div class="flex-row-gap-4 mt-2">
+          <button onclick="devPushDriverDB()" class="dev-btn pill-btn-green flex-1 font-9">⬆
             Push to Server</button>
-          <button class="dev-btn" onclick="devExportDriverCode()"
-            style="flex:1;font-size:9px;background:rgba(41,121,255,0.1);border-color:rgba(41,121,255,0.3);color:var(--blue);">Export
+          <button onclick="devExportDriverCode()" class="dev-btn pill-btn-blue flex-1 font-9">Export
             Code</button>
         </div>
-        <div style="display:flex;gap:4px;margin-top:2px;">
-          <button class="dev-btn" onclick="devResetDriverDB()" style="flex:1;font-size:9px;">↺ Reset to
-            Defaults</button>
+        <div class="flex-row-gap-4 mt-2">
+          <button class="dev-btn no-grow font-9">↺ Reset to Defaults</button>
         </div>
-        <div id="dev-drivers-status" style="font-size:9px;color:var(--muted);min-height:12px;margin-top:2px;"></div>
+        <div id="dev-drivers-status" class="font-9 text-muted min-h-12 mt-2"></div>
       </div>
 
       <div class="dev-card">
         <div class="dev-title">Active Sessions</div>
-        <div id="dev-sessions" style="font-size:10px;color:var(--muted);">Loading...</div>
+        <div id="dev-sessions" class="text-muted-sm">Loading...</div>
       </div>
 
       <div class="dev-card">
         <button class="dev-btn" onclick="window.api.openDevTools()">Open DevTools</button>
       </div>
-      <button class="dev-btn" onclick="openToolbox()"
-        style="background:rgba(41,121,255,0.1);border-color:rgba(41,121,255,0.3);color:var(--blue);">🧰 Toolbox</button>
+      <button class="dev-btn btn-outline-blue" onclick="openToolbox()">🧰 Toolbox</button>
     </div>
   </div>
 
   <div id="toolbox-modal"
-    style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
-    <div
-      style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;width:320px;max-height:80vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
-      <div style="font-size:12px;font-weight:800;color:var(--red);">🧰 TOOLBOX</div>
-      <div id="toolbox-items" style="display:flex;flex-direction:column;gap:6px;"></div>
-      <button class="save-btn" onclick="closeToolbox()" style="margin-top:4px;">Done</button>
+    class="modal modal-overlay">
+    <div class="modal-card">
+      <div class="font-12 fw-800 text-red">🧰 TOOLBOX</div>
     </div>
   </div>
 
   <div class="screen" id="screen-settings">
     <div
-      style="display:flex;align-items:center;gap:0;padding:0 10px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;">
+      class="toolbar-row">
       <button class="stab active" data-tab="appearance" onclick="openSettingsTab('appearance')">🎨 Look</button>
       <button class="stab" data-tab="audio" onclick="openSettingsTab('audio')">🔊 Audio</button>
       <button class="stab" data-tab="keybinds" onclick="openSettingsTab('keybinds')">⌨️ Keys</button>
@@ -1936,139 +480,133 @@
       <button class="stab" data-tab="account" onclick="openSettingsTab('account')">👤 Account</button>
     </div>
 
-    <div class="scroll-body" style="gap:12px;padding:14px 12px;">
+<div class="scroll-body scroll-body-padded">
 
       <div class="stab-panel active" id="stab-appearance">
         <div class="s-section-title">Theme</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:16px;">
+        <div class="grid-3-col">
           <button id="theme-dark-btn" onclick="setTheme('dark')" class="theme-tile">
-            <div class="theme-preview" style="background:#0a0a0f;border:1px solid #1e1e2a;">
-              <div style="width:65%;height:4px;background:#1e1e2a;border-radius:2px;margin-bottom:4px;"></div>
-              <div style="width:85%;height:3px;background:#1e1e2a;border-radius:2px;margin-bottom:3px;"></div>
-              <div style="width:50%;height:3px;background:#1e1e2a;border-radius:2px;"></div>
+            <div class="theme-preview theme-preview-dark">
+              <div class="theme-preview-line short"></div>
+              <div class="theme-preview-line medium"></div>
+              <div class="theme-preview-line long"></div>
             </div>
             <span class="theme-label">Dark</span>
           </button>
           <button id="theme-light-btn" onclick="setTheme('light')" class="theme-tile">
-            <div class="theme-preview" style="background:#f0f0f5;border:1px solid #d0d0e0;">
-              <div style="width:65%;height:4px;background:#d0d0e0;border-radius:2px;margin-bottom:4px;"></div>
-              <div style="width:85%;height:3px;background:#d0d0e0;border-radius:2px;margin-bottom:3px;"></div>
-              <div style="width:50%;height:3px;background:#d0d0e0;border-radius:2px;"></div>
+            <div class="theme-preview theme-preview-light">
+              <div class="theme-preview-line short"></div>
+              <div class="theme-preview-line medium"></div>
+              <div class="theme-preview-line long"></div>
             </div>
             <span class="theme-label">Light</span>
           </button>
           <button id="theme-transparent-btn" onclick="setTheme('transparent')" class="theme-tile">
-            <div class="theme-preview" style="background:rgba(10,10,20,0.45);border:1px solid rgba(255,255,255,0.1);">
-              <div style="width:65%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-bottom:4px;">
-              </div>
-              <div style="width:85%;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;margin-bottom:3px;">
-              </div>
-              <div style="width:50%;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;"></div>
+            <div class="theme-preview theme-preview-transparent">
+              <div class="theme-preview-line short"></div>
+              <div class="theme-preview-line medium"></div>
+              <div class="theme-preview-line long"></div>
             </div>
             <span class="theme-label">Glass</span>
           </button>
         </div>
 
-<div class="s-section-title" style="display:flex;align-items:center;gap:8px;">
+<div class="s-section-title flex-row-gap-8">
   <span>Font Size</span>
   <span style="font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border-radius:8px;background:rgba(255,23,68,0.12);border:1px solid rgba(255,23,68,0.35);color:var(--red);">Unavailable</span>
 </div>
-<div class="s-card" style="gap:10px;margin-bottom:0;opacity:0.5;">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <span style="font-size:10px;color:var(--muted);font-weight:700;flex-shrink:0;">A</span>
-    <input type="range" id="font-size-slider" class="vol-slider" min="10" max="16" step="1" value="12"
-      oninput="onFontSizeSlider(this.value)" disabled style="cursor:not-allowed;" />
-    <span style="font-size:15px;color:var(--muted);font-weight:700;flex-shrink:0;">A</span>
-    <span id="font-size-label"
-      style="font-size:11px;font-weight:700;color:var(--muted);width:32px;text-align:right;flex-shrink:0;">12px</span>
+<div class="s-card gap-10 opacity-50 mb-0">
+  <div class="flex-row-gap-10">
+    <span class="font-10 fw-700 text-muted flex-shrink-0">A</span>
+    <input type="range" id="font-size-slider" class="vol-slider cursor-not-allowed" min="10" max="16" step="1" value="12"
+      oninput="onFontSizeSlider(this.value)" disabled />
+    <span class="font-15 text-muted flex-shrink-0">A</span>
+    <span id="font-size-label" class="font-11 fw-700 text-muted width-34 text-right flex-shrink-0">12px</span>
   </div>
-<div style="font-size:9px;color:var(--muted);">This setting is temporarily unavailable.</div>
+<div class="small-note">This setting is temporarily unavailable.</div>
 </div>
       </div>
 
       <div class="stab-panel" id="stab-audio">
         <div class="s-section-title">Flag Alert Volume</div>
-        <div class="s-card" style="gap:10px;margin-bottom:16px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:16px;flex-shrink:0;">🔈</span>
+        <div class="s-card gap-10 mb-4">
+          <div class="flex-row-gap-10">
+            <span class="font-16 flex-shrink-0">🔈</span>
             <input type="range" id="vol-slider" class="vol-slider" min="0" max="100" value="100"
               oninput="onVolumeSlider(this.value)" />
-            <span style="font-size:16px;flex-shrink:0;">🔊</span>
-            <span id="vol-label"
-              style="font-size:11px;font-weight:700;color:var(--blue);width:34px;text-align:right;flex-shrink:0;">100%</span>
+            <span class="font-16 flex-shrink-0">🔊</span>
+            <span id="vol-label" class="font-11 fw-700 text-blue text-right flex-shrink-0 width-34">100%</span>
           </div>
-          <div style="font-size:9px;color:var(--muted);">Controls volume of all flag audio alerts.</div>
+          <div class="small-note">Controls volume of all flag audio alerts.</div>
         </div>
 
         <div class="s-section-title">Custom Flag Sounds</div>
-        <div class="s-card" style="gap:0;margin-bottom:16px;">
-          <div
-            style="font-size:9px;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:2px;">
+        <div class="s-card gap-0 mb-4">
+          <div class="section-note">
             Override flag sounds locally — only you hear these.</div>
           <div class="s-sound-row"><span class="s-sound-label">🟢 Green Flag</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('green')" id="fsnd-green-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('green')" id="fsnd-green-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('green')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🟡 Yellow Flag</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('yellow')" id="fsnd-yellow-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('yellow')" id="fsnd-yellow-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('yellow')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🟡 Full Course Yellow</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('fcy')" id="fsnd-fcy-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('fcy')" id="fsnd-fcy-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('fcy')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🔴 Red Flag</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('red')" id="fsnd-red-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('red')" id="fsnd-red-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('red')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🟠 Safety Car</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('safety_car')" id="fsnd-safety_car-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('safety_car')" id="fsnd-safety_car-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('safety_car')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🟠 SC Ending</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('sc_ending')" id="fsnd-sc_ending-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('sc_ending')" id="fsnd-sc_ending-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('sc_ending')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🟠 Speed Up</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('sc_speedup')" id="fsnd-sc_speedup-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('sc_speedup')" id="fsnd-sc_speedup-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('sc_speedup')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🟠 Single File</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('sfl')" id="fsnd-sfl-btn"
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('sfl')" id="fsnd-sfl-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('sfl')"
                 class="snd-reset-btn">✕</button></div>
           </div>
-          <div class="s-sound-row" style="border:none;padding-bottom:0;"><span class="s-sound-label">🏁 Checkered</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickFlagSound('checkered')" id="fsnd-checkered-btn"
+          <div class="s-sound-row no-border-bottom"><span class="s-sound-label">🏁 Checkered</span>
+            <div class="flex-row-gap-4"><button onclick="pickFlagSound('checkered')" id="fsnd-checkered-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetFlagSound('checkered')"
                 class="snd-reset-btn">✕</button></div>
           </div>
         </div>
 
         <div class="s-section-title">Keybind Sounds</div>
-        <div class="s-card" style="gap:0;">
-          <div
-            style="font-size:9px;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:2px;">
+        <div class="s-card gap-0">
+          <div class="section-note">
             Sounds played locally when you press a keybind.</div>
           <div class="s-sound-row"><span class="s-sound-label">🔵 Blue Flag</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickKeybindSound('blue_flag')" id="snd-blue_flag-btn"
+            <div class="flex-row-gap-4"><button onclick="pickKeybindSound('blue_flag')" id="snd-blue_flag-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetKeybindSound('blue_flag')"
                 class="snd-reset-btn">✕</button></div>
           </div>
           <div class="s-sound-row"><span class="s-sound-label">🏁 Next Lap</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickKeybindSound('next_lap')" id="snd-next_lap-btn"
+            <div class="flex-row-gap-4"><button onclick="pickKeybindSound('next_lap')" id="snd-next_lap-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetKeybindSound('next_lap')"
                 class="snd-reset-btn">✕</button></div>
           </div>
-          <div class="s-sound-row" style="border:none;padding-bottom:0;"><span class="s-sound-label">🔧 Pitting</span>
-            <div style="display:flex;gap:4px;"><button onclick="pickKeybindSound('pitting')" id="snd-pitting-btn"
+          <div class="s-sound-row no-border-bottom"><span class="s-sound-label">🔧 Pitting</span>
+            <div class="flex-row-gap-4"><button onclick="pickKeybindSound('pitting')" id="snd-pitting-btn"
                 class="snd-pick-btn">📁 Choose</button><button onclick="resetKeybindSound('pitting')"
                 class="snd-reset-btn">✕</button></div>
           </div>
@@ -2076,31 +614,30 @@
       </div>
 
       <div class="stab-panel" id="stab-keybinds">
-        <div
-          style="font-size:9px;color:var(--muted);padding:7px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:5px;margin-bottom:12px;line-height:1.6;">
+        <div class="info-panel">
           Click a field, then press any key to rebind. Hotkeys suspend automatically while you type elsewhere.
         </div>
 
         <div class="s-section-title">Driver 1</div>
-        <div class="s-card" style="gap:0;margin-bottom:14px;">
+        <div class="s-card gap-0 mb-4">
           <div class="s-kb-row"><span class="settings-label">🔵 Blue Flag</span><input type="text" class="kb-input"
               id="kb-blue_flag" readonly onclick="listenKey('blue_flag')" /></div>
           <div class="s-kb-row"><span class="settings-label">🏁 Next Lap</span><input type="text" class="kb-input"
               id="kb-next_lap" readonly onclick="listenKey('next_lap')" /></div>
           <div class="s-kb-row"><span class="settings-label">🔧 Pitting</span><input type="text" class="kb-input"
               id="kb-pitting" readonly onclick="listenKey('pitting')" /></div>
-          <div class="s-kb-row" style="border:none;padding-bottom:0;"><span class="settings-label">🚫 DNF</span><input
+          <div class="s-kb-row no-border-bottom"><span class="settings-label">🚫 DNF</span><input
               type="text" class="kb-input" id="kb-dnf" readonly onclick="listenKey('dnf')" /></div>
         </div>
 
-        <div id="kb-driver2-section" style="display:none;flex-direction:column;gap:0;">
+        <div id="kb-driver2-section" class="hidden flex-col-gap-0">
           <div class="s-section-title">Driver 2</div>
-          <div class="s-card" style="gap:0;">
+          <div class="s-card gap-0">
             <div class="s-kb-row"><span class="settings-label">🔵 Blue Flag</span><input type="text" class="kb-input"
                 id="kb-blue_flag2" readonly onclick="listenKey('blue_flag2')" /></div>
             <div class="s-kb-row"><span class="settings-label">🏁 Next Lap</span><input type="text" class="kb-input"
                 id="kb-next_lap2" readonly onclick="listenKey('next_lap2')" /></div>
-            <div class="s-kb-row" style="border:none;padding-bottom:0;"><span class="settings-label">🔧
+            <div class="s-kb-row no-border-bottom"><span class="settings-label">🔧
                 Pitting</span><input type="text" class="kb-input" id="kb-pitting2" readonly
                 onclick="listenKey('pitting2')" /></div>
           </div>
@@ -2109,25 +646,21 @@
 
       <div class="stab-panel" id="stab-connection">
         <div class="s-section-title">Status</div>
-        <div class="s-card" style="gap:8px;margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:8px;">
+        <div class="s-card gap-8 mb-4">
+          <div class="flex-row-gap-8">
             <div class="status-dot live"></div>
-            <span style="font-size:11px;font-weight:700;color:var(--green);">Auto-resolved via Gist</span>
+            <span class="font-11 fw-700 text-green">Auto-resolved via Gist</span>
           </div>
-          <div id="conn-api-url-display"
-            style="font-size:9px;color:var(--muted);word-break:break-all;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-          </div>
-          <button onclick="resetApiUrl()"
-            style="background:rgba(41,121,255,0.1);border:1px solid rgba(41,121,255,0.3);color:var(--blue);font-family:'Oxanium',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border-radius:4px;cursor:pointer;align-self:flex-start;">🔄
+          <div id="conn-api-url-display" class="font-9 text-muted break-all p-8 bg-panel"></div>
+          <button onclick="resetApiUrl()" class="btn-outline-blue no-grow">🔄
             Override URL</button>
         </div>
 
-        <div id="s-api-card" style="display:none;flex-direction:column;gap:8px;">
+        <div id="s-api-card" class="hidden flex-col-gap-8">
           <div class="s-section-title">Dev — Manual Override</div>
-          <div class="s-card" style="gap:8px;">
+          <div class="s-card gap-8">
             <input type="url" id="s-api" placeholder="https://xxx.trycloudflare.com" />
-            <div
-              style="font-size:9px;color:rgba(255,214,0,0.7);padding:5px 8px;background:rgba(255,214,0,0.06);border:1px solid rgba(255,214,0,0.2);border-radius:4px;">
+            <div class="text-muted-sm badge-pill-yellow">
               ⚠️ Dev-only. Auto-refreshes from Gist every 60 s.
             </div>
           </div>
@@ -2136,130 +669,103 @@
 
       <div class="stab-panel" id="stab-account">
         <div class="s-section-title">Signed In As</div>
-        <div class="s-card" style="gap:10px;margin-bottom:14px;">
-          <div
-            style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
-            <img id="settings-avatar" src=""
-              style="width:34px;height:34px;border-radius:50%;display:none;flex-shrink:0;" />
+        <div class="s-card gap-10 mb-4">
+          <div class="settings-item-box flex-row-gap-10">
+            <img id="settings-avatar" src="" class="avatar-small hidden" />
             <div>
-              <div id="settings-username" style="font-size:12px;font-weight:700;"></div>
-              <div style="font-size:9px;color:var(--muted);">Discord verified</div>
+              <div id="settings-username" class="font-12-bold"></div>
+              <div class="small-note">Discord verified</div>
             </div>
           </div>
           <button onclick="reLogin()" class="s-danger-btn">↩ Re-Login</button>
-          <button onclick="uninstallApp()" class="s-danger-btn" style="opacity:0.55;">🗑️ Uninstall App</button>
+          <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
         <div class="s-section-title">About</div>
-        <div class="s-card" style="gap:7px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:12px;font-weight:800;">RaceControl Desktop</span>
-            <span id="app-version"
-              style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);background:var(--bg);padding:2px 7px;border-radius:10px;border:1px solid var(--border);"></span>
+        <div class="s-card gap-7">
+          <div class="flex-row-between">
+            <span class="font-12 fw-800">RaceControl Desktop</span>
+            <span id="app-version" class="font-9 fw-700 text-muted badge-pill"></span>
           </div>
-          <div style="font-size:9px;color:var(--muted);">Developed by Sandrik | RaceLeague Software Developer<br>VSCO | RaceLeague Design Developer</div>
-          <div style="height:1px;background:var(--border);"></div>
-          <div style="font-size:9px;color:var(--muted);">Guild <span
-              style="color:var(--text);font-family:monospace;">1464788232263700687</span></div>
-          <div style="font-size:9px;color:var(--muted);">Bot <span
-              style="color:var(--text);font-family:monospace;">1467595519718195473</span></div>
+          <div class="small-note">Developed by Sandrik | RaceLeague Software Developer<br>VSCO | RaceLeague Design Developer</div>
+          <div class="separator"></div>
+          <div class="small-note">Guild <span
+              class="monospace-text">1464788232263700687</span></div>
+          <div class="small-note">Bot <span
+              class="monospace-text">1467595519718195473</span></div>
         </div>
       </div>
 
-      <div
-        style="display:flex;gap:6px;padding-top:6px;border-top:1px solid var(--border);margin-top:4px;flex-shrink:0;">
-        <button class="save-btn" onclick="saveSettings()" style="flex:2;">✓ Save Settings</button>
-        <button class="save-btn" onclick="goBack()"
-          style="flex:1;background:rgba(255,255,255,0.03);border-color:var(--border);color:var(--muted);">←
-          Back</button>
+      <div class="flex-row-gap-6" style="padding-top:6px;border-top:1px solid var(--border);margin-top:4px;flex-shrink:0;">
+        <button onclick="saveSettings()" class="save-btn flex-2">✓ Save Settings</button>
+        <button class="save-btn btn-ghost-muted flex-1" onclick="goBack()">← Back</button>
       </div>
 
     </div>
   </div>
 
-  <div id="update-banner"
-    style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(0,230,118,0.12);border-top:1px solid rgba(0,230,118,0.4);padding:8px 14px;align-items:center;justify-content:space-between;gap:10px;z-index:1000;">
-    <div style="font-size:11px;color:var(--green);font-weight:700;" id="update-text">🔄 Downloading update...</div>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <button id="update-install-btn" onclick="installUpdate()" disabled
-        style="background:var(--muted);border:none;color:#000;font-family:'Oxanium',sans-serif;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:not-allowed;opacity:0.5;transition:all 0.2s;">Install
+  <div id="update-banner" class="update-banner">
+    <div class="font-11 text-green fw-700" id="update-text">🔄 Downloading update...</div>
+    <div class="flex-row-gap-6">
+      <button id="update-install-btn" onclick="installUpdate()" disabled class="btn-disabled">Install
         & Restart</button>
-      <button onclick="document.getElementById('update-banner').style.display='none'"
-        style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 2px;">✕</button>
+      <button onclick="document.getElementById('update-banner').style.display='none'" class="button-link">✕</button>
     </div>
   </div>
-  <input type="file" id="sound-picker" accept="audio/*" style="display:none;" />
-  <input type="file" id="flag-sound-picker" accept="audio/*" style="display:none;" />
+  <input type="file" id="sound-picker" accept="audio/*" class="hidden" />
+  <input type="file" id="flag-sound-picker" accept="audio/*" class="hidden" />
 
-  <div id="dnf-modal"
-    style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
-    <div
-      style="background:var(--surface);border:1px solid rgba(255,23,68,0.4);border-radius:10px;padding:20px;width:100%;max-width:280px;display:flex;flex-direction:column;gap:12px;">
-      <div style="font-size:13px;font-weight:800;color:var(--red);">🚫 Confirm DNF</div>
-      <div style="font-size:11px;color:var(--muted);" id="dnf-modal-text">Are you sure you want to DNF?</div>
-      <div style="font-size:9px;color:var(--red);text-align:center;" id="dnf-timer"></div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="closeDNFModal()"
-          style="flex:1;padding:9px;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-family:'Oxanium',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:var(--radius);cursor:pointer;">No</button>
-        <button onclick="submitDNF()"
-          style="flex:1;padding:9px;background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);color:var(--red);font-family:'Oxanium',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:var(--radius);cursor:pointer;">Yes,
-          DNF</button>
+  <div id="dnf-modal" class="modal">
+    <div class="modal-panel modal-panel-compact text-center">
+      <div class="font-13 fw-800 text-red">🚫 Confirm DNF</div>
+      <div class="text-muted font-11" id="dnf-modal-text">Are you sure you want to DNF?</div>
+      <div class="text-error-sm text-center" id="dnf-timer"></div>
+      <div class="flex-row-gap-8">
+        <button onclick="closeDNFModal()" class="secondary-btn flex-1">No</button>
+        <button onclick="submitDNF()" class="btn-danger flex-1">Yes, DNF</button>
       </div>
     </div>
   </div>
 
   <div id="toast"></div>
 
-  <div id="bug-modal"
-    style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;overflow-y:auto;padding:20px;">
-    <div
-      style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:13px;font-weight:800;color:var(--red);">🐛 Report a Bug</div>
-        <button onclick="closeBugReport()"
-          style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">✕</button>
+  <div id="bug-modal" class="modal">
+    <div class="modal-panel modal-panel-scroll">
+      <div class="flex-row-between">
+        <div class="font-13 fw-800 text-red">🐛 Report a Bug</div>
+        <button onclick="closeBugReport()" class="modal-close">✕</button>
       </div>
-      <div style="font-size:9px;color:var(--muted);">All reports are sent directly to the developer.</div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">What
-          happened?</label>
-        <textarea id="bug-what" placeholder="Describe the bug..."
-          style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Oxanium',sans-serif;font-size:11px;padding:8px;border-radius:var(--radius);outline:none;resize:none;height:70px;"></textarea>
+      <div class="small-note">All reports are sent directly to the developer.</div>
+      <div class="flex-col-gap-4">
+        <label class="label-muted">What happened?</label>
+        <textarea id="bug-what" placeholder="Describe the bug..." class="input-full"></textarea>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">Steps to
-          reproduce</label>
-        <textarea id="bug-steps" placeholder="1. I clicked...&#10;2. Then..."
-          style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Oxanium',sans-serif;font-size:11px;padding:8px;border-radius:var(--radius);outline:none;resize:none;height:60px;"></textarea>
+      <div class="flex-col-gap-4">
+        <label class="label-muted">Steps to reproduce</label>
+        <textarea id="bug-steps" placeholder="1. I clicked...&#10;2. Then..." class="input-full textarea-md"></textarea>
       </div>
-      <div style="display:flex;gap:8px;">
-        <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
-          <label style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">Expected</label>
-          <textarea id="bug-expected" placeholder="What should happen..."
-            style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Oxanium',sans-serif;font-size:11px;padding:8px;border-radius:var(--radius);outline:none;resize:none;height:50px;"></textarea>
+      <div class="flex-row-gap-8">
+        <div class="flex-col-gap-4 flex-1">
+          <label class="label-muted">Expected</label>
+          <textarea id="bug-expected" placeholder="What should happen..." class="input-full textarea-sm"></textarea>
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
-          <label style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">Actual</label>
-          <textarea id="bug-actual" placeholder="What actually happened..."
-            style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Oxanium',sans-serif;font-size:11px;padding:8px;border-radius:var(--radius);outline:none;resize:none;height:50px;"></textarea>
+        <div class="flex-col-gap-4 flex-1">
+          <label class="label-muted">Actual</label>
+          <textarea id="bug-actual" placeholder="What actually happened..." class="input-full textarea-sm"></textarea>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">How often does this
-          happen?</label>
-        <select id="bug-frequency"
-          style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Oxanium',sans-serif;font-size:11px;padding:8px;border-radius:var(--radius);outline:none;">
+      <div class="flex-col-gap-4">
+        <label class="label-muted">How often does this happen?</label>
+        <select id="bug-frequency" class="input-full">
           <option value="always">Always</option>
           <option value="often">Often</option>
           <option value="sometimes">Sometimes</option>
           <option value="once">Only happened once</option>
         </select>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">Which panel were
-          you on?</label>
-        <select id="bug-panel"
-          style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Oxanium',sans-serif;font-size:11px;padding:8px;border-radius:var(--radius);outline:none;">
+      <div class="flex-col-gap-4">
+        <label class="label-muted">Which panel were you on?</label>
+        <select id="bug-panel" class="input-full">
           <option value="driver">Driver</option>
           <option value="marshal">Marshal</option>
           <option value="dev">Dev</option>
@@ -2268,152 +774,130 @@
           <option value="other">Other</option>
         </select>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">Screenshot
-          (optional)</label>
-        <div id="bug-img-drop" onclick="document.getElementById('bug-img-input').click()"
-          style="border:1px dashed var(--border);border-radius:var(--radius);padding:12px;text-align:center;font-size:10px;color:var(--muted);cursor:pointer;">
+      <div class="flex-col-gap-4">
+        <label class="label-muted">Screenshot (optional)</label>
+        <div id="bug-img-drop" class="upload-drop" onclick="document.getElementById('bug-img-input').click()">
           🖼️ Click or drop image here
         </div>
-        <input type="file" id="bug-img-input" accept="image/*" style="display:none;"
-          onchange="loadBugImage(this.files[0])" />
-        <div id="bug-img-preview" style="display:none;position:relative;margin-top:4px;">
-          <img id="bug-img-thumb"
-            style="width:100%;border-radius:var(--radius);border:1px solid var(--border);max-height:120px;object-fit:cover;" />
-          <button onclick="clearBugImage()"
-            style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.7);border:none;color:#fff;font-size:9px;border-radius:3px;padding:2px 5px;cursor:pointer;">✕</button>
+        <input type="file" id="bug-img-input" accept="image/*" class="hidden" onchange="loadBugImage(this.files[0])" />
+        <div id="bug-img-preview" class="hidden mt-4 position-relative">
+          <img id="bug-img-thumb" class="img-full" />
+          <button onclick="clearBugImage()" class="overlay-close-btn">✕</button>
         </div>
       </div>
-      <div
-        style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);">
+      <div class="card-row-between">
         <div>
-          <div style="font-size:10px;font-weight:700;">Include dev logs</div>
-          <div style="font-size:8px;color:var(--muted);">Helps diagnose the issue faster</div>
+          <div class="font-10 fw-700">Include dev logs</div>
+          <div class="font-8 text-muted">Helps diagnose the issue faster</div>
         </div>
-        <input type="checkbox" id="bug-include-logs" checked
-          style="width:16px;height:16px;cursor:pointer;accent-color:var(--blue);" />
+        <input type="checkbox" id="bug-include-logs" checked class="check-input" />
       </div>
-      <div id="bug-status" style="font-size:9px;text-align:center;min-height:12px;color:var(--muted);"></div>
-      <button onclick="submitBugReport()" id="bug-submit-btn"
-        style="width:100%;padding:10px;background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);color:var(--red);font-family:'Oxanium',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:var(--radius);cursor:pointer;">
+      <div id="bug-status" class="font-9 text-muted text-center min-h-12"></div>
+      <button onclick="submitBugReport()" id="bug-submit-btn" class="btn-danger w-full">
         🐛 Submit Report
       </button>
     </div>
   </div>
 
-  <div id="blueflag-modal"
-    style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
-    <div
-      style="background:var(--surface);border:1px solid rgba(41,121,255,0.3);border-radius:10px;padding:20px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;max-height:80vh;overflow-y:auto;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:18px;">🔵</span>
+  <div id="blueflag-modal" class="modal">
+    <div class="modal-panel modal-panel-compact modal-panel-scroll">
+      <div class="flex-row-between">
+        <div class="flex-row-gap-8">
+          <span class="font-18">🔵</span>
           <div>
-            <div style="font-size:13px;font-weight:800;color:var(--blue);">BLUE FLAG</div>
-            <div style="font-size:9px;color:var(--muted);">Select a driver to blue flag</div>
+            <div class="font-13 fw-800 text-blue">BLUE FLAG</div>
+            <div class="small-note">Select a driver to blue flag</div>
           </div>
         </div>
-        <button onclick="closeBlueFlagModal()"
-          style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">✕</button>
+        <button onclick="closeBlueFlagModal()" class="modal-close">✕</button>
       </div>
-      <input type="text" id="bf-search" placeholder="Search driver..."
-        style="width:100%;font-size:10px;padding:5px 8px;" oninput="filterBlueFlagList(this.value)" />
-      <div id="blueflag-driver-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+      <input type="text" id="bf-search" placeholder="Search driver..." class="input-full font-10" oninput="filterBlueFlagList(this.value)" />
+      <div id="blueflag-driver-list" class="flex-col-gap-6 mt-4"></div>
     </div>
   </div>
 
-  <div id="sector-modal"
-    style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
-    <div
-      style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:18px;">🟡</span>
+  <div id="sector-modal" class="modal">
+    <div class="modal-panel modal-panel-compact">
+      <div class="flex-row-between">
+        <div class="flex-row-gap-8">
+          <span class="font-18">🟡</span>
           <div>
-            <div style="font-size:13px;font-weight:800;color:var(--yellow);">YELLOW FLAG</div>
-            <div style="font-size:9px;color:var(--muted);">Select a sector</div>
+            <div class="font-13 fw-800 text-yellow">YELLOW FLAG</div>
+            <div class="small-note">Select a sector</div>
           </div>
         </div>
-        <button onclick="closeSectorModal()"
-          style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">✕</button>
+        <button onclick="closeSectorModal()" class="modal-close">✕</button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+      <div class="flex-col-gap-6 mt-4">
         <button onclick="triggerSectorFlag('yellow_s1')" class="sector-btn">
-          <span style="font-size:16px;">🟡</span>
+          <span class="font-16">🟡</span>
           <div>
-            <div style="font-size:12px;font-weight:700;">Sector 1</div>
+            <div class="font-12-bold">Sector 1</div>
           </div>
         </button>
         <button onclick="triggerSectorFlag('yellow_s2')" class="sector-btn">
-          <span style="font-size:16px;">🟡</span>
+          <span class="font-16">🟡</span>
           <div>
-            <div style="font-size:12px;font-weight:700;">Sector 2</div>
+            <div class="font-12-bold">Sector 2</div>
           </div>
         </button>
         <button onclick="triggerSectorFlag('yellow_s3')" class="sector-btn">
-          <span style="font-size:16px;">🟡</span>
+          <span class="font-16">🟡</span>
           <div>
-            <div style="font-size:12px;font-weight:700;">Sector 3</div>
+            <div class="font-12-bold">Sector 3</div>
           </div>
         </button>
       </div>
     </div>
   </div>
 
-  <div id="driver-modal"
-    style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
-    <div
-      style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:13px;font-weight:800;color:var(--text);" id="driver-modal-title">Add Driver</div>
-        <button onclick="closeDriverModal()"
-          style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">✕</button>
+  <div id="driver-modal" class="modal">
+    <div class="modal-panel modal-panel-compact">
+      <div class="flex-row-between">
+        <div class="font-13 fw-800" id="driver-modal-title">Add Driver</div>
+        <button onclick="closeDriverModal()" class="modal-close">✕</button>
       </div>
       <input type="hidden" id="dm-edit-id" />
       <div>
-        <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">
+        <div class="label-muted">
           Driver Name (callname)</div>
         <input type="text" id="dm-name" placeholder="ACHILLES" oninput="this.value=this.value.toUpperCase()" />
       </div>
-      <div style="display:flex;gap:8px;">
-        <div style="flex:1;">
-          <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">
+      <div class="flex-row-gap-8">
+        <div class="flex-1">
+          <div class="label-muted">
             Car #</div>
           <input type="text" id="dm-number" placeholder="09" />
         </div>
-        <div style="flex:2;">
-          <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">
+        <div class="flex-2">
+          <div class="label-muted">
             Callsign</div>
           <input type="text" id="dm-callsign" placeholder="MAR-09" />
         </div>
       </div>
       <div>
-        <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">
+        <div class="label-muted">
           Discord ID</div>
         <input type="text" id="dm-discord" placeholder="884223249939050507" />
       </div>
-      <div style="font-size:10px;color:var(--red);min-height:14px;" id="dm-error"></div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="closeDriverModal()"
-          style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-family:'Oxanium',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:var(--radius);cursor:pointer;">Cancel</button>
-        <button onclick="saveDriverEntry()" class="save-btn" style="flex:1;">Save Driver</button>
+      <div id="dm-error" class="text-error-sm"></div>
+      <div class="flex-row-gap-6">
+        <button onclick="closeDriverModal()" class="secondary-btn flex-1">Cancel</button>
+        <button onclick="saveDriverEntry()" class="save-btn flex-1">Save Driver</button>
       </div>
     </div>
   </div>
 
-  <div id="driver-export-modal"
-    style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
-    <div
-      style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:12px;font-weight:800;color:var(--text);">Export — paste into renderer.html</div>
+  <div id="driver-export-modal" class="modal">
+    <div class="modal-panel">
+      <div class="flex-row-between">
+        <div class="modal-heading">Export — paste into renderer.html</div>
         <button onclick="document.getElementById('driver-export-modal').style.display='none'"
-          style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">✕</button>
+          class="modal-close">✕</button>
       </div>
 
-      <div style="font-size:9px;color:var(--muted);">Replace your DRIVER_IDS and DRIVER_INFO constants with this:</div>
-      <pre id="driver-export-code"
-        style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;font-family:monospace;font-size:9px;color:var(--text);white-space:pre-wrap;word-break:break-all;max-height:180px;overflow-y:auto;"></pre>
+      <div class="small-note">Replace your DRIVER_IDS and DRIVER_INFO constants with this:</div>
+      <pre id="driver-export-code" class="code-block"></pre>
       <button class="save-btn" onclick="devCopyDriverExport()">📋 Copy to Clipboard</button>
     </div>
   </div>
@@ -2757,7 +1241,7 @@ evtSource.addEventListener("flag", e => {
     function clearLocalEngineers() {
       localStorage.removeItem("rc_engineers");
       const engEl = document.getElementById("dev-engineers");
-      if (engEl) engEl.innerHTML = '<div style="color:var(--muted);">No engineers active.</div>';
+      if (engEl) engEl.innerHTML = '<div class="text-muted">No engineers active.</div>';
       showToast("✓ Local engineers cleared", "ok");
     }
 
@@ -2779,20 +1263,17 @@ evtSource.addEventListener("flag", e => {
       const drivers = Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number));
       el.innerHTML = drivers.map(([name, info]) => {
         const present = _attendance[name] !== false;
+        const btnClass = present ? "btn-outline-green" : "btn-outline-red";
         return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 9px;background:var(--surface);border:1px solid ${present ? "var(--border)" : "rgba(255,23,68,0.3)"};border-radius:5px;transition:border-color 0.15s;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:24px;height:24px;border-radius:3px;background:rgba(255,255,255,0.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;">#${info.number}</div>
-          <div>
-            <div style="font-size:11px;font-weight:700;color:${present ? "var(--text)" : "var(--muted)"};">${name}</div>
-            <div style="font-size:8px;color:var(--muted);">${info.callsign}</div>
+      <div class="attendance-row ${present ? "" : "absent"}">
+        <div class="flex-row-gap-8">
+          <div class="attendance-meta">#${info.number}</div>
+          <div class="attendance-body">
+            <div class="attendance-name ${present ? "" : "text-muted"}">${name}</div>
+            <div class="attendance-sub">${info.callsign}</div>
           </div>
         </div>
-        <button onclick="toggleAttendance('${name}')"
-          style="font-size:9px;font-weight:800;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;font-family:'Oxanium',sans-serif;
-            background:${present ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)"};
-            border-color:${present ? "var(--green)" : "var(--red)"};
-            color:${present ? "var(--green)" : "var(--red)"};">
+        <button onclick="toggleAttendance('${name}')" class="toggle-button ${btnClass}">
           ${present ? "✓ HERE" : "✗ ABSENT"}
         </button>
       </div>`;
@@ -2908,16 +1389,16 @@ evtSource.addEventListener("flag", e => {
       if (!el) return;
 
       el.innerHTML = filtered.length ? filtered.map(d => `
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-      <div style="width:26px;height:26px;border-radius:3px;background:rgba(255,255,255,0.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;flex-shrink:0;">#${d.number}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:10px;font-weight:700;">${d.name}</div>
-        <div style="font-size:8px;color:var(--muted);">${d.callsign} · <span style="font-family:monospace;">${d.discordId}</span></div>
+    <div class="drivers-row">
+      <div class="drivers-meta">#${d.number}</div>
+      <div class="drivers-body">
+        <div class="drivers-name">${d.name}</div>
+        <div class="drivers-sub">${d.callsign} · <span class="monospace-text">${d.discordId}</span></div>
       </div>
-      <button onclick="openDriverEdit('${d.name}')" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'Oxanium',sans-serif;">✏️</button>
-      <button onclick="deleteDriverEntry('${d.name}')" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid rgba(255,23,68,0.3);background:rgba(255,23,68,0.08);color:var(--red);cursor:pointer;font-family:'Oxanium',sans-serif;">✕</button>
+      <button onclick="openDriverEdit('${d.name}')" class="secondary-btn btn-compact">✏️</button>
+      <button onclick="deleteDriverEntry('${d.name}')" class="btn-danger btn-compact">✕</button>
     </div>`).join("")
-        : `<div style="font-size:10px;color:var(--muted);text-align:center;padding:10px;">No drivers found.</div>`;
+        : `<div class="muted-note-center">No drivers found.</div>`;
 
       const badge = document.getElementById("dev-drivers-badge");
       if (badge) badge.textContent = `${drivers.length} driver${drivers.length !== 1 ? "s" : ""}`;
@@ -3576,26 +2057,19 @@ setInterval(async () => {
 
     function showChangeUrlPrompt() {
       const errEl = document.getElementById("login-error");
-      errEl.innerHTML = `❌ Can't reach API. <button onclick="resetApiUrl()" style="background:none;border:none;color:var(--blue);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;padding:0;">Change URL</button>`;
+      errEl.innerHTML = `❌ Can't reach API. <button onclick="resetApiUrl()" class="dialog-link-btn">Change URL</button>`;
     }
 
     async function resetApiUrl() {
       const modal = document.createElement("div");
-      modal.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;";
+      modal.className = "js-overlay";
       modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:300px;display:flex;flex-direction:column;gap:10px;">
-      <div style="font-size:12px;font-weight:800;color:var(--text);">Override API URL</div>
-      <input type="url" id="url-override-input" value="${apiUrl}" placeholder="https://xxx.trycloudflare.com"
-        style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Oxanium',sans-serif;font-size:11px;padding:8px 10px;border-radius:var(--radius);outline:none;"/>
-      <div style="display:flex;gap:8px;">
-        <button onclick="this.closest('[style*=fixed]').remove()"
-          style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--muted);font-family:'Oxanium',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:var(--radius);cursor:pointer;">
-          Cancel
-        </button>
-        <button id="url-override-confirm"
-          style="flex:1;padding:8px;background:rgba(41,121,255,0.15);border:1px solid rgba(41,121,255,0.4);color:var(--blue);font-family:'Oxanium',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:var(--radius);cursor:pointer;">
-          Save
-        </button>
+    <div class="dialog-card compact">
+      <div class="dialog-title">Override API URL</div>
+      <input type="url" id="url-override-input" value="${apiUrl}" placeholder="https://xxx.trycloudflare.com" class="dialog-url-input" />
+      <div class="dialog-button-row">
+        <button onclick="this.closest('.js-overlay').remove()" class="secondary-btn flex-1">Cancel</button>
+        <button id="url-override-confirm" class="btn-outline-blue flex-1">Save</button>
       </div>
     </div>`;
       document.body.appendChild(modal);
@@ -3646,17 +2120,17 @@ setInterval(async () => {
     <div class="login-card">
       <div class="user-pill" style="margin-bottom:4px;">
         <img src="${user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64` : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png`}" style="width:28px;height:28px;border-radius:50%;"/>
-        <div><div class="uname">${user.username}</div><div class="vrfd" style="color:var(--muted);">🎧 Engineer</div></div>
+        <div><div class="uname">${user.username}</div><div class="vrfd text-muted">🎧 Engineer</div></div>
       </div>
-<div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">Driver 1 (required)</div>
-      <select id="eng-driver-select" style="width:100%;">
+<div class="small-meta">Driver 1 (required)</div>
+      <select id="eng-driver-select" class="w-full">
         <option value="">Select a driver...</option>
         ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) =>
         `<option value="${name}">${name} #${info.number} (${info.callsign})</option>`
       ).join("")}
       </select>
       <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px;">Driver 2 (optional)</div>
-      <select id="eng-driver2-select" style="width:100%;">
+      <select id="eng-driver2-select" class="w-full">
         <option value="">None</option>
         ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) =>
         `<option value="${name}">${name} #${info.number} (${info.callsign})</option>`
@@ -4122,20 +2596,20 @@ setInterval(async () => {
         if (document.getElementById("panel-disabled-overlay")) return;
         const overlay = document.createElement("div");
         overlay.id = "panel-disabled-overlay";
-        overlay.style.cssText = "position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:24px;text-align:center;";
+        overlay.className = "js-overlay";
         overlay.innerHTML = `
-    <div style="background:var(--surface);border:1px solid rgba(255,214,0,0.25);border-radius:16px;padding:32px 28px;max-width:280px;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,214,0,0.1);border:1px solid rgba(255,214,0,0.3);display:flex;align-items:center;justify-content:center;font-size:26px;">🛠️</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div style="font-size:13px;font-weight:800;color:var(--yellow);text-transform:uppercase;letter-spacing:1.5px;">Temporarily Shut Down</div>
-        <div style="width:32px;height:2px;background:rgba(255,214,0,0.4);margin:0 auto;border-radius:2px;"></div>
+    <div class="alert-card">
+      <div class="alert-icon" style="background:rgba(255,214,0,0.1);border:1px solid rgba(255,214,0,0.3);">🛠️</div>
+      <div class="flex-col-gap-6">
+        <div class="alert-title text-yellow">Temporarily Shut Down</div>
+        <div class="separator" style="width:32px;height:2px;border-radius:2px;background:rgba(255,214,0,0.4);margin:0 auto;"></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.7;">This panel is currently offline for<br/>bug fixes or modifications.</div>
-      <a href="https://discord.gg/w6AHaqUJeq" target="_blank" style="display:flex;align-items:center;gap:6px;background:rgba(88,101,242,0.15);border:1px solid rgba(88,101,242,0.35);color:#5865F2;font-family:'Oxanium',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border-radius:6px;text-decoration:none;">
+      <div class="alert-subtext">This panel is currently offline for<br/>bug fixes or modifications.</div>
+      <a href="https://discord.gg/w6AHaqUJeq" target="_blank" class="settings-link-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
         Join our Discord
       </a>
-      <div style="font-size:9px;color:var(--border);letter-spacing:1px;">CHECKING EVERY 3 SECONDS</div>
+      <div class="font-9 text-muted">CHECKING EVERY 3 SECONDS</div>
     </div>`;
         document.body.appendChild(overlay);
       }
@@ -4144,16 +2618,16 @@ setInterval(async () => {
         if (document.getElementById("panel-disabled-overlay")) return;
         const overlay = document.createElement("div");
         overlay.id = "panel-disabled-overlay";
-        overlay.style.cssText = "position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:24px;text-align:center;";
+        overlay.className = "js-overlay";
         overlay.innerHTML = `
-    <div style="background:var(--surface);border:1px solid rgba(255,23,68,0.25);border-radius:16px;padding:32px 28px;max-width:280px;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.3);display:flex;align-items:center;justify-content:center;font-size:26px;">🚫</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div style="font-size:13px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:1.5px;">Access Denied</div>
-        <div style="width:32px;height:2px;background:rgba(255,23,68,0.4);margin:0 auto;border-radius:2px;"></div>
+    <div class="alert-card">
+      <div class="alert-icon" style="background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.3);">🚫</div>
+      <div class="flex-col-gap-6">
+        <div class="alert-title text-red">Access Denied</div>
+        <div class="separator" style="width:32px;height:2px;border-radius:2px;background:rgba(255,23,68,0.4);margin:0 auto;"></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.7;">You have been banned from<br/>the Race Control panel.</div>
-      <a href="https://discord.gg/w6AHaqUJeq" target="_blank" style="display:flex;align-items:center;gap:6px;background:rgba(88,101,242,0.15);border:1px solid rgba(88,101,242,0.35);color:#5865F2;font-family:'Oxanium',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border-radius:6px;text-decoration:none;">
+      <div class="alert-subtext">You have been banned from<br/>the Race Control panel.</div>
+      <a href="https://discord.gg/w6AHaqUJeq" target="_blank" class="settings-link-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
         Appeal on Discord
       </a>
@@ -4171,7 +2645,7 @@ setInterval(async () => {
         items.innerHTML = TOOLBOX_SECTIONS.map(s => {
           const visible = _toolboxVisible[s.id] !== false;
           return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-      <span style="font-size:11px;">${s.label}</span>
+      <span class="font-11">${s.label}</span>
       <button onclick="toggleToolboxSection('${s.id}')" id="tb-btn-${s.id}" style="font-size:9px;font-weight:800;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;font-family:'Oxanium',sans-serif;background:${visible ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)"};border-color:${visible ? "var(--green)" : "var(--red)"};color:${visible ? "var(--green)" : "var(--red)"};">
         ${visible ? "VISIBLE" : "HIDDEN"}
       </button></div>`;
@@ -4366,9 +2840,9 @@ setInterval(async () => {
   banner.style.cssText = "position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;";
   banner.innerHTML = `
       <div style="background:var(--surface);border:1px solid rgba(41,121,255,0.4);border-radius:12px;padding:24px 32px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
-        <div style="font-size:22px;">🔄</div>
+        <div class="font-22">🔄</div>
         <div style="font-size:13px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:1px;">Restarting</div>
-        <div style="font-size:10px;color:var(--muted);">Driver list updated — applying changes...</div>
+        <div class="text-muted-sm">Driver list updated — applying changes...</div>
       </div>`;
   document.body.appendChild(banner);
   requestAnimationFrame(() => {
@@ -4473,7 +2947,7 @@ if (flag === "__driver_db_update__") {
         overlay.innerHTML = `
     <div style="background:var(--surface);border:1px solid rgba(255,214,0,0.25);border-radius:16px;padding:32px 28px;max-width:280px;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;">
       <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,214,0,0.1);border:1px solid rgba(255,214,0,0.3);display:flex;align-items:center;justify-content:center;font-size:26px;">🛠️</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
+      <div class="flex-col-gap-6">
         <div style="font-size:13px;font-weight:800;color:var(--yellow);text-transform:uppercase;letter-spacing:1.5px;">Temporarily Shut Down</div>
         <div style="width:32px;height:2px;background:rgba(255,214,0,0.4);margin:0 auto;border-radius:2px;"></div>
       </div>
@@ -4692,7 +3166,7 @@ if (flag === "__driver_db_update__") {
           const lapEl = document.getElementById("m-lap-counter");
           if (!lb) return;
           if (!data.drivers?.length) {
-            lb.innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center;padding:12px;">Waiting for race...</div>';
+            lb.innerHTML = '<div class="placeholder-text">Waiting for race...</div>';
             if (lapEl) lapEl.textContent = "";
             return;
           }
@@ -4713,7 +3187,7 @@ if (flag === "__driver_db_update__") {
           <div class="lb-call">${d.callsign}</div>
         </div>
         <div class="lb-lap" style="text-align:right;">
-          <div>${d.dnf ? "Out " : d.finished ? "Finished 🏁" : `Lap ${d.lap || 1}${data.totalLaps ? `<span style="color:var(--muted);">/${data.totalLaps}</span>` : ""}`}</div>
+          <div>${d.dnf ? "Out " : d.finished ? "Finished 🏁" : `Lap ${d.lap || 1}${data.totalLaps ? `<span class="text-muted">/${data.totalLaps}</span>` : ""}`}</div>
           ${d.inPits ? '<div style="font-size:8px;color:var(--yellow);">🔧 IN PITS</div>' : (d.gap && d.gap !== "Leader" ? `<div style="font-size:8px;color:var(--muted);">${d.gap}</div>` : "")}
         </div>
       </div>`;
@@ -4857,9 +3331,9 @@ if (flag === "__driver_db_update__") {
           banner.style.cssText = "position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;";
           banner.innerHTML = `
   <div style="background:var(--surface);border:1px solid rgba(41,121,255,0.4);border-radius:12px;padding:24px 32px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
-    <div style="font-size:22px;">🔄</div>
+    <div class="font-22">🔄</div>
     <div style="font-size:13px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:1px;">Restarting</div>
-    <div style="font-size:10px;color:var(--muted);">Driver list updated — applying changes...</div>
+    <div class="text-muted-sm">Driver list updated — applying changes...</div>
   </div>`;
           document.body.appendChild(banner);
 
@@ -4922,34 +3396,34 @@ if (flag === "__driver_db_update__") {
       <div class="dev-stat">Active Sessions <span>${(ai.sessions || si.sessions || []).filter(s => s.verified).length}</span></div>
       <div class="dev-stat">Blacklisted <span>${(ai.blacklist || []).length}</span></div>`;
           const vcsEl = document.getElementById("dev-vcs"), vcs = ai.voiceChannels || [];
-          vcsEl.innerHTML = !vcs.length ? '<div style="font-size:10px;color:var(--muted);">No voice channels found.</div>' : vcs.map(vc => `
+          vcsEl.innerHTML = !vcs.length ? '<div class="text-muted-sm">No voice channels found.</div>' : vcs.map(vc => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-        <div><div style="font-size:10px;font-weight:700;">${vc.name}</div><div style="font-size:8px;color:var(--muted);">${vc.guild} · ${vc.memberCount} members</div></div>
+        <div><div class="font-10 fw-700">${vc.name}</div><div style="font-size:8px;color:var(--muted);">${vc.guild} · ${vc.memberCount} members</div></div>
         ${vc.connected ? `<button class="dev-btn" onclick="devLeaveVc('${vc.id}')" style="width:auto;padding:3px 8px;font-size:9px;">Leave</button>` : `<button class="dev-btn" onclick="devJoinVc('${vc.id}')" style="width:auto;padding:3px 8px;font-size:9px;background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);">Join</button>`}
       </div>`).join("");
           const blEl = document.getElementById("dev-blacklist"), blList = ai.blacklistFull || [];
           blEl.innerHTML = blList.length ? blList.map(e => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">
-        <div><div style="font-size:10px;font-weight:700;">${e.username}</div><div style="font-size:8px;color:var(--muted);">${e.reason || "No reason"}</div></div>
+        <div><div class="font-10 fw-700">${e.username}</div><div style="font-size:8px;color:var(--muted);">${e.reason || "No reason"}</div></div>
         <button class="dev-btn" onclick="devRemoveBlacklist('${e.id}')" style="width:auto;padding:3px 8px;font-size:9px;">Remove</button>
-      </div>`).join("") : '<div style="font-size:10px;color:var(--muted);">No blacklisted users.</div>';
+      </div>`).join("") : '<div class="text-muted-sm">No blacklisted users.</div>';
           const dlEl = document.getElementById("dev-driver-logins"), logins = dl.logins || [];
           dlEl.innerHTML = logins.length ? logins.slice(0, 10).map(l => {
             const ago = Math.floor((Date.now() - l.timestamp) / 1000);
             return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);">
         ${l.avatar ? `<img src="https://cdn.discordapp.com/avatars/${l.id}/${l.avatar}.png?size=32" style="width:18px;height:18px;border-radius:50%;"/>` : '<div style="width:18px;height:18px;border-radius:50%;background:var(--border);"></div>'}
-        <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${l.username}</div><div style="font-size:8px;color:var(--muted);">${l.ip || "unknown"}</div></div>
-        <div style="font-size:9px;color:var(--muted);">${ago < 60 ? ago + "s" : Math.floor(ago / 60) + "m"} ago</div>
+        <div class="flex-1"><div class="font-10 fw-700">${l.username}</div><div style="font-size:8px;color:var(--muted);">${l.ip || "unknown"}</div></div>
+        <div class="small-note">${ago < 60 ? ago + "s" : Math.floor(ago / 60) + "m"} ago</div>
       </div>`;
-          }).join("") : '<div style="color:var(--muted);">No driver logins yet.</div>';
+          }).join("") : '<div class="text-muted">No driver logins yet.</div>';
           document.getElementById("dev-sessions").innerHTML = (si.sessions || []).filter(s => s.verified).map(s => {
             const ago = s.lastActive ? Math.floor((Date.now() - s.lastActive) / 1000) : null;
-            return `<div style="font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);">${s.username}${s.isAdmin ? " 👑" : ""}<span style="color:var(--muted);font-size:8px;"> · ${s.ip || "unknown"}</span> — <span style="color:var(--muted);">${ago !== null ? (ago < 60 ? ago + "s" : Math.floor(ago / 60) + "m") + " ago" : "just logged in"}</span></div>`;
-          }).join("") || '<div style="color:var(--muted);">No active sessions.</div>';
+            return `<div style="font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);">${s.username}${s.isAdmin ? " 👑" : ""}<span style="color:var(--muted);font-size:8px;"> · ${s.ip || "unknown"}</span> — <span class="text-muted">${ago !== null ? (ago < 60 ? ago + "s" : Math.floor(ago / 60) + "m") + " ago" : "just logged in"}</span></div>`;
+          }).join("") || '<div class="text-muted">No active sessions.</div>';
           document.getElementById("dev-audit").innerHTML = (li.audit || []).slice(0, 20).map(a => {
             const ago = Math.floor((Date.now() - a.timestamp) / 1000);
-            return `<div style="padding:3px 0;border-bottom:1px solid var(--border);">${a.action} — <span style="color:var(--muted);">${a.username} · ${ago < 60 ? ago + "s" : Math.floor(ago / 60) + "m"} ago</span></div>`;
-          }).join("") || '<div style="color:var(--muted);">No actions yet.</div>';
+            return `<div style="padding:3px 0;border-bottom:1px solid var(--border);">${a.action} — <span class="text-muted">${a.username} · ${ago < 60 ? ago + "s" : Math.floor(ago / 60) + "m"} ago</span></div>`;
+          }).join("") || '<div class="text-muted">No actions yet.</div>';
 
           renderMockLb();
           renderDriverDB();
@@ -4964,8 +3438,8 @@ if (flag === "__driver_db_update__") {
           engEl.innerHTML = allEngineers.length ? allEngineers.map(l => `
       <div style="padding:3px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">
         <span style="font-weight:700;">${l.username}</span>
-        <span style="color:var(--muted);">→ engineering for <span style="color:var(--text);font-weight:700;">${l.engineerFor || "?"}</span></span>
-      </div>`).join("") : '<div style="color:var(--muted);">No engineers active.</div>';
+        <span class="text-muted">→ engineering for <span style="color:var(--text);font-weight:700;">${l.engineerFor || "?"}</span></span>
+      </div>`).join("") : '<div class="text-muted">No engineers active.</div>';
         } catch (e) { console.error("[Dev]", e); showToast("❌ Failed to load dev info", "err"); }
       }
 
@@ -5329,7 +3803,7 @@ if (flag === "__driver_db_update__") {
       <div style="width:22px;height:22px;border-radius:3px;background:rgba(255,255,255,0.05);
         border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
         font-size:8px;font-weight:800;flex-shrink:0;">${number === "–" ? "🏁" : "#" + number}</div>
-      <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${name}</div>
+      <div class="flex-1"><div class="font-10 fw-700">${name}</div>
         <div style="font-size:8px;color:var(--muted);">${callsign}</div></div>
       <span style="font-size:14px;">${type === "yes" ? "✅" : "❌"}</span>
     </div>`;
