@@ -1474,6 +1474,10 @@ textarea:focus {
   flex-shrink: 0;
 }
 
+.setup-label {
+  white-space: nowrap;
+}
+
 /* setup-label / settings-label font use --font-scale in section 3 */
 .settings-label { font-size: 11px; color: var(--text); }
 
