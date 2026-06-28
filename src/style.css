@@ -1974,6 +1974,17 @@ textarea:focus {
   border-radius: 4px;
 }
 
+input[type=number] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Oxanium', sans-serif;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  outline: none;
+}
 
 /* =============================================================================
    34. Animations & Keyframes
