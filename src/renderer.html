@@ -2104,18 +2104,9 @@ async function afterLogin() {
     document.getElementById("change-url-btn").style.display = "block";
   }
   const driverName = DRIVER_IDS[user.id];
-  const isInDB = !!driverName;
-  hasDriver = isInDB;
-  showRoleSelectScreen(isInDB);
+  hasDriver = !!driverName;
+  showRoleSelectScreen(!!driverName);
 }
-      if (driverName) {
-        const info = DRIVER_INFO[driverName] || {};
-        config.username = user.username;
-        config.driver = driverName; config.number = info.number; config.callsign = info.callsign;
-        config.discordId = user.id; config.engineer = false; isEngineer = false;
-        window.api.saveConfig(config); updateSwitcher(); launchDriverPanel();
-      } else { showEngineerScreen(); }
-    }
 
 function showRoleSelectScreen(isInDB) {
   const screen = document.getElementById("screen-login");
@@ -2124,29 +2115,17 @@ function showRoleSelectScreen(isInDB) {
     : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png`;
 
   const racerCard = isInDB ? `
-    <button onclick="chooseRoleRacer()" style="
-      flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:10px;padding:22px 16px;background:var(--surface);border:1px solid var(--border);
-      border-radius:10px;cursor:pointer;color:var(--text);font-family:'Oxanium',sans-serif;
-      transition:border-color 0.15s,background 0.15s;min-width:120px;
-    " onmouseover="this.style.borderColor='var(--red)';this.style.background='rgba(255,23,68,0.06)'"
-      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
-      <span style="font-size:32px;">🏎️</span>
-      <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">Racer</div>
-      <div style="font-size:9px;color:var(--muted);text-align:center;">You are driving today</div>
+    <button onclick="chooseRoleRacer()" class="role-card racer">
+      <span class="role-icon">🏎️</span>
+      <div class="role-title">Racer</div>
+      <div class="role-sub">You are driving today</div>
     </button>` : '';
 
   const engineerCard = `
-    <button onclick="chooseRoleEngineer()" style="
-      flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:10px;padding:22px 16px;background:var(--surface);border:1px solid var(--border);
-      border-radius:10px;cursor:pointer;color:var(--text);font-family:'Oxanium',sans-serif;
-      transition:border-color 0.15s,background 0.15s;min-width:120px;
-    " onmouseover="this.style.borderColor='var(--blue)';this.style.background='rgba(41,121,255,0.06)'"
-      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
-      <span style="font-size:32px;">🎧</span>
-      <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">Engineer</div>
-      <div style="font-size:9px;color:var(--muted);text-align:center;">You are managing a driver remotely</div>
+    <button onclick="chooseRoleEngineer()" class="role-card engineer">
+      <span class="role-icon">🎧</span>
+      <div class="role-title">Engineer</div>
+      <div class="role-sub">You are managing a driver remotely</div>
     </button>`;
 
   screen.innerHTML = `
@@ -2160,11 +2139,10 @@ function showRoleSelectScreen(isInDB) {
         </div>
       </div>
       <div class="small-heading" style="text-align:center;margin-top:4px;">What are you today?</div>
-      <div style="display:flex;gap:10px;margin-top:2px;">
+      <div class="role-select-grid">
         ${racerCard}
         ${engineerCard}
       </div>
-      <button onclick="showRoleSelectScreen(!!DRIVER_IDS[user.id])" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:2px;">← Back</button>
       ${hasDev ? `<button onclick="skipEngineerScreen()" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:2px;align-self:center;">⚙️ Skip (dev only)</button>` : ''}
       <div class="login-error" id="role-select-error"></div>
     </div>`;
@@ -2201,7 +2179,7 @@ function chooseRoleEngineer() {
   isEngineer = false;
   showEngineerScreen();
 }
-    
+ 
     function showEngineerScreen() {
       config.driver = "";
       engineerPending = true;
@@ -2231,7 +2209,7 @@ function chooseRoleEngineer() {
       ).join("")}
       </select>
       <button class="pw-btn" onclick="confirmEngineer()">Continue →</button>
-      ${hasDev ? `<button onclick="skipEngineerScreen()" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:4px;">⚙️ Skip (dev only)</button>` : ""}
+      <button onclick="showRoleSelectScreen(!!DRIVER_IDS[user.id])" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:2px;">← Back</button>       ${hasDev ? `<button onclick="skipEngineerScreen()" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:4px;">⚙️ Skip (dev only)</button>` : ""}
       <div class="login-error" id="eng-error"></div>
     </div>`;
       showScreen("screen-login");
