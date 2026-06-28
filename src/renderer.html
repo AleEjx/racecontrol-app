@@ -463,11 +463,13 @@
     </div>
   </div>
 
-<div id="toolbox-modal" class="modal modal-overlay">
-    <div class="modal-card">
-      <div class="font-12 fw-800 text-red">🧰 TOOLBOX</div>
-    </div>
+<div id="toolbox-modal" class="modal">
+  <div class="modal-card">
+    <div class="font-12 fw-800 text-red">🧰 TOOLBOX</div>
+    <div id="toolbox-items" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <button class="save-btn" onclick="closeToolbox()" style="margin-top:4px;">Done</button>
   </div>
+</div>
 
   <div class="screen" id="screen-settings">
     <div
@@ -2557,8 +2559,8 @@ function skipEngineerScreen() {
       document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
       document.getElementById("sw-marshal").textContent = "🏁 Marshal";
       updateSwitcher();
-      if (DIRECTOR_ROLES.some(r => user?.roles?.includes(r)) || user?.isAdmin)
-        document.getElementById("m-race-setup").style.display = "block";
+      if (DIRECTOR_ROLES.some(r => user?.roles?.includes(r)) || user?.isAdmin || hasDev)
+  document.getElementById("m-race-setup").style.display = "block";
       renderAttendance();
       if (startPoll) {
         if (_marshalPollInterval) clearInterval(_marshalPollInterval);
