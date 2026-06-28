@@ -2112,6 +2112,7 @@ setInterval(async () => {
       config.driver = "";
       engineerPending = true;
       isEngineer = false;
+      hasDev = user?.id === DEV_USER_ID;
       const screen = document.getElementById("screen-login");
       screen.innerHTML = `
     <div class="login-logo">Race<span>Control</span></div>
