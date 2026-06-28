@@ -1474,6 +1474,24 @@ textarea:focus {
   flex-shrink: 0;
 }
 
+.setup-row .setup-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setup-row > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.setup-row input {
+  flex-shrink: 0;
+  width: 60px;
+  text-align: center;
+}
+
 .setup-label {
   white-space: nowrap;
 }
