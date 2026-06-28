@@ -18,7 +18,7 @@
       <div id="panel-switcher">
         <button class="switch-btn" id="sw-driver" onclick="switchPanel('driver')">🏎️ Driver</button>
         <button class="switch-btn" id="sw-marshal" onclick="switchPanel('marshal')">🏁 Marshal 🔒</button>
-        <button id="sw-dev" onclick="switchPanel('dev')" class="switch-btn hidden">⚙️ Dev</button>
+        <button id="sw-dev" onclick="switchPanel('dev')" class="switch-btn" style="display:none;">⚙️ Dev</button>
       </div>
     </div>
     <div class="tb-btns">
@@ -2175,15 +2175,16 @@ setInterval(async () => {
       });
     })();
 
-    function skipEngineerScreen() {
-      engineerPending = false;
-      config.driver = "__dev__";
-      config.engineer = false;
-      isEngineer = false;
-      hasDriver = true;
-      updateSwitcher();
-      launchDriverPanel();
-    }
+function skipEngineerScreen() {
+  engineerPending = false;
+  config.driver = "__dev__";
+  config.engineer = false;
+  isEngineer = false;
+  hasDriver = true;
+  hasDev = true;     
+  updateSwitcher();
+  launchDriverPanel();
+}
 
     function openBugReport() {
       document.getElementById("bug-modal").style.display = "flex";
