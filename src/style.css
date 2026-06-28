@@ -1469,8 +1469,10 @@ textarea:focus {
   gap: 8px;
 }
 
+
 .num-input {
-  width: 55px;
+  width: 40px;
+  font-size: 10px;
   flex-shrink: 0;
 }
 
