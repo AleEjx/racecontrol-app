@@ -1470,8 +1470,9 @@ textarea:focus {
 }
 
 .setup-row > div {
-  flex: 0 1 auto;
+  flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .setup-label {
@@ -1480,10 +1481,11 @@ textarea:focus {
 }
 
 .num-input {
-  width: 40px;
+  width: 35px;
   font-size: 10px;
   flex-shrink: 0;
   text-align: center;
+  padding: 4px 2px;
 }
 
 /* setup-label / settings-label font use --font-scale in section 3 */
