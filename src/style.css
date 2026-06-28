@@ -946,7 +946,11 @@ textarea:focus {
    18. Flag Buttons (Marshal panel grid)
    ============================================================================= */
 
-.flag-grid { display: grid; gap: 6px; }
+.flag-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
 
 .flag-btn {
   display: flex;
@@ -1571,6 +1575,10 @@ textarea:focus {
 }
 .driver-db-subtext { font-size: 8px; color: var(--muted); }
 
+#dev-driver-list button {
+  width: auto;
+  flex: 0 0 auto;
+}
 
 /* =============================================================================
    24. Modals & Overlays
