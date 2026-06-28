@@ -1468,6 +1468,12 @@ textarea:focus {
   justify-content: space-between;
   gap: 8px;
 }
+
+.num-input {
+  width: 55px;
+  flex-shrink: 0;
+}
+
 /* setup-label / settings-label font use --font-scale in section 3 */
 .settings-label { font-size: 11px; color: var(--text); }
 
