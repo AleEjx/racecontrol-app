@@ -401,12 +401,6 @@ textarea:focus {
 .input-full   { width: 100%; font-size: 10px; padding: 5px 8px; }
 .input-inline { flex: 1; font-size: 10px; padding: 5px 8px; }
 
-.num-input {
-  width: 65px;
-  text-align: center;
-  flex: 0 0 auto;
-}
-
 .textarea-sm { min-height: 50px; }
 .textarea-md { min-height: 60px; }
 
@@ -1469,23 +1463,18 @@ textarea:focus {
   gap: 8px;
 }
 
-.setup-row > div {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
 .setup-label {
-  white-space: nowrap;
   font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .num-input {
-  width: 35px;
+  width: 50px;
   font-size: 10px;
-  flex-shrink: 0;
   text-align: center;
-  padding: 4px 2px;
+  padding: 4px 6px;
+  flex-shrink: 0;
 }
 
 /* setup-label / settings-label font use --font-scale in section 3 */
@@ -2010,17 +1999,6 @@ textarea:focus {
   border-radius: 4px;
 }
 
-input[type=number] {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: 'Oxanium', sans-serif;
-  font-size: 12px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  outline: none;
-}
 
 /* =============================================================================
    34. Animations & Keyframes
