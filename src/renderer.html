@@ -704,14 +704,19 @@
     </div>
   </div>
 
-  <div id="update-banner" class="update-banner">
-    <div class="font-11 text-green fw-700" id="update-text">🔄 Downloading update...</div>
-    <div class="flex-row-gap-6">
-      <button id="update-install-btn" onclick="installUpdate()" disabled class="btn-disabled">Install
-        & Restart</button>
-      <button onclick="document.getElementById('update-banner').style.display='none'" class="button-link">✕</button>
+<div id="update-banner" class="update-banner">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.4);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">⬆️</div>
+    <div>
+      <div class="font-11 fw-700 text-green" id="update-text">🔄 Downloading update...</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:1px;">RaceControl Desktop</div>
     </div>
   </div>
+  <div class="flex-row-gap-6">
+    <button id="update-install-btn" onclick="installUpdate()" disabled class="btn-disabled" style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:6px;">Install & Restart</button>
+    <button onclick="document.getElementById('update-banner').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 2px;">✕</button>
+  </div>
+</div>
   <input type="file" id="sound-picker" accept="audio/*" class="hidden" />
   <input type="file" id="flag-sound-picker" accept="audio/*" class="hidden" />
 
