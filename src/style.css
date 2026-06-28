@@ -694,6 +694,52 @@ textarea:focus {
 .dev-card   .user-pill,
 .pw-card    .user-pill { margin-bottom: 4px; }
 
+/* =============================================================================
+   13b. Role Select Screen
+   ============================================================================= */
+
+.role-select-grid {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.role-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: 'Oxanium', sans-serif;
+  transition: border-color 0.15s, background 0.15s;
+  min-width: 120px;
+}
+
+.role-card .role-icon { font-size: 32px; }
+
+.role-card .role-title {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.role-card .role-sub {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.role-card.racer:hover  { border-color: var(--red);  background: rgba(255,23,68,0.06); }
+.role-card.engineer:hover { border-color: var(--blue); background: rgba(41,121,255,0.06); }
+
 
 /* =============================================================================
    14. Status Row & Dots
