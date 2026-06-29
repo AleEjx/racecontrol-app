@@ -1271,19 +1271,76 @@ function updateTesterBtn() {
 
 function playTesterActivateAnimation() {
   if (document.getElementById("tester-overlay")) return;
-  const overlay = document.createElement("div");
-  overlay.id = "tester-overlay";
-  overlay.className = "tester-overlay";
-  overlay.innerHTML = `
-    <div class="tester-scanline"></div>
-    <div class="tester-vignette"></div>
-    <div class="tester-glitch-bar"></div>
-    <div class="tester-corner tl"></div>
-    <div class="tester-corner tr"></div>
-    <div class="tester-corner bl"></div>
-    <div class="tester-corner br"></div>`;
-  document.body.appendChild(overlay);
-  spawnTesterParticles(overlay, 30);
+
+  const burst = document.createElement("div");
+  burst.style.cssText = `position:fixed;inset:0;z-index:100000;pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(147,51,234,0.35) 0%, transparent 70%);
+    opacity:0;transition:opacity 0.1s;`;
+  document.body.appendChild(burst);
+  requestAnimationFrame(() => { burst.style.opacity = "1"; });
+
+  const glitchText = document.createElement("div");
+  glitchText.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    z-index:100001;pointer-events:none;font-family:'Oxanium',sans-serif;
+    font-size:11px;font-weight:900;letter-spacing:6px;text-transform:uppercase;
+    color:#a855f7;text-shadow:0 0 20px #a855f7,0 0 40px #6366f1;
+    opacity:0;transition:opacity 0.08s;`;
+  glitchText.textContent = "TESTER MODE";
+  document.body.appendChild(glitchText);
+
+  const sweep = document.createElement("div");
+  sweep.style.cssText = `position:fixed;top:0;left:-100%;width:100%;height:100%;z-index:99999;
+    pointer-events:none;
+    background:linear-gradient(90deg,transparent 0%,rgba(147,51,234,0.12) 40%,rgba(99,102,241,0.2) 50%,rgba(147,51,234,0.12) 60%,transparent 100%);`;
+  document.body.appendChild(sweep);
+
+  setTimeout(() => {
+    glitchText.style.opacity = "1";
+    sweep.style.transition = "left 0.5s cubic-bezier(0.4,0,0.2,1)";
+    sweep.style.left = "100%";
+  }, 60);
+
+  setTimeout(() => {
+    glitchText.style.opacity = "0";
+    burst.style.opacity = "0";
+  }, 350);
+
+  spawnTesterParticles(document.body, 50);
+
+  const flickerTimes = [100, 160, 220, 280];
+  flickerTimes.forEach((t, i) => {
+    setTimeout(() => {
+      glitchText.style.opacity = i % 2 === 0 ? "0.6" : "0.2";
+      glitchText.style.transform = `translate(calc(-50% + ${(Math.random()-0.5)*6}px), calc(-50% + ${(Math.random()-0.5)*4}px))`;
+      glitchText.style.color = i % 2 === 0 ? "#a855f7" : "#6366f1";
+    }, t);
+  });
+
+  setTimeout(() => {
+    glitchText.style.opacity = "0";
+  }, 320);
+
+  setTimeout(() => {
+    burst.remove();
+    sweep.remove();
+    glitchText.remove();
+
+    if (document.getElementById("tester-overlay")) return;
+    const overlay = document.createElement("div");
+    overlay.id = "tester-overlay";
+    overlay.className = "tester-overlay";
+    overlay.innerHTML = `
+      <div class="tester-scanline"></div>
+      <div class="tester-vignette"></div>
+      <div class="tester-corner tl"></div>
+      <div class="tester-corner tr"></div>
+      <div class="tester-corner bl"></div>
+      <div class="tester-corner br"></div>`;
+    overlay.style.opacity = "0";
+    overlay.style.transition = "opacity 0.4s";
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { overlay.style.opacity = "1"; });
+  }, 600);
 }
 
 function playTesterApprovedAnimation() {
