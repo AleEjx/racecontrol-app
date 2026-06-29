@@ -1523,10 +1523,10 @@ textarea:focus {
 }
 
 .num-input {
-  width: 40px !important;
+  width: 52px !important;
   font-size: 10px;
   text-align: center;
-  padding: 3px 4px;
+  padding: 4px 6px;
   flex-shrink: 0;
 }
 
