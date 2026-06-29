@@ -742,6 +742,69 @@ textarea:focus {
 
 
 /* =============================================================================
+   13c. Tester Mode
+   ============================================================================= */
+
+.tester-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.3s;
+}
+
+.tester-toggle-row.active {
+  border-color: rgba(147, 51, 234, 0.5);
+  background: rgba(147, 51, 234, 0.06);
+  animation: testerPulse 2s ease-in-out infinite;
+}
+
+.tester-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tester-label-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text);
+  transition: color 0.3s;
+}
+
+.tester-toggle-row.active .tester-label-title {
+  background: linear-gradient(90deg, #a855f7, #6366f1, #3b82f6, #a855f7);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: testerShimmer 2s linear infinite;
+}
+
+.tester-label-sub {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.tester-toggle-row.active .tester-label-sub {
+  color: rgba(168, 85, 247, 0.7);
+}
+
+@keyframes testerPulse {
+  0%, 100% { box-shadow: 0 0 0px rgba(147,51,234,0); }
+  50%       { box-shadow: 0 0 12px rgba(147,51,234,0.3); }
+}
+
+@keyframes testerShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* =============================================================================
    14. Status Row & Dots
    ============================================================================= */
 
