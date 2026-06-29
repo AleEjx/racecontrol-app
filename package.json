@@ -1,6 +1,6 @@
 {
   "name": "racecontrol-driver",
-  "version": "1.0.9-beta.16",
+  "version": "1.0.9-beta.17",
   "description": "RaceLeague Driver Panel",
   "main": "src/main.js",
   "author": "AleEjx",
