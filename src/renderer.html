@@ -681,7 +681,7 @@
           <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
-        <div class="s-section-title">Beta</div>
+<div class="s-section-title">Beta</div>
 <div class="s-card gap-8 mb-4">
   <div class="tester-toggle-row" id="tester-toggle-row">
     <div class="tester-label">
@@ -691,6 +691,21 @@
     <button id="tester-toggle-btn" onclick="toggleTesterMode()" class="toggle-button">OFF</button>
   </div>
   <div id="tester-error" class="text-error-sm" style="min-height:0;display:none;"></div>
+  <div id="tester-access-grid" class="tester-access-grid" style="display:none;">
+    <div class="font-9 text-muted" style="letter-spacing:1px;text-transform:uppercase;">Jump to panel</div>
+    <button class="tester-access-btn" onclick="testerGoto('marshal')">
+      <span class="tab-icon">🏁</span>
+      <div><div>Marshal Panel</div><div class="tab-sub">Flag controls & leaderboard</div></div>
+    </button>
+    <button class="tester-access-btn" onclick="testerGoto('driver')">
+      <span class="tab-icon">🏎️</span>
+      <div><div>Racer Panel</div><div class="tab-sub">Driver actions & lap tracking</div></div>
+    </button>
+    <button class="tester-access-btn" onclick="testerGoto('engineer')">
+      <span class="tab-icon">🎧</span>
+      <div><div>Engineer Panel</div><div class="tab-sub">Manage a driver remotely</div></div>
+    </button>
+  </div>
 </div>
 
         <div class="s-section-title">About</div>
@@ -1116,6 +1131,7 @@
       });
     }
 
+    
     function updateThemeBtns() {
       const isLight = document.documentElement.classList.contains('light-mode');
       const isTransparent = document.documentElement.classList.contains('transparent-mode');
@@ -1124,8 +1140,11 @@
       document.getElementById('theme-transparent-btn')?.classList.toggle('active', isTransparent);
     }
 
-    const TESTER_ROLE = "1503570737015951370";
+const TESTER_ROLE = "1503570737015951370";
 let _testerMode = false;
+let _testerStatus = "off"; // "off" | "pending" | "approved" | "denied"
+let _testerPollInterval = null;
+let _testerRequestId = null;
 
 function toggleTesterMode() {
   const hasRole = user?.roles?.includes(TESTER_ROLE) || user?.id === DEV_USER_ID;
@@ -1138,28 +1157,213 @@ function toggleTesterMode() {
     return;
   }
 
-  _testerMode = !_testerMode;
-  localStorage.setItem("rc_tester_mode", _testerMode ? "1" : "0");
+  if (_testerStatus === "approved") {
+    disableTesterMode();
+    return;
+  }
+
+  if (_testerStatus === "pending") return;
+
+  requestTesterApproval();
+}
+
+async function requestTesterApproval() {
+  _testerRequestId = Date.now();
+  _testerStatus = "pending";
+  localStorage.setItem("rc_tester_request_id", _testerRequestId);
   updateTesterBtn();
-  showToast(_testerMode ? "🧪 Tester Mode enabled" : "🧪 Tester Mode disabled", _testerMode ? "ok" : "");
+  playTesterActivateAnimation();
+
+  try {
+    await fetch(`${apiUrl}/tester/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token || user.marshalToken || "" },
+      body: JSON.stringify({ requestId: _testerRequestId, username: user.username, discordId: user.id }),
+    });
+  } catch { }
+
+  if (_testerPollInterval) clearInterval(_testerPollInterval);
+  _testerPollInterval = setInterval(pollTesterStatus, 3000);
+}
+
+async function pollTesterStatus() {
+  if (!_testerRequestId) return;
+  try {
+    const res = await fetch(`${apiUrl}/tester/status/${_testerRequestId}`, {
+      headers: { "x-discord-id": user.id }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (data.status === "approved" || data.status === "approved_24h") {
+      clearInterval(_testerPollInterval);
+      _testerStatus = "approved";
+      _testerMode = true;
+      localStorage.setItem("rc_tester_mode", "1");
+      updateTesterBtn();
+      playTesterApprovedAnimation();
+      showToast("🧪 Tester access granted!", "ok");
+    } else if (data.status === "denied" || data.status === "denied_24h") {
+      clearInterval(_testerPollInterval);
+      _testerStatus = "denied";
+      _testerMode = false;
+      _testerRequestId = null;
+      updateTesterBtn();
+      removeTesterOverlay();
+      showToast("❌ Tester access denied.", "err");
+      setTimeout(() => { _testerStatus = "off"; updateTesterBtn(); }, 3000);
+    }
+  } catch { }
+}
+
+function disableTesterMode() {
+  _testerMode = false;
+  _testerStatus = "off";
+  _testerRequestId = null;
+  if (_testerPollInterval) { clearInterval(_testerPollInterval); _testerPollInterval = null; }
+  localStorage.setItem("rc_tester_mode", "0");
+  updateTesterBtn();
+  removeTesterOverlay();
+  showToast("🧪 Tester Mode disabled", "");
 }
 
 function updateTesterBtn() {
   const btn = document.getElementById("tester-toggle-btn");
   const row = document.getElementById("tester-toggle-row");
   const sub = document.getElementById("tester-label-sub");
+  const accessGrid = document.getElementById("tester-access-grid");
   if (!btn) return;
-  btn.textContent = _testerMode ? "ON" : "OFF";
-  btn.style.background = _testerMode ? "rgba(147,51,234,0.15)" : "";
-  btn.style.borderColor = _testerMode ? "rgba(147,51,234,0.5)" : "";
-  btn.style.color = _testerMode ? "#a855f7" : "";
-  row.classList.toggle("active", _testerMode);
-  if (sub) sub.textContent = _testerMode ? "✓ Experimental features unlocked" : "Access experimental features";
+
+  row.classList.remove("active");
+  btn.style.background = "";
+  btn.style.borderColor = "";
+  btn.style.color = "";
+
+  if (_testerStatus === "pending") {
+    btn.innerHTML = `<span class="tester-pending-badge">⏳ Pending</span>`;
+    btn.style.background = "none";
+    btn.style.border = "none";
+    btn.style.padding = "0";
+    if (sub) sub.textContent = "Waiting for admin approval...";
+    if (accessGrid) accessGrid.style.display = "none";
+  } else if (_testerStatus === "approved") {
+    row.classList.add("active");
+    btn.innerHTML = `<span class="tester-approved-badge">✓ Active</span>`;
+    btn.style.background = "none";
+    btn.style.border = "none";
+    btn.style.padding = "0";
+    if (sub) sub.textContent = "✓ Experimental features unlocked";
+    if (accessGrid) accessGrid.style.display = "flex";
+  } else if (_testerStatus === "denied") {
+    btn.textContent = "DENIED";
+    btn.style.background = "rgba(255,23,68,0.15)";
+    btn.style.borderColor = "var(--red)";
+    btn.style.color = "var(--red)";
+    if (sub) sub.textContent = "Access was denied.";
+    if (accessGrid) accessGrid.style.display = "none";
+  } else {
+    btn.textContent = "OFF";
+    btn.style.cssText = "";
+    if (sub) sub.textContent = "Access experimental features";
+    if (accessGrid) accessGrid.style.display = "none";
+  }
+}
+
+function playTesterActivateAnimation() {
+  if (document.getElementById("tester-overlay")) return;
+  const overlay = document.createElement("div");
+  overlay.id = "tester-overlay";
+  overlay.className = "tester-overlay";
+  overlay.innerHTML = `
+    <div class="tester-scanline"></div>
+    <div class="tester-vignette"></div>
+    <div class="tester-glitch-bar"></div>
+    <div class="tester-corner tl"></div>
+    <div class="tester-corner tr"></div>
+    <div class="tester-corner bl"></div>
+    <div class="tester-corner br"></div>`;
+  document.body.appendChild(overlay);
+  spawnTesterParticles(overlay, 30);
+}
+
+function playTesterApprovedAnimation() {
+  spawnTesterParticles(document.getElementById("tester-overlay") || document.body, 60);
+  const flash = document.createElement("div");
+  flash.style.cssText = `position:fixed;inset:0;z-index:100000;pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(147,51,234,0.25) 0%, transparent 70%);
+    animation:testerApproveFlash 0.8s ease forwards;`;
+  document.body.appendChild(flash);
+  const style = document.createElement("style");
+  style.textContent = `@keyframes testerApproveFlash {
+    0%   { opacity: 0; }
+    20%  { opacity: 1; }
+    100% { opacity: 0; }
+  }`;
+  document.head.appendChild(style);
+  setTimeout(() => { flash.remove(); style.remove(); }, 900);
+}
+
+function spawnTesterParticles(container, count) {
+  const colors = ["#a855f7", "#6366f1", "#3b82f6", "#c084fc", "#818cf8"];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("div");
+    p.className = "tester-particle";
+    const x = Math.random() * 100;
+    const y = Math.random() * 100;
+    const size = 1 + Math.random() * 3;
+    const dur = 0.8 + Math.random() * 1.8;
+    const delay = Math.random() * 0.6;
+    const tx = (Math.random() - 0.5) * 120;
+    const ty = (Math.random() - 0.5) * 120;
+    p.style.cssText = `
+      left:${x}%; top:${y}%;
+      width:${size}px; height:${size}px;
+      background:${colors[Math.floor(Math.random() * colors.length)]};
+      opacity:0;
+      animation: testerParticle${i} ${dur}s ease ${delay}s forwards;`;
+    const keyframes = document.createElement("style");
+    keyframes.textContent = `@keyframes testerParticle${i} {
+      0%   { opacity:0; transform:translate(0,0) scale(0); }
+      20%  { opacity:1; transform:translate(${tx*0.2}px,${ty*0.2}px) scale(1); }
+      100% { opacity:0; transform:translate(${tx}px,${ty}px) scale(0); }
+    }`;
+    document.head.appendChild(keyframes);
+    container.appendChild(p);
+    setTimeout(() => { p.remove(); keyframes.remove(); }, (dur + delay) * 1000 + 100);
+  }
+}
+
+function removeTesterOverlay() {
+  document.getElementById("tester-overlay")?.remove();
 }
 
 function loadTesterMode() {
   _testerMode = localStorage.getItem("rc_tester_mode") === "1";
+  if (_testerMode) _testerStatus = "approved";
   updateTesterBtn();
+  if (_testerMode) playTesterActivateAnimation();
+}
+
+function testerGoto(panel) {
+  if (_testerStatus !== "approved") return;
+  if (panel === "marshal") {
+    hasMarshal = true;
+    user.token = user.token || user.marshalToken || "__tester__";
+    launchMarshalPanel();
+  } else if (panel === "driver") {
+    if (!config.driver) {
+      hasDriver = true;
+      showRoleSelectScreen(!!DRIVER_IDS[user.id]);
+    } else {
+      launchDriverPanel();
+    }
+  } else if (panel === "engineer") {
+    hasDriver = true;
+    engineerPending = true;
+    showEngineerScreen();
+  }
+  switchPanel("settings");
+  setTimeout(() => openSettingsTab("account"), 50);
 }
     
     function loadThemePrefs() {
