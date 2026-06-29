@@ -681,6 +681,18 @@
           <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
+        <div class="s-section-title">Beta</div>
+<div class="s-card gap-8 mb-4">
+  <div class="tester-toggle-row" id="tester-toggle-row">
+    <div class="tester-label">
+      <div class="tester-label-title" id="tester-label-title">🧪 Tester Mode</div>
+      <div class="tester-label-sub" id="tester-label-sub">Access experimental features</div>
+    </div>
+    <button id="tester-toggle-btn" onclick="toggleTesterMode()" class="toggle-button">OFF</button>
+  </div>
+  <div id="tester-error" class="text-error-sm" style="min-height:0;display:none;"></div>
+</div>
+
         <div class="s-section-title">About</div>
         <div class="s-card gap-7">
           <div class="flex-row-between">
@@ -1112,6 +1124,44 @@
       document.getElementById('theme-transparent-btn')?.classList.toggle('active', isTransparent);
     }
 
+    const TESTER_ROLE = "1503570737015951370";
+let _testerMode = false;
+
+function toggleTesterMode() {
+  const hasRole = user?.roles?.includes(TESTER_ROLE) || user?.id === DEV_USER_ID;
+  const errEl = document.getElementById("tester-error");
+
+  if (!hasRole) {
+    errEl.textContent = "❌ You don't have the Tester role.";
+    errEl.style.display = "block";
+    setTimeout(() => { errEl.style.display = "none"; }, 3000);
+    return;
+  }
+
+  _testerMode = !_testerMode;
+  localStorage.setItem("rc_tester_mode", _testerMode ? "1" : "0");
+  updateTesterBtn();
+  showToast(_testerMode ? "🧪 Tester Mode enabled" : "🧪 Tester Mode disabled", _testerMode ? "ok" : "");
+}
+
+function updateTesterBtn() {
+  const btn = document.getElementById("tester-toggle-btn");
+  const row = document.getElementById("tester-toggle-row");
+  const sub = document.getElementById("tester-label-sub");
+  if (!btn) return;
+  btn.textContent = _testerMode ? "ON" : "OFF";
+  btn.style.background = _testerMode ? "rgba(147,51,234,0.15)" : "";
+  btn.style.borderColor = _testerMode ? "rgba(147,51,234,0.5)" : "";
+  btn.style.color = _testerMode ? "#a855f7" : "";
+  row.classList.toggle("active", _testerMode);
+  if (sub) sub.textContent = _testerMode ? "✓ Experimental features unlocked" : "Access experimental features";
+}
+
+function loadTesterMode() {
+  _testerMode = localStorage.getItem("rc_tester_mode") === "1";
+  updateTesterBtn();
+}
+    
     function loadThemePrefs() {
       const saved = localStorage.getItem("rc_theme");
       document.documentElement.classList.remove("light-mode", "transparent-mode");
@@ -1937,6 +1987,7 @@ setInterval(async () => {
       loadToolboxPrefs();
       loadKeybindSounds();
       loadFontSizePrefs();
+      loadTesterMode();
       loadThemePrefs();
       loadVolumePrefs();
 
