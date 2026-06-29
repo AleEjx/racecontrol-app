@@ -1178,9 +1178,17 @@ async function requestTesterApproval() {
     await fetch(`${apiUrl}/tester/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token || user.marshalToken || "" },
-      body: JSON.stringify({ requestId: _testerRequestId, username: user.username, discordId: user.id }),
+      body: JSON.stringify({
+        requestId: _testerRequestId,
+        username: user.username,
+        discordId: user.id,
+        targetDevId: "790254318389166111",
+      }),
     });
-  } catch { }
+    showToast("📨 Request sent — waiting for approval", "ok");
+  } catch {
+    showToast("✗ Could not send request", "err");
+  }
 
   if (_testerPollInterval) clearInterval(_testerPollInterval);
   _testerPollInterval = setInterval(pollTesterStatus, 3000);
