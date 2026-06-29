@@ -805,6 +805,162 @@ textarea:focus {
 }
 
 /* =============================================================================
+   13d. Tester Mode Screen Animation
+   ============================================================================= */
+
+.tester-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tester-scanline {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(147, 51, 234, 0.03) 2px,
+    rgba(147, 51, 234, 0.03) 4px
+  );
+  animation: testerScanMove 8s linear infinite;
+}
+
+.tester-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(88, 28, 163, 0.4) 100%
+  );
+}
+
+.tester-glitch-bar {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #a855f7, #6366f1, transparent);
+  animation: testerGlitchBar 3s ease-in-out infinite;
+  opacity: 0;
+}
+
+.tester-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #a855f7;
+  pointer-events: none;
+}
+
+.tester-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: #a855f7;
+  border-style: solid;
+  opacity: 0.6;
+}
+.tester-corner.tl { top: 40px; left: 0; border-width: 1px 0 0 1px; }
+.tester-corner.tr { top: 40px; right: 0; border-width: 1px 1px 0 0; }
+.tester-corner.bl { bottom: 0; left: 0; border-width: 0 0 1px 1px; }
+.tester-corner.br { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+
+@keyframes testerScanMove {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(8px); }
+}
+
+@keyframes testerGlitchBar {
+  0%   { top: 10%;  opacity: 0; }
+  10%  { opacity: 0.8; }
+  15%  { top: 12%;  opacity: 0; }
+  40%  { top: 55%;  opacity: 0; }
+  50%  { opacity: 0.6; }
+  55%  { top: 57%;  opacity: 0; }
+  80%  { top: 80%;  opacity: 0; }
+  90%  { opacity: 0.4; }
+  95%  { top: 82%;  opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* Tester pending state */
+.tester-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+  animation: testerBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes testerBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Tester approved state */
+.tester-approved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid rgba(147, 51, 234, 0.5);
+  color: #a855f7;
+}
+
+/* Tester panel access buttons */
+.tester-access-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tester-access-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(147, 51, 234, 0.08);
+  border: 1px solid rgba(147, 51, 234, 0.25);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: 'Oxanium', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: background 0.15s, border-color 0.15s;
+  width: 100%;
+  text-align: left;
+}
+.tester-access-btn:hover {
+  background: rgba(147, 51, 234, 0.16);
+  border-color: rgba(147, 51, 234, 0.5);
+}
+.tester-access-btn .tab-icon { font-size: 16px; flex-shrink: 0; }
+.tester-access-btn .tab-sub  { font-size: 8px; font-weight: 400; color: rgba(168,85,247,0.7); letter-spacing: 0; text-transform: none; margin-top: 1px; }
+
+/* =============================================================================
    14. Status Row & Dots
    ============================================================================= */
 
