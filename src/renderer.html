@@ -1396,9 +1396,23 @@ function removeTesterOverlay() {
 
 function loadTesterMode() {
   _testerMode = localStorage.getItem("rc_tester_mode") === "1";
-  if (_testerMode) _testerStatus = "approved";
+  if (_testerMode) {
+    _testerStatus = "approved";
+    if (!document.getElementById("tester-overlay")) {
+      const overlay = document.createElement("div");
+      overlay.id = "tester-overlay";
+      overlay.className = "tester-overlay";
+      overlay.innerHTML = `
+        <div class="tester-scanline"></div>
+        <div class="tester-vignette"></div>
+        <div class="tester-corner tl"></div>
+        <div class="tester-corner tr"></div>
+        <div class="tester-corner bl"></div>
+        <div class="tester-corner br"></div>`;
+      document.body.appendChild(overlay);
+    }
+  }
   updateTesterBtn();
-  if (_testerMode) playTesterActivateAnimation();
 }
 
 function testerGoto(panel) {
