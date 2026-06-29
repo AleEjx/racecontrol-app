@@ -1222,8 +1222,8 @@ function disableTesterMode() {
   _testerRequestId = null;
   if (_testerPollInterval) { clearInterval(_testerPollInterval); _testerPollInterval = null; }
   localStorage.setItem("rc_tester_mode", "0");
-  updateTesterBtn();
   removeTesterOverlay();
+  updateTesterBtn();
   showToast("🧪 Tester Mode disabled", "");
 }
 
@@ -1320,44 +1320,23 @@ function playTesterActivateAnimation() {
     glitchText.style.opacity = "0";
   }, 320);
 
-  setTimeout(() => {
+setTimeout(() => {
     burst.remove();
     sweep.remove();
     glitchText.remove();
-
-    if (document.getElementById("tester-overlay")) return;
-    const overlay = document.createElement("div");
-    overlay.id = "tester-overlay";
-    overlay.className = "tester-overlay";
-    overlay.innerHTML = `
-      <div class="tester-scanline"></div>
-      <div class="tester-vignette"></div>
-      <div class="tester-corner tl"></div>
-      <div class="tester-corner tr"></div>
-      <div class="tester-corner bl"></div>
-      <div class="tester-corner br"></div>`;
-    overlay.style.opacity = "0";
-    overlay.style.transition = "opacity 0.4s";
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => { overlay.style.opacity = "1"; });
   }, 600);
 }
 
 function playTesterApprovedAnimation() {
-  spawnTesterParticles(document.getElementById("tester-overlay") || document.body, 60);
   const flash = document.createElement("div");
   flash.style.cssText = `position:fixed;inset:0;z-index:100000;pointer-events:none;
-    background:radial-gradient(ellipse at center, rgba(147,51,234,0.25) 0%, transparent 70%);
-    animation:testerApproveFlash 0.8s ease forwards;`;
+    background:radial-gradient(ellipse at center, rgba(147,51,234,0.2) 0%, transparent 70%);
+    opacity:0;transition:opacity 0.15s;`;
   document.body.appendChild(flash);
-  const style = document.createElement("style");
-  style.textContent = `@keyframes testerApproveFlash {
-    0%   { opacity: 0; }
-    20%  { opacity: 1; }
-    100% { opacity: 0; }
-  }`;
-  document.head.appendChild(style);
-  setTimeout(() => { flash.remove(); style.remove(); }, 900);
+  requestAnimationFrame(() => { flash.style.opacity = "1"; });
+  setTimeout(() => { flash.style.opacity = "0"; }, 300);
+  setTimeout(() => { flash.remove(); }, 500);
+  removeTesterOverlay();
 }
 
 function spawnTesterParticles(container, count) {
@@ -1396,22 +1375,7 @@ function removeTesterOverlay() {
 
 function loadTesterMode() {
   _testerMode = localStorage.getItem("rc_tester_mode") === "1";
-  if (_testerMode) {
-    _testerStatus = "approved";
-    if (!document.getElementById("tester-overlay")) {
-      const overlay = document.createElement("div");
-      overlay.id = "tester-overlay";
-      overlay.className = "tester-overlay";
-      overlay.innerHTML = `
-        <div class="tester-scanline"></div>
-        <div class="tester-vignette"></div>
-        <div class="tester-corner tl"></div>
-        <div class="tester-corner tr"></div>
-        <div class="tester-corner bl"></div>
-        <div class="tester-corner br"></div>`;
-      document.body.appendChild(overlay);
-    }
-  }
+  if (_testerMode) _testerStatus = "approved";
   updateTesterBtn();
 }
 
