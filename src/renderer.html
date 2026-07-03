@@ -681,6 +681,14 @@
           <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
+<div class="s-section-title" id="pref-eng-title" style="display:none;">Engineering</div>
+<div class="s-card gap-8 mb-4" id="pref-eng-card" style="display:none;">
+  <div class="small-note">Lock who can engineer for you. Leave blank to allow any engineer to pick you.</div>
+  <input type="text" id="pref-eng-input" placeholder="Engineer's Discord ID (optional)" />
+  <button onclick="savePreferredEngineer()" class="btn-outline-blue no-grow">🔒 Save Preferred Engineer</button>
+  <div id="pref-eng-status" class="font-9 text-muted min-h-12"></div>
+</div>
+
 <div class="s-section-title">Beta</div>
 <div class="s-card gap-8 mb-4">
   <div class="tester-toggle-row" id="tester-toggle-row">
@@ -1070,6 +1078,7 @@
     let _prevPositions = {};
     let _deltaSeconds = {};
     let _driverDbVersion = null;
+let PREFERRED_ENGINEERS = {};
 
     function updateDeltas(gaps) {
       if (!gaps) return;
@@ -1559,8 +1568,9 @@ evtSource.addEventListener("flag", e => {
         if (tab === "driver" && hasMarshal) launchMarshalPanel(false);
         else if (tab === "marshal" && hasDriver) launchDriverPanel(false);
       }
-if (visible && tab === "driver" && !config.driver) {
+if (visible && tab === "driver") {
   hasDriver = true;
+  config.driver = "";
   showRoleSelectScreen(!!DRIVER_IDS[user.id]); 
 }
       showToast(`✓ ${tab} tab ${visible ? "shown" : "hidden"}`, "ok");
@@ -1694,6 +1704,71 @@ if (visible && tab === "driver" && !config.driver) {
       }
     }
 
+
+    async function loadPreferredEngineers() {
+      if (!apiUrl) return;
+      try {
+        const res = await fetch(`${apiUrl}/driver/preferred-engineers`);
+        if (!res.ok) return;
+        const data = await res.json();
+        PREFERRED_ENGINEERS = data.preferredEngineers || {};
+      } catch (e) { console.warn("[PrefEngineer] Load failed:", e.message); }
+    }
+
+    async function setupPreferredEngineerUI() {
+      const title = document.getElementById("pref-eng-title");
+      const card = document.getElementById("pref-eng-card");
+      const isRacer = hasDriver && config.driver && config.driver !== "__dev__" && !config.engineer;
+      if (!isRacer) {
+        if (title) title.style.display = "none";
+        if (card) card.style.display = "none";
+        return;
+      }
+      title.style.display = "block";
+      card.style.display = "flex";
+      await loadPreferredEngineers();
+      const input = document.getElementById("pref-eng-input");
+      if (input) input.value = PREFERRED_ENGINEERS[config.driver] || "";
+    }
+
+    async function savePreferredEngineer() {
+      const statusEl = document.getElementById("pref-eng-status");
+      const val = document.getElementById("pref-eng-input").value.trim();
+      if (val && !/^\d{17,19}$/.test(val)) {
+        statusEl.style.color = "var(--red)";
+        statusEl.textContent = "❌ Discord ID should be 17–19 digits.";
+        return;
+      }
+      statusEl.style.color = "var(--muted)";
+      statusEl.textContent = "Saving...";
+      try {
+        const res = await fetch(`${apiUrl}/driver/preferred-engineer`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-discord-id": user.id },
+          body: JSON.stringify({ driver: config.driver, preferredEngineerId: val || null }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          PREFERRED_ENGINEERS[config.driver] = val || null;
+          statusEl.style.color = "var(--green)";
+          statusEl.textContent = val ? "✓ Locked to your engineer" : "✓ Open to any engineer";
+          showToast("✓ Preferred engineer saved", "ok");
+        } else {
+          statusEl.style.color = "var(--red)";
+          statusEl.textContent = `✗ ${data.error || "Failed"}`;
+        }
+      } catch {
+        statusEl.style.color = "var(--red)";
+        statusEl.textContent = "✗ Bot unreachable";
+      }
+    }
+
+    function driverOptionHTML(name, info) {
+      const lockedTo = PREFERRED_ENGINEERS[name];
+      const isLocked = lockedTo && lockedTo !== user?.id;
+      const lockIcon = lockedTo ? (isLocked ? " 🔒" : " 🔓") : "";
+      return `<option value="${name}" ${isLocked ? "disabled" : ""}>${name} #${info.number} (${info.callsign})${lockIcon}</option>`;
+    }
 
     function getDriverDB() {
       try {
@@ -2512,12 +2587,21 @@ function chooseRoleEngineer() {
   showEngineerScreen();
 }
  
-    function showEngineerScreen() {
+    async function showEngineerScreen() {
       config.driver = "";
       engineerPending = true;
       isEngineer = false;
       hasDev = user?.id === DEV_USER_ID;
       const screen = document.getElementById("screen-login");
+      screen.innerHTML = `
+    <div class="login-logo">Race<span>Control</span></div>
+    <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">Engineer Setup</div>
+    <div class="login-card"><div class="small-note" style="text-align:center;">Loading driver list...</div></div>`;
+      showScreen("screen-login");
+      updateSwitcher();
+
+      await loadPreferredEngineers();
+
       screen.innerHTML = `
     <div class="login-logo">Race<span>Control</span></div>
     <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);">Engineer Setup</div>
@@ -2529,23 +2613,18 @@ function chooseRoleEngineer() {
 <div class="small-meta">Driver 1 (required)</div>
       <select id="eng-driver-select" class="w-full">
         <option value="">Select a driver...</option>
-        ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) =>
-        `<option value="${name}">${name} #${info.number} (${info.callsign})</option>`
-      ).join("")}
+        ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) => driverOptionHTML(name, info)).join("")}
       </select>
       <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px;">Driver 2 (optional)</div>
       <select id="eng-driver2-select" class="w-full">
         <option value="">None</option>
-        ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) =>
-        `<option value="${name}">${name} #${info.number} (${info.callsign})</option>`
-      ).join("")}
+        ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) => driverOptionHTML(name, info)).join("")}
       </select>
+      <div style="font-size:8px;color:var(--muted);margin-top:2px;">🔒 = locked to another engineer</div>
       <button class="pw-btn" onclick="confirmEngineer()">Continue →</button>
       <button onclick="showRoleSelectScreen(!!DRIVER_IDS[user.id])" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:2px;">← Back</button>       ${hasDev ? `<button onclick="skipEngineerScreen()" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:4px;">⚙️ Skip (dev only)</button>` : ""}
       <div class="login-error" id="eng-error"></div>
     </div>`;
-      showScreen("screen-login");
-      updateSwitcher();
     }
 
     let _flagSounds = {};
@@ -2708,7 +2787,13 @@ function skipEngineerScreen() {
     async function confirmEngineer() {
       const name = document.getElementById("eng-driver-select")?.value;
       if (!name) { document.getElementById("eng-error").textContent = "Please select a driver."; return; }
+      const lockedTo = PREFERRED_ENGINEERS[name];
+      if (lockedTo && lockedTo !== user.id) { document.getElementById("eng-error").textContent = "❌ This driver has locked engineering to someone else."; return; }
       const name2 = document.getElementById("eng-driver2-select")?.value || "";
+      if (name2) {
+        const lockedTo2 = PREFERRED_ENGINEERS[name2];
+        if (lockedTo2 && lockedTo2 !== user.id) { document.getElementById("eng-error").textContent = "❌ Driver 2 has locked engineering to someone else."; return; }
+      }
       if (name2 && name2 === name) { document.getElementById("eng-error").textContent = "Driver 2 must be different from Driver 1."; return; }
       const info = DRIVER_INFO[name];
       const info2 = name2 ? DRIVER_INFO[name2] : null;
@@ -2811,6 +2896,7 @@ function skipEngineerScreen() {
         if (label) label.textContent = volPct + "%";
         updateThemeBtns();
         openSettingsTab('appearance');
+        setupPreferredEngineerUI();
         showScreen("screen-settings");
       }
     }
