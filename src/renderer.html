@@ -706,6 +706,14 @@
       <div><div>Engineer Panel</div><div class="tab-sub">Manage a driver remotely</div></div>
     </button>
   </div>
+  <div id="tester-version-section" class="tester-access-grid" style="display:none;margin-top:6px;">
+    <div class="font-9 text-muted" style="letter-spacing:1px;text-transform:uppercase;">App Version</div>
+    <div id="tester-version-current" class="text-muted-sm" style="padding:2px 2px 4px;"></div>
+    <button class="tester-access-btn" onclick="openVersionPicker()">
+      <span class="tab-icon">🕹️</span>
+      <div><div>Switch Version</div><div class="tab-sub">Install a specific release build</div></div>
+    </button>
+  </div>
 </div>
 
         <div class="s-section-title">About</div>
@@ -1207,7 +1215,7 @@ async function pollTesterStatus() {
       clearInterval(_testerPollInterval);
       _testerStatus = "approved";
       _testerMode = true;
-      localStorage.setItem("rc_tester_mode", "1");
+      sessionStorage.setItem("rc_tester_mode", "1");
       updateTesterBtn();
       playTesterApprovedAnimation();
       showToast("🧪 Tester access granted!", "ok");
@@ -1229,7 +1237,7 @@ function disableTesterMode() {
   _testerStatus = "off";
   _testerRequestId = null;
   if (_testerPollInterval) { clearInterval(_testerPollInterval); _testerPollInterval = null; }
-  localStorage.setItem("rc_tester_mode", "0");
+  sessionStorage.setItem("rc_tester_mode", "0");
   removeTesterOverlay();
   updateTesterBtn();
   showToast("🧪 Tester Mode disabled", "");
@@ -1240,6 +1248,8 @@ function updateTesterBtn() {
   const row = document.getElementById("tester-toggle-row");
   const sub = document.getElementById("tester-label-sub");
   const accessGrid = document.getElementById("tester-access-grid");
+  const versionSection = document.getElementById("tester-version-section");
+  if (!btn) return;
   if (!btn) return;
 
   row.classList.remove("active");
@@ -1262,6 +1272,11 @@ function updateTesterBtn() {
     btn.style.padding = "0";
     if (sub) sub.textContent = "✓ Experimental features unlocked";
     if (accessGrid) accessGrid.style.display = "flex";
+    if (versionSection) {
+      versionSection.style.display = "flex";
+      const cur = document.getElementById("tester-version-current");
+      if (cur) cur.textContent = `Currently running ${document.getElementById("app-version")?.textContent || ""}`;
+    }
   } else if (_testerStatus === "denied") {
     btn.textContent = "DENIED";
     btn.style.background = "rgba(255,23,68,0.15)";
@@ -1269,11 +1284,13 @@ function updateTesterBtn() {
     btn.style.color = "var(--red)";
     if (sub) sub.textContent = "Access was denied.";
     if (accessGrid) accessGrid.style.display = "none";
+    if (versionSection) versionSection.style.display = "none";
   } else {
     btn.textContent = "OFF";
     btn.style.cssText = "";
     if (sub) sub.textContent = "Access experimental features";
     if (accessGrid) accessGrid.style.display = "none";
+    if (versionSection) versionSection.style.display = "none";
   }
 }
 
@@ -1382,7 +1399,7 @@ function removeTesterOverlay() {
 }
 
 function loadTesterMode() {
-  _testerMode = localStorage.getItem("rc_tester_mode") === "1";
+   _testerMode = sessionStorage.getItem("rc_tester_mode") === "1";
   if (_testerMode) _testerStatus = "approved";
   updateTesterBtn();
 }
@@ -2150,6 +2167,14 @@ setInterval(async () => {
       window.api.onCooldownStart((s, slot) => startCooldown(s, slot));
       window.api.onCooldownEnd((slot) => stopCooldown(slot));
       window.api.onPitStateChanged(v => updatePitBtn(v));
+      window.api.onVersionInstallProgress?.(pct => {
+  const el = document.getElementById("version-install-status");
+  if (el) { el.style.color = "var(--blue)"; el.textContent = `Downloading... ${pct}%`; }
+});
+window.api.onVersionInstallError?.(msg => {
+  const el = document.getElementById("version-install-status");
+  if (el) { el.style.color = "var(--red)"; el.textContent = `✗ ${msg}`; }
+});
       window.api.onPitStateChanged2(v => updatePitBtn2(v));
       window.api.onFlagEvent(d => onFlagEvent(d.flag, d));
       window.api.onKeybindFired(action => {
@@ -2779,6 +2804,58 @@ function skipEngineerScreen() {
       }
     }
 
+    function openVersionPicker() {
+  if (_testerStatus !== "approved") return;
+  document.getElementById("version-modal").style.display = "flex";
+  loadReleases();
+}
+function closeVersionPicker() {
+  document.getElementById("version-modal").style.display = "none";
+}
+
+async function loadReleases() {
+  const listEl = document.getElementById("version-list");
+  listEl.innerHTML = "Loading releases...";
+  try {
+    const res = await fetch("https://api.github.com/repos/AleEjx/racecontrol-app/releases");
+    if (!res.ok) { listEl.innerHTML = '<div class="text-error-sm">Failed to load releases.</div>'; return; }
+    const releases = await res.json();
+    const currentVersion = (document.getElementById("app-version")?.textContent || "").replace(/^v/, "");
+    if (!releases.length) { listEl.innerHTML = '<div class="text-muted-sm">No releases found.</div>'; return; }
+    listEl.innerHTML = releases.map(r => {
+      const tag = r.tag_name;
+      const isCurrent = tag.replace(/^v/, "") === currentVersion;
+      const badge = r.prerelease ? '<span class="badge-pill badge-pill-yellow">Pre-release</span>' : '';
+      const date = new Date(r.published_at).toLocaleDateString();
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid ${isCurrent ? "var(--blue)" : "var(--border)"};border-radius:6px;">
+          <div>
+            <div class="font-11 fw-700">${tag} ${badge} ${isCurrent ? '<span class="text-blue font-9">— current</span>' : ''}</div>
+            <div class="font-9 text-muted">${date}</div>
+          </div>
+          <button class="dev-btn no-grow font-9" style="width:auto;padding:5px 10px;" ${isCurrent ? "disabled" : ""} onclick="installReleaseVersion('${tag}')">
+            ${isCurrent ? "Installed" : "Install"}
+          </button>
+        </div>`;
+    }).join("");
+  } catch (e) {
+    listEl.innerHTML = '<div class="text-error-sm">Could not reach GitHub.</div>';
+  }
+}
+
+async function installReleaseVersion(tag) {
+  if (!confirm(`Install ${tag}? RaceControl will close and restart to apply this version.`)) return;
+  const statusEl = document.getElementById("version-install-status");
+  statusEl.style.color = "var(--muted)";
+  statusEl.textContent = `Downloading ${tag}...`;
+  try {
+    await window.api.installReleaseVersion(tag);
+  } catch (e) {
+    statusEl.style.color = "var(--red)";
+    statusEl.textContent = `✗ ${e.message || "Install failed"}`;
+  }
+}
+    
     function goBack() {
       const v = ["driver", "marshal", "dev"];
       if (prevPanel && v.includes(prevPanel)) switchPanel(prevPanel);
