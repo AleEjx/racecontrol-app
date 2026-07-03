@@ -2620,7 +2620,6 @@ function chooseRoleEngineer() {
         <option value="">None</option>
         ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) => driverOptionHTML(name, info)).join("")}
       </select>
-      <div style="font-size:8px;color:var(--muted);margin-top:2px;"></div>
       <button class="pw-btn" onclick="confirmEngineer()">Continue →</button>
       <button onclick="showRoleSelectScreen(!!DRIVER_IDS[user.id])" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:2px;">← Back</button>       ${hasDev ? `<button onclick="skipEngineerScreen()" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:4px;">⚙️ Skip (dev only)</button>` : ""}
       <div class="login-error" id="eng-error"></div>
@@ -2868,9 +2867,12 @@ function skipEngineerScreen() {
       } catch (err) { document.getElementById("pw-error").textContent = "❌ " + err.message; }
     }
 
-    function switchPanel(panel) {
+function switchPanel(panel) {
       if (panel === "driver" && engineerPending && !config.driver) {
-        showScreen("screen-login"); currentPanel = "login"; updateSwitcher(); return;
+        showRoleSelectScreen(!!DRIVER_IDS[user.id]);
+        currentPanel = "login";
+        showToast("⚠️ Choose Racer or Engineer first", "err");
+        return;
       }
       if (panel === "driver") launchDriverPanel(false);
       else if (panel === "marshal") hasMarshal ? launchMarshalPanel(false) : showPasswordScreen();
@@ -2960,11 +2962,16 @@ async function installReleaseVersion(tag) {
       else showScreen("screen-login");
     }
 
-    function updateSwitcher() {
+function updateSwitcher() {
       const show = hasDriver || hasMarshal || hasDev;
       document.getElementById("panel-switcher").style.display = show ? "flex" : "none";
       const driverTabAllowed = hasDriver && (config.driver || engineerPending || hasMarshal);
-      document.getElementById("sw-driver").style.display = (driverTabAllowed && _devTabVisible.driver !== false) ? "" : "none";
+      const swDriverBtn = document.getElementById("sw-driver");
+      swDriverBtn.style.display = (driverTabAllowed && _devTabVisible.driver !== false) ? "" : "none";
+      const driverNeedsChoice = engineerPending && !config.driver;
+      swDriverBtn.style.opacity = driverNeedsChoice ? "0.4" : "";
+      swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
+      swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
       document.getElementById("sw-marshal").style.display = _devTabVisible.marshal !== false ? "" : "none";
       document.getElementById("sw-dev").style.display = hasDev ? "" : "none";
       document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
