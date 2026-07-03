@@ -2325,13 +2325,14 @@ window.api.onVersionInstallError?.(msg => {
         if (apiDisplay) apiDisplay.textContent = apiUrl;
       }
 
-      const saved = sessionStorage.getItem("rc_user") || localStorage.getItem("rc_user");
-      if (saved && apiUrl) {
-        user = JSON.parse(saved);
-        delete user.isAdmin;
-        delete user.roles;
-        await afterLogin();
-      }
+const saved = sessionStorage.getItem("rc_user") || localStorage.getItem("rc_user");
+if (saved && apiUrl) {
+  user = JSON.parse(saved);
+  delete user.isAdmin;
+  delete user.roles;
+  if (!user.driverToken) user.driverToken = user.id;   // backfill stale/cached sessions
+  await afterLogin();
+}
 
       startSSE();
 
