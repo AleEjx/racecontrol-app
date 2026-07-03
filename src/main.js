@@ -170,6 +170,26 @@ function createTray() {
   tray.on("click", () => { mainWindow?.show(); mainWindow?.focus(); });
 }
 
+function enterPits(slot) {
+  if (slot === 1) {
+    inPits = true;
+    sendDriverAction("pitting");
+    mainWindow?.webContents.send("pit-state-changed", true);
+    setTimeout(() => {
+      inPits = false;
+      mainWindow?.webContents.send("pit-state-changed", false);
+    }, 15000);
+  } else {
+    inPits2 = true;
+    sendDriverAction2("pitting");
+    mainWindow?.webContents.send("pit-state-changed2", true);
+    setTimeout(() => {
+      inPits2 = false;
+      mainWindow?.webContents.send("pit-state-changed2", false);
+    }, 15000);
+  }
+}
+
 function registerHotkeys(keybinds) {
   globalShortcut.unregisterAll();
   const { blue_flag, next_lap, pitting, blue_flag2, next_lap2, pitting2 } = keybinds || {};
@@ -184,12 +204,10 @@ function registerHotkeys(keybinds) {
     mainWindow?.webContents.send("keybind-fired", "next_lap");
     sendDriverAction("next_lap");
   });
-  if (pitting) globalShortcut.register(toElectronAccelerator(pitting), () => {
-    if (onCooldown) return;
-    inPits = !inPits;
+if (pitting) globalShortcut.register(toElectronAccelerator(pitting), () => {
+    if (onCooldown || inPits) return;
     mainWindow?.webContents.send("keybind-fired", "pitting");
-    sendDriverAction(inPits ? "pitting" : "in_race");
-    mainWindow?.webContents.send("pit-state-changed", inPits);
+    enterPits(1);
   });
   if (blue_flag2) globalShortcut.register(toElectronAccelerator(blue_flag2), () => {
     if (onCooldown2) return;
@@ -202,11 +220,9 @@ function registerHotkeys(keybinds) {
     sendDriverAction2("next_lap");
   });
 if (pitting2) globalShortcut.register(toElectronAccelerator(pitting2), () => {
-    if (onCooldown2) return;
-    inPits2 = !inPits2;
+    if (onCooldown2 || inPits2) return;
     mainWindow?.webContents.send("keybind-fired", "pitting2");
-    sendDriverAction2(inPits2 ? "pitting" : "in_race");
-    mainWindow?.webContents.send("pit-state-changed2", inPits2);
+    enterPits(2);
   });
 
   const { dnf } = keybinds || {};
@@ -392,7 +408,11 @@ ipcMain.handle("open-oauth", (_, _url) => {
 ipcMain.handle("get-config",     ()      => config);
 ipcMain.handle("save-config",    (_, cfg) => { config = { ...config, ...cfg }; saveConfig(config); if (cfg.keybinds) registerHotkeys(cfg.keybinds); return true; });
 ipcMain.handle("send-action",    (_, action) => sendDriverAction(action));
-ipcMain.handle("toggle-pitting", () => { inPits = !inPits; sendDriverAction(inPits ? "pitting" : "in_race"); mainWindow?.webContents.send("pit-state-changed", inPits); return inPits; });
+ipcMain.handle("toggle-pitting", () => {
+  if (inPits) return inPits;
+  enterPits(1);
+  return inPits;
+});
 ipcMain.handle("minimize-app",   () => mainWindow?.minimize());
 ipcMain.handle("dev-auth-password", () => {
   let secrets = {};
@@ -414,9 +434,8 @@ ipcMain.handle("register-hotkeys",  (_, keybinds) => { registerHotkeys(keybinds)
 ipcMain.handle("suspend-hotkeys",   () => { globalShortcut.unregisterAll(); return true; });
 ipcMain.handle("send-action2",    (_, action) => sendDriverAction2(action));
 ipcMain.handle("toggle-pitting2", () => {
-  inPits2 = !inPits2;
-  sendDriverAction2(inPits2 ? "pitting" : "in_race");
-  mainWindow?.webContents.send("pit-state-changed2", inPits2);
+  if (inPits2) return inPits2;
+  enterPits(2);
   return inPits2;
 });
 ipcMain.handle("resume-hotkeys",    () => { registerHotkeys(config.keybinds); return true; });
