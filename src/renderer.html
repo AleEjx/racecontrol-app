@@ -2620,7 +2620,7 @@ function chooseRoleEngineer() {
         <option value="">None</option>
         ${Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number)).map(([name, info]) => driverOptionHTML(name, info)).join("")}
       </select>
-      <div style="font-size:8px;color:var(--muted);margin-top:2px;">🔒 = locked to another engineer</div>
+      <div style="font-size:8px;color:var(--muted);margin-top:2px;"></div>
       <button class="pw-btn" onclick="confirmEngineer()">Continue →</button>
       <button onclick="showRoleSelectScreen(!!DRIVER_IDS[user.id])" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:2px;">← Back</button>       ${hasDev ? `<button onclick="skipEngineerScreen()" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:4px;">⚙️ Skip (dev only)</button>` : ""}
       <div class="login-error" id="eng-error"></div>
