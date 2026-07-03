@@ -2387,8 +2387,8 @@ window.api.onVersionInstallError?.(msg => {
         } catch (fetchErr) { errEl.style.color = "var(--red)"; errEl.textContent = "❌ Can't reach API. Is the URL still valid?"; showChangeUrlPrompt(); return; }
 
         if (dRes.ok) {
-          user = dData.user;
-          user.driverToken = dData.user.token;
+  user = dData.user;
+  user.driverToken = dData.user.token || user.id;
         } else if (dRes.status === 403 && !dData.disabled) {
           errEl.style.color = "var(--muted)"; errEl.textContent = "Trying marshal login...";
           let mRes, mData;
