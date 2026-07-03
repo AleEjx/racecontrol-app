@@ -10,7 +10,7 @@
 
 <body>
 
-  <!-- Title Bar -->
+  <!-- Title Bar -->function renderSpectateLeaderboard(data) {
   <div class="titlebar">
     <div class="titlebar-left">
       <div class="tl-logo">Race<span>Control</span></div>
@@ -3158,22 +3158,27 @@ function formatLapTime(seconds) {
 async function pollSpectateState() {
   if (!apiUrl) return;
   try {
+    await fetchAttendanceFromServer();
     const res = await fetch(`${apiUrl}/driver/state`);
     if (!res.ok) return;
     const data = await res.json();
-    renderSpectateLeaderboard(data);
+    const filteredDrivers = data.drivers?.filter(d => _attendance[d.name] !== false) || [];
+    const filteredData = { ...data, drivers: filteredDrivers };
+    renderSpectateLeaderboard(filteredData);
     document.getElementById("sp-status-dot").classList.add("live");
     document.getElementById("sp-status-label").textContent = "Live";
     const lapEl = document.getElementById("sp-lap-counter");
-    if (lapEl && data.totalLaps && data.drivers?.length) {
-      const maxLap = Math.max(...data.drivers.map(d => d.lap || 1));
-      lapEl.textContent = `Lap ${maxLap} / ${data.totalLaps}`;
+    if (lapEl && filteredData.totalLaps && filteredData.drivers?.length) {
+      const maxLap = Math.max(...filteredData.drivers.map(d => d.lap || 1));
+      lapEl.textContent = `Lap ${maxLap} / ${filteredData.totalLaps}`;
     } else if (lapEl) lapEl.textContent = "";
   } catch {
     document.getElementById("sp-status-dot").classList.remove("live");
     document.getElementById("sp-status-label").textContent = "Offline";
   }
 }
+
+let _spectateExpandedName = null;
 
 function renderSpectateLeaderboard(data) {
   const el = document.getElementById("sp-leaderboard");
@@ -3185,6 +3190,7 @@ function renderSpectateLeaderboard(data) {
     const pos = i + 1;
     const team = getTeamFromCallsign(d.callsign);
     const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : null;
+    const expandedClass = d.name === _spectateExpandedName ? " expanded" : "";
 
     const pitLine = d.pitCount > 0
       ? `🔧 Driver has pitted <b>${d.pitCount === 1 ? "once" : d.pitCount + " times"}</b>${d.lastPitLap ? ` — last on lap ${d.lastPitLap}` : ""}`
@@ -3200,7 +3206,7 @@ function renderSpectateLeaderboard(data) {
       : `<div class="sp-detail-sub">No best lap recorded yet.</div>`;
 
     return `
-      <div class="sp-row" id="sp-row-${i}" onclick="toggleSpectateRow(${i})">
+      <div class="sp-row${expandedClass}" id="sp-row-${i}" data-name="${d.name}" onclick="toggleSpectateRow('${d.name}')">
         <div class="sp-row-head" style="border-left:3px solid ${tc || "var(--border)"};">
           <div style="width:18px;font-weight:900;font-size:13px;color:var(--muted);text-align:center;">${pos}</div>
           <div style="flex:1;min-width:0;">
@@ -3220,10 +3226,10 @@ function renderSpectateLeaderboard(data) {
   }).join("");
 }
 
-function toggleSpectateRow(i) {
-  document.querySelectorAll(".sp-row").forEach((row, idx) => {
-    if (idx === i) row.classList.toggle("expanded");
-    else row.classList.remove("expanded");
+function toggleSpectateRow(name) {
+  _spectateExpandedName = (_spectateExpandedName === name) ? null : name;
+  document.querySelectorAll(".sp-row").forEach(row => {
+    row.classList.toggle("expanded", row.dataset.name === _spectateExpandedName);
   });
 }
 
