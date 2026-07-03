@@ -3063,6 +3063,9 @@ function updateSwitcher() {
         checkRaceSummaryTriggers(data);
         if (data.gaps) updateDeltas(data.gaps);
 
+        const filtered = (data.drivers || []).filter(d => _attendance[d.name] !== false);
+        renderLeaderboard({ ...data, drivers: filtered });
+
         if (config.driver) {
           const myDriver = data.drivers?.find(d => d.name === config.driver);
           if (myDriver) updatePitBtn(myDriver.inPits);
