@@ -345,23 +345,6 @@
           Loading...</div>
         <button class="dev-btn mt-4 font-9 no-grow" onclick="clearLocalEngineers()">🗑️ Clear Local Engineers</button>
       </div>
-
-      <div class="dev-card">
-        <div class="dev-title">Tab Visibility</div>
-        <div class="flex-col-gap-6 mt-4">
-          <div
-            class="panel-row-compact">
-            <span class="font-11">🏎️ Driver Tab</span>
-            <button id="dev-toggle-driver-tab" onclick="devToggleTab('driver')" class="toggle-button"></button>
-          </div>
-          <div
-            class="panel-row-compact">
-            <span class="font-11">🏁 Marshal Tab</span>
-            <button id="dev-toggle-marshal-tab" onclick="devToggleTab('marshal')" class="toggle-button"></button>
-          </div>
-        </div>
-      </div>
-
       <div class="dev-card">
         <div class="dev-title">API Stats</div>
         <div id="dev-stats">
@@ -739,6 +722,23 @@
       <div><div>Switch Version</div><div class="tab-sub">Install a specific release build</div></div>
     </button>
   </div>
+</div>
+
+<div class="s-section-title">Tab Visibility</div>
+<div class="s-card gap-8 mb-4">
+  <div class="card-row-between">
+    <span class="font-11">🏎️ Driver Tab</span>
+    <button id="utab-driver-btn" onclick="toggleUserTab('driver')" class="toggle-button"></button>
+  </div>
+  <div class="card-row-between">
+    <span class="font-11">🏁 Marshal Tab</span>
+    <button id="utab-marshal-btn" onclick="toggleUserTab('marshal')" class="toggle-button"></button>
+  </div>
+  <div class="card-row-between">
+    <span class="font-11">👁️ Spectator Tab</span>
+    <button id="utab-spectate-btn" onclick="toggleUserTab('spectate')" class="toggle-button"></button>
+  </div>
+  <div class="small-note">Hide tabs you don't use from the top switcher. This only affects your view.</div>
 </div>
 
         <div class="s-section-title">About</div>
@@ -1524,6 +1524,43 @@ evtSource.addEventListener("flag", e => {
     }
 
 
+    let _userTabPrefs = { driver: true, marshal: true, spectate: true };
+
+function loadUserTabPrefs() {
+  try {
+    const saved = localStorage.getItem("rc_user_tab_prefs");
+    if (saved) _userTabPrefs = { ..._userTabPrefs, ...JSON.parse(saved) };
+  } catch { }
+  updateUserTabToggleBtns();
+}
+
+function updateUserTabToggleBtns() {
+  [["driver", "utab-driver-btn"], ["marshal", "utab-marshal-btn"], ["spectate", "utab-spectate-btn"]].forEach(([key, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const on = _userTabPrefs[key] !== false;
+    btn.textContent = on ? "ON" : "OFF";
+    btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+    btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+    btn.style.color = on ? "var(--green)" : "var(--red)";
+  });
+}
+
+function toggleUserTab(tab) {
+  const wasOn = _userTabPrefs[tab] !== false;
+  _userTabPrefs[tab] = !wasOn;
+  localStorage.setItem("rc_user_tab_prefs", JSON.stringify(_userTabPrefs));
+  updateUserTabToggleBtns();
+  updateSwitcher();
+
+  if (!_userTabPrefs[tab] && currentPanel === tab) {
+    if (tab === "driver" && hasMarshal) launchMarshalPanel(false);
+    else if (tab === "marshal" && hasDriver) launchDriverPanel(false);
+    else launchSpectatePanel(false);
+  }
+  showToast(`✓ ${tab} tab ${_userTabPrefs[tab] ? "shown" : "hidden"}`, "ok");
+}
+    
     function filterMarshalLeaderboard(q) {
       const rows = document.querySelectorAll("#m-leaderboard .lb-row");
       const term = q.toLowerCase().trim();
@@ -1572,44 +1609,11 @@ evtSource.addEventListener("flag", e => {
       }
     }
 
-    let _devTabVisible = { driver: true, marshal: true };
-
-    function devToggleTab(tab) {
-      _devTabVisible[tab] = !_devTabVisible[tab];
-      const visible = _devTabVisible[tab];
-      localStorage.setItem("rc_dev_tabs", JSON.stringify(_devTabVisible));
-      const swBtn = document.getElementById(`sw-${tab}`);
-      if (swBtn) swBtn.style.display = visible ? "" : "none";
-      updateDevTabBtns();
-      if (!visible && currentPanel === tab) {
-        if (tab === "driver" && hasMarshal) launchMarshalPanel(false);
-        else if (tab === "marshal" && hasDriver) launchDriverPanel(false);
-      }
-if (visible && tab === "driver") {
-  hasDriver = true;
-  config.driver = "";
-  showRoleSelectScreen(!!DRIVER_IDS[user.id]); 
-}
-      showToast(`✓ ${tab} tab ${visible ? "shown" : "hidden"}`, "ok");
-    }
-
     function clearLocalEngineers() {
       localStorage.removeItem("rc_engineers");
       const engEl = document.getElementById("dev-engineers");
       if (engEl) engEl.innerHTML = '<div class="text-muted">No engineers active.</div>';
       showToast("✓ Local engineers cleared", "ok");
-    }
-
-    function updateDevTabBtns() {
-      ["driver", "marshal"].forEach(tab => {
-        const btn = document.getElementById(`dev-toggle-${tab}-tab`);
-        if (!btn) return;
-        const visible = _devTabVisible[tab] !== false;
-        btn.textContent = visible ? "VISIBLE" : "HIDDEN";
-        btn.style.background = visible ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
-        btn.style.borderColor = visible ? "var(--green)" : "var(--red)";
-        btn.style.color = visible ? "var(--green)" : "var(--red)";
-      });
     }
 
     function renderAttendance() {
@@ -1659,21 +1663,6 @@ if (visible && tab === "driver") {
       if (!_lastRaceState?.drivers?.length) return;
       const filtered = _lastRaceState.drivers.filter(d => _attendance[d.name] !== false);
       renderLeaderboard({ ..._lastRaceState, drivers: filtered });
-    }
-
-    function loadDevTabPrefs() {
-      try {
-        const saved = localStorage.getItem("rc_dev_tabs");
-        if (saved) {
-          _devTabVisible = JSON.parse(saved);
-          ["driver", "marshal"].forEach(tab => {
-            if (_devTabVisible[tab] === false) {
-              const swBtn = document.getElementById(`sw-${tab}`);
-              if (swBtn) swBtn.style.display = "none";
-            }
-          });
-        }
-      } catch { }
     }
 
     // DD
@@ -2360,7 +2349,7 @@ window.api.onVersionInstallError?.(msg => {
         updatePreview();
       }, 600);
 
-      loadDevTabPrefs();
+      
       loadFlagSounds();
       loadToolboxPrefs();
       loadKeybindSounds();
@@ -2368,6 +2357,7 @@ window.api.onVersionInstallError?.(msg => {
       loadTesterMode();
       loadThemePrefs();
       loadVolumePrefs();
+      loadUserTabPrefs(); 
 
 
       _initHotkeyPauseObserver();
@@ -2915,7 +2905,7 @@ function switchPanel(panel) {
       else if (panel === "dev") {
         document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
         document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
-        showScreen("screen-dev"); currentPanel = "dev"; updateSwitcher(); loadDevInfo(); updateDevTabBtns();
+        showScreen("screen-dev"); currentPanel = "dev"; updateSwitcher(); loadDevInfo();
       }
       else if (panel === "settings") {
         document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
@@ -2933,6 +2923,7 @@ function switchPanel(panel) {
         if (slider) slider.value = volPct;
         if (label) label.textContent = volPct + "%";
         updateThemeBtns();
+        updateUserTabToggleBtns();
         openSettingsTab('appearance');
         showScreen("screen-settings");
       }
@@ -3003,13 +2994,13 @@ function updateSwitcher() {
       document.getElementById("panel-switcher").style.display = show ? "flex" : "none";
       const driverTabAllowed = hasDriver && (config.driver || engineerPending || hasMarshal);
       const swDriverBtn = document.getElementById("sw-driver");
-      swDriverBtn.style.display = (driverTabAllowed && _devTabVisible.driver !== false) ? "" : "none";
+      swDriverBtn.style.display = (driverTabAllowed && _userTabPrefs.driver !== false) ? "" : "none";
       const driverNeedsChoice = engineerPending && !config.driver;
       swDriverBtn.style.opacity = driverNeedsChoice ? "0.4" : "";
       swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
       swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
-      document.getElementById("sw-marshal").style.display = _devTabVisible.marshal !== false ? "" : "none";
-      document.getElementById("sw-spectate").style.display = "";
+      document.getElementById("sw-marshal").style.display = _userTabPrefs.marshal !== false ? "" : "none";
+      document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
       document.getElementById("sw-dev").style.display = hasDev ? "" : "none";
       document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
       const aId = currentPanel === "driver" ? "sw-driver"
@@ -3275,7 +3266,6 @@ function filterSpectateLeaderboard(q) {
         { id: "dev-mock-lb", label: "Mock Leaderboard (dev)" },
         { id: "dev-flag-text", label: "Custom Flag (dev)" },
         { id: "dev-engineers", label: "Engineering Assignments" },
-        { id: "dev-toggle-driver-tab", label: "Tab Visibility" },
         { id: "dev-drivers-card", label: "Driver Database" },
         { id: "dev-watchmarshal", label: "WatchMarshal Toggle" },
         { id: "action-log-toggle-btn", label: "Action Logging" },
