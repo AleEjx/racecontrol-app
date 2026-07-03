@@ -3058,8 +3058,6 @@ function updateSwitcher() {
         }
         const data = await res.json();
         _lastRaceState = data;
-        const data = await res.json();
-        _lastRaceState = data;
         checkRaceSummaryTriggers(data);
         if (data.gaps) updateDeltas(data.gaps);
 
