@@ -681,14 +681,6 @@
           <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
-<div class="s-section-title" id="pref-eng-title" style="display:none;">Engineering</div>
-<div class="s-card gap-8 mb-4" id="pref-eng-card" style="display:none;">
-  <div class="small-note">Lock who can engineer for you. Leave blank to allow any engineer to pick you.</div>
-  <input type="text" id="pref-eng-input" placeholder="Engineer's Discord ID (optional)" />
-  <button onclick="savePreferredEngineer()" class="btn-outline-blue no-grow">🔒 Save Preferred Engineer</button>
-  <div id="pref-eng-status" class="font-9 text-muted min-h-12"></div>
-</div>
-
 <div class="s-section-title">Beta</div>
 <div class="s-card gap-8 mb-4">
   <div class="tester-toggle-row" id="tester-toggle-row">
@@ -2904,7 +2896,6 @@ function skipEngineerScreen() {
         if (label) label.textContent = volPct + "%";
         updateThemeBtns();
         openSettingsTab('appearance');
-        setupPreferredEngineerUI();
         showScreen("screen-settings");
       }
     }
