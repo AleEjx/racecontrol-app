@@ -2905,6 +2905,13 @@ function switchPanel(panel) {
       }
       if (panel === "driver") launchDriverPanel(false);
       else if (panel === "marshal") hasMarshal ? launchMarshalPanel(false) : showPasswordScreen();
+
+      else if (panel === "spectate") {
+        document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
+        document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
+        launchSpectatePanel();
+      }
+
       else if (panel === "dev") {
         document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
         document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
@@ -3002,13 +3009,18 @@ function updateSwitcher() {
       swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
       swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
       document.getElementById("sw-marshal").style.display = _devTabVisible.marshal !== false ? "" : "none";
+      document.getElementById("sw-spectate").style.display = "";
       document.getElementById("sw-dev").style.display = hasDev ? "" : "none";
       document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
-      const aId = currentPanel === "driver" ? "sw-driver" : currentPanel === "marshal" ? "sw-marshal" : "sw-dev";
+      const aId = currentPanel === "driver" ? "sw-driver"
+        : currentPanel === "marshal" ? "sw-marshal"
+        : currentPanel === "spectate" ? "sw-spectate"
+        : "sw-dev";
       document.getElementById(aId)?.classList.add("active");
       const badge = document.getElementById("mode-badge");
       if (currentPanel === "driver") { badge.textContent = "Driver"; badge.className = "tl-badge driver"; badge.style.display = ""; }
       if (currentPanel === "marshal") { badge.textContent = "Marshal"; badge.className = "tl-badge marshal"; badge.style.display = ""; }
+      if (currentPanel === "spectate") { badge.textContent = "Spectate"; badge.className = "tl-badge"; badge.style.display = ""; }
       if (currentPanel === "dev") { badge.textContent = "Dev"; badge.className = "tl-badge dev"; badge.style.display = ""; }
     }
 
@@ -3128,6 +3140,106 @@ function updateSwitcher() {
       if (label) label.textContent = px + 'px';
     }
 
+    let _spectatePollInterval = null;
+
+function launchSpectatePanel(startPoll = true) {
+  showScreen("screen-spectate");
+  currentPanel = "spectate";
+  updateSwitcher();
+  if (startPoll) {
+    if (_spectatePollInterval) clearInterval(_spectatePollInterval);
+    pollSpectateState();
+    _spectatePollInterval = setInterval(pollSpectateState, 3000);
+  }
+}
+
+function formatLapTime(seconds) {
+  if (typeof seconds !== "number" || isNaN(seconds)) return "–";
+  const mins = Math.floor(seconds / 60);
+  const secs = (seconds % 60).toFixed(2);
+  return mins > 0 ? `${mins}:${secs.padStart(5, "0")}` : `${secs}s`;
+}
+
+async function pollSpectateState() {
+  if (!apiUrl) return;
+  try {
+    const res = await fetch(`${apiUrl}/driver/state`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderSpectateLeaderboard(data);
+    document.getElementById("sp-status-dot").classList.add("live");
+    document.getElementById("sp-status-label").textContent = "Live";
+    const lapEl = document.getElementById("sp-lap-counter");
+    if (lapEl && data.totalLaps && data.drivers?.length) {
+      const maxLap = Math.max(...data.drivers.map(d => d.lap || 1));
+      lapEl.textContent = `Lap ${maxLap} / ${data.totalLaps}`;
+    } else if (lapEl) lapEl.textContent = "";
+  } catch {
+    document.getElementById("sp-status-dot").classList.remove("live");
+    document.getElementById("sp-status-label").textContent = "Offline";
+  }
+}
+
+function renderSpectateLeaderboard(data) {
+  const el = document.getElementById("sp-leaderboard");
+  if (!data.drivers?.length) {
+    el.innerHTML = '<div class="placeholder-text">Waiting for race...</div>';
+    return;
+  }
+  el.innerHTML = data.drivers.map((d, i) => {
+    const pos = i + 1;
+    const team = getTeamFromCallsign(d.callsign);
+    const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : null;
+
+    const pitLine = d.pitCount > 0
+      ? `🔧 Driver has pitted <b>${d.pitCount === 1 ? "once" : d.pitCount + " times"}</b>${d.lastPitLap ? ` — last on lap ${d.lastPitLap}` : ""}`
+      : `Driver has not yet pitted`;
+
+    const bestLapHtml = d.bestLap
+      ? `<div class="sp-bestlap">
+           <div class="sp-bestlap-badge">🏆</div>
+           <div>
+             <div class="sp-detail-text">Best lap this race was on lap ${d.bestLap.lap}, hitting a ${formatLapTime(d.bestLap.time)} lap.</div>
+           </div>
+         </div>`
+      : `<div class="sp-detail-sub">No best lap recorded yet.</div>`;
+
+    return `
+      <div class="sp-row" id="sp-row-${i}" onclick="toggleSpectateRow(${i})">
+        <div class="sp-row-head" style="border-left:3px solid ${tc || "var(--border)"};">
+          <div style="width:18px;font-weight:900;font-size:13px;color:var(--muted);text-align:center;">${pos}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:800;">${d.name} <span style="font-size:9px;color:var(--muted);font-weight:400;">#${d.number}</span></div>
+            <div style="font-size:9px;color:var(--muted);">${d.callsign}</div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);">${d.dnf ? "DNF" : d.finished ? "Finished 🏁" : `Lap ${d.lap || 1}`}</div>
+          <span class="sp-chevron">▾</span>
+        </div>
+        <div class="sp-details">
+          <div class="sp-detail-line"><span class="sp-detail-icon">🔧</span><span class="sp-detail-text">${pitLine}</span></div>
+          ${bestLapHtml}
+          <div class="sp-detail-line"><span class="sp-detail-icon">🏁</span><span class="sp-detail-text">The driver is currently on lap ${d.lap || 1}.</span></div>
+          <div class="sp-detail-line"><span class="sp-detail-icon">🕐</span><span class="sp-detail-text">Their last lap was a ${formatLapTime(d.lastLapDuration)}.</span></div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function toggleSpectateRow(i) {
+  document.querySelectorAll(".sp-row").forEach((row, idx) => {
+    if (idx === i) row.classList.toggle("expanded");
+    else row.classList.remove("expanded");
+  });
+}
+
+function filterSpectateLeaderboard(q) {
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll("#sp-leaderboard .sp-row").forEach(row => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = (!term || text.includes(term)) ? "" : "none";
+  });
+}
+    
     function launchMarshalPanel(startPoll = true) {
       showScreen("screen-marshal"); currentPanel = "marshal";
       document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "");
