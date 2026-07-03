@@ -445,10 +445,24 @@ ipcMain.handle("install-release-version", async (event, tag) => {
       sender.send("version-install-progress", pct);
     });
 
-    if (process.platform === "win32") {
-      execFile(destPath, [], { detached: true, stdio: "ignore" }).unref();
+if (process.platform === "win32") {
+      const pid = process.pid;
+      const batPath = path.join(os.tmpdir(), "rc_update.bat");
+      const batScript = `@echo off
+:wait
+tasklist /FI "PID eq ${pid}" | find "${pid}" >nul
+if not errorlevel 1 (
+  timeout /t 1 /nobreak >nul
+  goto wait
+)
+start "" "${destPath}"
+del "%~f0"
+`;
+      fs.writeFileSync(batPath, batScript);
+      execFile("cmd.exe", ["/c", batPath], { detached: true, stdio: "ignore", windowsHide: true }).unref();
       globalShortcut.unregisterAll();
-      app.quit();
+      mainWindow?.destroy();
+      app.exit(0);
     } else if (process.platform === "darwin") {
       await shell.openPath(destPath);
       globalShortcut.unregisterAll();
