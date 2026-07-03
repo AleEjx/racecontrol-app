@@ -2509,6 +2509,9 @@ async function afterLogin() {
     document.getElementById("api-url-display").style.display = "block";
     document.getElementById("change-url-btn").style.display = "block";
   }
+  config.driver = "";
+  config.engineer = false;
+  isEngineer = false;
   const driverName = DRIVER_IDS[user.id];
   hasDriver = !!driverName;
   showRoleSelectScreen(!!driverName);
