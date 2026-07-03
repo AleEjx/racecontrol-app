@@ -266,15 +266,19 @@ if (!stateData.raceStarted) {
   } catch {
   }
   try {
+    if (!config.driverToken) {
+      onCooldown = false;
+      mainWindow?.webContents.send("toast", { msg: "⚠️ Driver session expired — re-login in Settings", type: "err" });
+      return;
+    }
     const res = await fetch(`${config.apiUrl}/driver/action`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-discord-id": config.discordId, "x-discord-token": config.driverToken },
 body: JSON.stringify({
   action,
   driver:    config.driver,
   callsign:  config.callsign,
   number:    config.number,
-  discordId: config.discordId,
   username:  config.username || config.driver,
   engineer:  config.engineer || false,
 }),
@@ -284,8 +288,13 @@ if (res.ok) {
       mainWindow?.webContents.send("toast", { msg: `✓ ${labels[action]}`, type: "ok" });
       mainWindow?.webContents.send("cooldown-start", 7, 1);
       setTimeout(() => { onCooldown = false; mainWindow?.webContents.send("cooldown-end", 1); }, 7000);
+    } else {
+      onCooldown = false;
+      const data = await res.json().catch(() => ({}));
+      mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"}`, type: "err" });
     }
   } catch {
+    onCooldown = false;
     mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" });
   }
 }
@@ -308,16 +317,20 @@ if (!stateData.raceStarted) {
       return;
     }
   } catch {}
+  if (!config.driverToken) {
+    onCooldown2 = false;
+    mainWindow?.webContents.send("toast", { msg: "⚠️ Driver session expired — re-login in Settings", type: "err" });
+    return;
+  }
   try {
     const res = await fetch(`${config.apiUrl}/driver/action`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-discord-id": config.discordId, "x-discord-token": config.driverToken },
       body: JSON.stringify({
         action,
         driver:    config.driver2,
         callsign:  config.callsign2,
         number:    config.number2,
-        discordId: config.discordId,
         username:  config.username || config.driver2,
         engineer:  config.engineer || false,
       }),
@@ -327,8 +340,13 @@ if (!stateData.raceStarted) {
       mainWindow?.webContents.send("toast", { msg: `✓ ${labels[action]} (D2)`, type: "ok" });
       mainWindow?.webContents.send("cooldown-start", 7, 2);
       setTimeout(() => { onCooldown2 = false; mainWindow?.webContents.send("cooldown-end", 2); }, 7000);
+    } else {
+      onCooldown2 = false;
+      const data = await res.json().catch(() => ({}));
+      mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"} (D2)`, type: "err" });
     }
   } catch {
+    onCooldown2 = false;
     mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" });
   }
 }
