@@ -724,6 +724,7 @@
   </div>
 </div>
 
+<div id="tab-visibility-section" style="display:none;">
 <div class="s-section-title">Tab Visibility</div>
 <div class="s-card gap-8 mb-4">
   <div class="card-row-between">
@@ -739,6 +740,7 @@
     <button id="utab-spectate-btn" onclick="toggleUserTab('spectate')" class="toggle-button"></button>
   </div>
   <div class="small-note">Hide tabs you don't use from the top switcher. This only affects your view.</div>
+</div>
 </div>
 
         <div class="s-section-title">About</div>
@@ -3004,7 +3006,7 @@ function updateSwitcher() {
       swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
       swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
       document.getElementById("sw-marshal").style.display = _userTabPrefs.marshal !== false ? "" : "none";
-      document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
+      document.getElementById("sw-spectate").style.display = "none"; // temporarily hidden
       document.getElementById("sw-dev").style.display = hasDev ? "" : "none";
       document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
       const aId = currentPanel === "driver" ? "sw-driver"
