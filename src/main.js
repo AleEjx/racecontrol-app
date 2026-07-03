@@ -137,8 +137,11 @@ function createWindow() {
     title: "RaceLeague Control",
   });
 
-  mainWindow.loadFile(path.join(__dirname, "renderer.html"));
-  if (config.alwaysOnTop) mainWindow.setAlwaysOnTop(true, "screen-saver");
+mainWindow.loadFile(path.join(__dirname, "renderer.html"));
+if (config.alwaysOnTop) mainWindow.setAlwaysOnTop(true, "screen-saver");
+
+mainWindow.on("focus", () => mainWindow.webContents.invalidate());
+mainWindow.on("resize", () => mainWindow.webContents.invalidate());
 
   mainWindow.on("close", () => {
     globalShortcut.unregisterAll();
@@ -403,7 +406,7 @@ ipcMain.handle("toggle-top", () => {
   saveConfig(config);
   return config.alwaysOnTop;
 });
-ipcMain.handle("open-devtools",  () => mainWindow?.webContents.openDevTools());
+ipcMain.handle("open-devtools",  () => mainWindow?.webContents.openDevTools({ mode: "undocked" }));
 ipcMain.handle("install-update", () => autoUpdater.quitAndInstall());
 ipcMain.handle("check-version",  () => app.getVersion());
 ipcMain.handle("flag-broadcast", (_, data) => mainWindow?.webContents.send("flag-event", data));
