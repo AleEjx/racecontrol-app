@@ -3193,7 +3193,7 @@ function updateSwitcher() {
         lapStatsHtml = `
           <div style="font-size:11px;line-height:1.7;">Your fastest lap was <b style="color:var(--green);">${formatLapTime(fastest.time)}</b>, which was lap ${fastest.lap}.</div>
           <div style="font-size:11px;line-height:1.7;">Your slowest lap was <b style="color:var(--red);">${formatLapTime(slowest.time)}</b>, which was lap ${slowest.lap}.</div>
-          <div style="font-size:11px;line-height:1.7;">You averaged about <b>${formatLapTime(avg)}</b>, over the course of ${laps.length} lap${laps.length === 1 ? "" : "s"}.</div>
+          <div style="font-size:11px;line-height:1.7;">You averaged about <b>${formatLapTime(avg)}</b>, over the course of ${laps.length} lap${laps.length === 1 ? "" : "s"}(excluding laps you did a pit on).</div>
         `;
       }
 
