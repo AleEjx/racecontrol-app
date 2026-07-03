@@ -928,7 +928,7 @@
     </div>
   </div>
 
-  <div id="driver-export-modal" class="modal">
+<div id="driver-export-modal" class="modal">
     <div class="modal-panel">
       <div class="flex-row-between">
         <div class="modal-heading">Export — paste into renderer.html</div>
@@ -939,6 +939,18 @@
       <div class="small-note">Replace your DRIVER_IDS and DRIVER_INFO constants with this:</div>
       <pre id="driver-export-code" class="code-block"></pre>
       <button class="save-btn" onclick="devCopyDriverExport()">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+
+  <div id="version-modal" class="modal">
+    <div class="modal-panel modal-panel-scroll">
+      <div class="flex-row-between">
+        <div class="font-13 fw-800 text-blue">🕹️ Switch App Version</div>
+        <button onclick="closeVersionPicker()" class="modal-close">✕</button>
+      </div>
+      <div class="small-note">Installs a specific release from GitHub. The app will restart to apply it.</div>
+      <div id="version-list" class="flex-col-gap-6 mt-4">Loading releases...</div>
+      <div id="version-install-status" class="font-9 text-muted text-center min-h-12"></div>
     </div>
   </div>
 
@@ -1249,7 +1261,6 @@ function updateTesterBtn() {
   const sub = document.getElementById("tester-label-sub");
   const accessGrid = document.getElementById("tester-access-grid");
   const versionSection = document.getElementById("tester-version-section");
-  if (!btn) return;
   if (!btn) return;
 
   row.classList.remove("active");
