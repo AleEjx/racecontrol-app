@@ -2578,6 +2578,7 @@ function chooseRoleRacer() {
   config.number = info.number;
   config.callsign = info.callsign;
   config.discordId = user.id;
+  config.driverToken = user.driverToken || null;
   config.engineer = false;
   isEngineer = false;
   hasDriver = true;
@@ -2806,7 +2807,7 @@ function skipEngineerScreen() {
       const info2 = name2 ? DRIVER_INFO[name2] : null;
       config.driver = name; config.number = info.number; config.callsign = info.callsign;
       config.driver2 = name2; config.number2 = info2?.number || ""; config.callsign2 = info2?.callsign || "";
-      config.discordId = user.id; config.engineer = true; isEngineer = true;
+      config.discordId = user.id; config.driverToken = user.driverToken || null; config.engineer = true; isEngineer = true;
       engineerPending = false;
       window.api.saveConfig(config);
 
@@ -3633,13 +3634,14 @@ if (flag === "__driver_db_update__") {
         const driver = _dnfSlot === 1 ? config.driver : config.driver2;
         const number = _dnfSlot === 1 ? config.number : config.number2;
         const callsign = _dnfSlot === 1 ? config.callsign : config.callsign2;
+        if (!config.driverToken) { showToast("❌ Driver session expired — re-login in Settings", "err"); return; }
         try {
           const res = await fetch(`${apiUrl}/driver/action`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-discord-id": config.discordId, "x-discord-token": config.driverToken },
             body: JSON.stringify({
               action: "dnf", driver, number, callsign,
-              discordId: config.discordId, username: config.username || driver,
+              username: config.username || driver,
               engineer: config.engineer || false,
             }),
           });
