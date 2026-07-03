@@ -75,8 +75,14 @@
   <div class="screen" id="screen-driver">
     <div id="flag-notif-driver" class="pt-8 px-12 pb-0"></div>
     <div id="ac-driver-prompt" class="hidden panel-padding-x"></div>
-    <div id="cooldown-bar">
+<div id="cooldown-bar">
       <div id="cooldown-fill"></div>
+    </div>
+    <div id="race-summary-bar" style="display:none;align-items:center;gap:8px;padding:6px 12px;background:rgba(41,121,255,0.1);border-bottom:1px solid rgba(41,121,255,0.3);">
+      <span id="race-summary-label" style="font-size:10px;font-weight:700;color:var(--blue);flex-shrink:0;"></span>
+      <div style="flex:1;height:4px;background:rgba(41,121,255,0.15);border-radius:2px;overflow:hidden;">
+        <div id="race-summary-fill" style="height:100%;width:100%;background:var(--blue);"></div>
+      </div>
     </div>
     <div class="scroll-body">
       <div class="status-row">
@@ -738,7 +744,16 @@
     <span class="font-11">👁️ Spectator Tab</span>
     <button id="utab-spectate-btn" onclick="toggleUserTab('spectate')" class="toggle-button"></button>
   </div>
-  <div class="small-note">Hide tabs you don't use from the top switcher. This only affects your view.</div>
+<div class="small-note">Hide tabs you don't use from the top switcher. This only affects your view.</div>
+</div>
+
+<div class="s-section-title">Race Summary</div>
+<div class="s-card gap-8 mb-4">
+  <div class="card-row-between">
+    <span class="font-11">🏁 Show summary after finishing</span>
+    <button id="race-summary-toggle-btn" onclick="toggleRaceSummaryPref()" class="toggle-button"></button>
+  </div>
+  <div class="small-note">Shows your blue flags, pit stops, lap times, and finishing position 10 seconds after you cross the checkered flag.</div>
 </div>
 
         <div class="s-section-title">About</div>
@@ -790,6 +805,10 @@
         <button onclick="submitDNF()" class="btn-danger flex-1">Yes, DNF</button>
       </div>
     </div>
+  </div>
+
+<div id="race-summary-modal" class="modal">
+    <div class="modal-panel modal-panel-scroll" id="race-summary-body"></div>
   </div>
 
   <div id="toast"></div>
@@ -1095,6 +1114,12 @@
     let _prevPositions = {};
     let _deltaSeconds = {};
     let _driverDbVersion = null;
+    let _raceSummaryEnabled = true;
+    let _raceSummaryShown = { 1: false, 2: false };
+    let _summaryQueue = [];
+    let _summaryActive = false;
+    let _summaryCountdownTimer = null;
+    let _prevRaceStartedForSummary = false;
 let PREFERRED_ENGINEERS = {};
 
     function updateDeltas(gaps) {
@@ -2359,6 +2384,7 @@ if (saved && apiUrl) {
       loadTesterMode();
       loadThemePrefs();
       loadVolumePrefs();
+      loadRaceSummaryPref();
 
 
       _initHotkeyPauseObserver();
@@ -2928,8 +2954,8 @@ function switchPanel(panel) {
         if (label) label.textContent = volPct + "%";
         updateThemeBtns();
         updateUserTabToggleBtns();
+        updateRaceSummaryToggleBtn();
         openSettingsTab('appearance');
-        showScreen("screen-settings");
       }
     }
 
@@ -3032,9 +3058,10 @@ function updateSwitcher() {
         }
         const data = await res.json();
         _lastRaceState = data;
+        const data = await res.json();
+        _lastRaceState = data;
+        checkRaceSummaryTriggers(data);
         if (data.gaps) updateDeltas(data.gaps);
-        const filteredDrivers = data.drivers?.filter(d => _attendance[d.name] !== false) || [];
-        renderLeaderboard({ ...data, drivers: filteredDrivers });
 
         if (config.driver) {
           const myDriver = data.drivers?.find(d => d.name === config.driver);
@@ -3085,6 +3112,149 @@ function updateSwitcher() {
       }
     }
 
+    function checkRaceSummaryTriggers(data) {
+      const started = !!data.raceStarted;
+      if (started && !_prevRaceStartedForSummary) {
+        _raceSummaryShown = { 1: false, 2: false };
+        _summaryQueue = [];
+      }
+      _prevRaceStartedForSummary = started;
+      if (!started || !data.drivers?.length) return;
+
+      const slots = [];
+      if (config.driver)  slots.push({ slot: 1, name: config.driver });
+      if (config.driver2) slots.push({ slot: 2, name: config.driver2 });
+
+      slots.forEach(({ slot, name }) => {
+        if (_raceSummaryShown[slot]) return;
+        const d = data.drivers.find(x => x.name === name);
+        if (!d?.finished) return;
+        _raceSummaryShown[slot] = true;
+        if (!_raceSummaryEnabled) return;
+        _summaryQueue.push({
+          slot, name,
+          snapshot: JSON.parse(JSON.stringify(d)),
+          totalDrivers: data.drivers.length,
+        });
+        _processSummaryQueue();
+      });
+    }
+
+    function _processSummaryQueue() {
+      if (_summaryActive) return;
+      const next = _summaryQueue.shift();
+      if (!next) return;
+      _summaryActive = true;
+      startSummaryCountdown(next);
+    }
+
+    function startSummaryCountdown(item) {
+      const bar = document.getElementById("race-summary-bar");
+      const fill = document.getElementById("race-summary-fill");
+      const label = document.getElementById("race-summary-label");
+      if (!bar || !fill || !label) { showRaceSummaryScreen(item); return; }
+
+      label.textContent = `🏁 ${item.name} — Race Summary in 10s`;
+      bar.style.display = "flex";
+      fill.style.transition = "none";
+      fill.style.width = "100%";
+      void fill.offsetWidth;
+      fill.style.transition = "width 10s linear";
+      fill.style.width = "0%";
+
+      clearTimeout(_summaryCountdownTimer);
+      _summaryCountdownTimer = setTimeout(() => {
+        bar.style.display = "none";
+        showRaceSummaryScreen(item);
+      }, 10000);
+    }
+
+    function _ordinalSuffix(n) {
+      if (n % 100 >= 11 && n % 100 <= 13) return "th";
+      switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
+    }
+
+    function showRaceSummaryScreen(item) {
+      const { name, snapshot, totalDrivers } = item;
+      const laps = (snapshot.lapDurations || []).filter(l => !l.pit);
+      const team = getTeamFromCallsign(snapshot.callsign);
+      const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : "var(--blue)";
+      const pos = snapshot.position || null;
+      const posColor = pos === 1 ? '#ffd600' : pos === 2 ? '#c0c0c0' : pos === 3 ? '#cd7f32' : 'var(--text)';
+
+      let lapStatsHtml = `<div style="font-size:10px;color:var(--muted);">No clean laps recorded yet.</div>`;
+      if (laps.length) {
+        const fastest = laps.reduce((a, b) => (b.time < a.time ? b : a));
+        const slowest = laps.reduce((a, b) => (b.time > a.time ? b : a));
+        const avg = laps.reduce((sum, l) => sum + l.time, 0) / laps.length;
+        lapStatsHtml = `
+          <div style="font-size:11px;line-height:1.7;">Your fastest lap was <b style="color:var(--green);">${formatLapTime(fastest.time)}</b>, which was lap ${fastest.lap}.</div>
+          <div style="font-size:11px;line-height:1.7;">Your slowest lap was <b style="color:var(--red);">${formatLapTime(slowest.time)}</b>, which was lap ${slowest.lap}.</div>
+          <div style="font-size:11px;line-height:1.7;">You averaged about <b>${formatLapTime(avg)}</b>, over the course of ${laps.length} lap${laps.length === 1 ? "" : "s"}.</div>
+        `;
+      }
+
+      document.getElementById("race-summary-body").innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="text-align:center;display:flex;flex-direction:column;gap:4px;">
+            <div style="font-size:15px;font-weight:800;">🏁 Race Summary</div>
+            <div style="font-size:10px;color:var(--muted);">Hey ${config.username || name}, here's how your race went!</div>
+          </div>
+
+          <div style="border-left:3px solid ${tc};background:rgba(255,255,255,0.03);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--blue);">🔵 Blue Flags</div>
+            <div style="font-size:11px;">Blue flags called <b>by</b> you — ${snapshot.blueFlagsCalledByCount || 0}</div>
+            <div style="font-size:11px;">Blue flags called <b>on</b> you — ${snapshot.blueFlagsCalledOnCount || 0}</div>
+          </div>
+
+          <div style="border-left:3px solid ${tc};background:rgba(255,255,255,0.03);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--yellow);">🔧 Pits</div>
+            <div style="font-size:11px;">Total pit stops — ${snapshot.pitCount || 0}</div>
+          </div>
+
+          <div style="border-left:3px solid ${tc};background:rgba(255,255,255,0.03);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">🕐 Lap Times</div>
+            ${lapStatsHtml}
+          </div>
+
+          <div style="border-left:3px solid ${tc};background:rgba(255,255,255,0.03);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:${posColor};">🏆 Position</div>
+            <div style="font-size:11px;">You finished <b style="color:${posColor};font-size:13px;">${pos ? pos + _ordinalSuffix(pos) : "?"}</b>, out of ${totalDrivers} driver${totalDrivers === 1 ? "" : "s"}.</div>
+          </div>
+
+          <button class="save-btn" onclick="closeRaceSummary()">← Back</button>
+        </div>`;
+      document.getElementById("race-summary-modal").style.display = "flex";
+    }
+
+    function closeRaceSummary() {
+      document.getElementById("race-summary-modal").style.display = "none";
+      _summaryActive = false;
+      _processSummaryQueue();
+    }
+
+    function loadRaceSummaryPref() {
+      const saved = localStorage.getItem("rc_race_summary_enabled");
+      _raceSummaryEnabled = saved === null ? true : saved === "1";
+      updateRaceSummaryToggleBtn();
+    }
+
+    function updateRaceSummaryToggleBtn() {
+      const btn = document.getElementById("race-summary-toggle-btn");
+      if (!btn) return;
+      const on = _raceSummaryEnabled;
+      btn.textContent = on ? "ON" : "OFF";
+      btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+      btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+      btn.style.color = on ? "var(--green)" : "var(--red)";
+    }
+
+    function toggleRaceSummaryPref() {
+      _raceSummaryEnabled = !_raceSummaryEnabled;
+      localStorage.setItem("rc_race_summary_enabled", _raceSummaryEnabled ? "1" : "0");
+      updateRaceSummaryToggleBtn();
+    }
+    
     function launchDriverPanel(startPoll = true) {
       showScreen("screen-driver"); currentPanel = "driver";
       document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "");
