@@ -1739,12 +1739,17 @@ if (visible && tab === "driver") {
         statusEl.textContent = "❌ Discord ID should be 17–19 digits.";
         return;
       }
+      if (!user?.driverToken) {
+        statusEl.style.color = "var(--red)";
+        statusEl.textContent = "❌ Driver session expired — please re-login.";
+        return;
+      }
       statusEl.style.color = "var(--muted)";
       statusEl.textContent = "Saving...";
       try {
         const res = await fetch(`${apiUrl}/driver/preferred-engineer`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-discord-id": user.id },
+          headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.driverToken },
           body: JSON.stringify({ driver: config.driver, preferredEngineerId: val || null }),
         });
         const data = await res.json();
@@ -2376,6 +2381,7 @@ window.api.onVersionInstallError?.(msg => {
 
         if (dRes.ok) {
           user = dData.user;
+          user.driverToken = dData.user.token;
         } else if (dRes.status === 403 && !dData.disabled) {
           errEl.style.color = "var(--muted)"; errEl.textContent = "Trying marshal login...";
           let mRes, mData;
@@ -2434,6 +2440,7 @@ window.api.onVersionInstallError?.(msg => {
           avatar: user.avatar,
           token: user.token || null,
           marshalToken: user.marshalToken || user.token || null,
+          driverToken: user.driverToken || null,
         };
         sessionStorage.setItem("rc_user", JSON.stringify(safeUser));
         localStorage.setItem("rc_user", JSON.stringify(safeUser));
