@@ -3901,9 +3901,24 @@ if (flag === "__driver_db_update__") {
         }
       }
 
+      async function _validateToken(token) {
+        try {
+          const r = await fetch(`${apiUrl}/admin/sessions`, {
+            headers: { "x-discord-id": user.id, "x-discord-token": token }
+          });
+          return r.ok;
+        } catch { return false; }
+      }
+
       async function devAutoAuth() {
-        if (user?.token) return true;
-        if (user?.marshalToken) { user.token = user.marshalToken; sessionStorage.setItem("rc_user", JSON.stringify(user)); localStorage.setItem("rc_user", JSON.stringify(user)); return true; }
+        if (user?.token && await _validateToken(user.token)) return true;
+        if (user?.marshalToken && await _validateToken(user.marshalToken)) {
+          user.token = user.marshalToken;
+          sessionStorage.setItem("rc_user", JSON.stringify(user));
+          localStorage.setItem("rc_user", JSON.stringify(user));
+          return true;
+        }
+        user.token = null; user.marshalToken = null;
         try {
           const code = await window.api.openOAuth(); if (!code) return false;
           const authRes = await fetch(`${apiUrl}/auth`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, redirectUri: "http://localhost:7823" }) });
