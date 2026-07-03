@@ -23,6 +23,7 @@
     20.  Marshal Panel (BF / WM alerts)
     21.  Dev Panel
     22.  Settings Panel
+    23. Spectator Panel
     23.  Attendance & Driver DB Rows
     24.  Modals & Overlays
     25.  Dialogs & Cards
@@ -36,6 +37,7 @@
     33.  Toolbox
     34.  Animations & Keyframes
     35.  Theme Overrides (Light, Transparent)
+    
    ============================================================================= */
 
 
@@ -1774,9 +1776,74 @@ textarea:focus {
   flex-shrink: 0;
 }
 
+/* =============================================================================
+   23. Reset & Base
+   ============================================================================= */
+.sp-row {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.sp-row.expanded { border-color: var(--blue); }
+
+.sp-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+.sp-chevron {
+  font-size: 9px;
+  color: var(--muted);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.sp-row.expanded .sp-chevron { transform: rotate(180deg); color: var(--blue); }
+
+.sp-details {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+}
+.sp-row.expanded .sp-details { display: flex; }
+
+.sp-detail-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sp-detail-icon { font-size: 12px; flex-shrink: 0; }
+.sp-detail-text { color: var(--text); }
+.sp-detail-sub { color: var(--muted); font-size: 9px; }
+
+.sp-bestlap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 214, 0, 0.08);
+  border: 1px solid rgba(255, 214, 0, 0.3);
+}
+.sp-bestlap-badge {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(255, 214, 0, 0.15);
+  border: 1px solid var(--yellow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0;
+}
 
 /* =============================================================================
-   23. Attendance & Driver DB Rows
+   24. Attendance & Driver DB Rows
    ============================================================================= */
 
 .attendance-row,
@@ -1857,7 +1924,7 @@ textarea:focus {
 }
 
 /* =============================================================================
-   24. Modals & Overlays
+   25. Modals & Overlays
    ============================================================================= */
 
 /* Generic modal backdrop */
@@ -1933,7 +2000,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   25. Dialogs & Cards
+   26. Dialogs & Cards
    ============================================================================= */
 
 /* dialog-card: 320px wide (compact form dialog) */
@@ -1999,7 +2066,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   26. Badges & Pills
+   27. Badges & Pills
    ============================================================================= */
 
 .badge-pill {
@@ -2054,7 +2121,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   27. Toggle & Generic Buttons
+   28. Toggle & Generic Buttons
    ============================================================================= */
 
 .toggle-button {
@@ -2138,7 +2205,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   28. Form Helpers
+   29. Form Helpers
    ============================================================================= */
 
 .textarea-sm { min-height: 50px; }
@@ -2146,7 +2213,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   29. Toast
+   30. Toast
    ============================================================================= */
 
 #toast {
@@ -2173,7 +2240,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   30. Update Banner
+   31. Update Banner
    ============================================================================= */
 
 .update-banner {
@@ -2201,7 +2268,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   31. Cooldown Bar
+   32. Cooldown Bar
    ============================================================================= */
 
 #cooldown-bar  { display: none; height: 3px; background: var(--border); flex-shrink: 0; }
@@ -2209,7 +2276,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   32. Alert Overlays (Disabled / Blacklisted screens)
+   33 Alert Overlays (Disabled / Blacklisted screens)
    ============================================================================= */
 
 .alert-card {
@@ -2251,7 +2318,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   33. Toolbox
+   34. Toolbox
    ============================================================================= */
 
 .toolbox-row,
@@ -2268,7 +2335,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   34. Animations & Keyframes
+   35. Animations & Keyframes
    ============================================================================= */
 
 @keyframes slideIn {
@@ -2324,7 +2391,7 @@ textarea:focus {
 
 
 /* =============================================================================
-   35. Theme Overrides — kept at bottom so they always win
+   36. Theme Overrides — kept at bottom so they always win
        (Already defined inside section 2 above; this comment is a reminder
         that no additional overrides belong below this line.)
    ============================================================================= */
