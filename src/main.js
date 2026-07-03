@@ -1,9 +1,10 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage, shell } = require("electron");
 const path = require("path");
 const fs   = require("fs");
+const os   = require("os");
+const https = require("https");
 const { exec, execFile } = require('child_process');
 const { autoUpdater } = require("electron-updater");
-
 const CONFIG_FILE = path.join(app.getPath("userData"), "config.json");
 
 function loadConfig() {
@@ -211,6 +212,37 @@ if (pitting2) globalShortcut.register(toElectronAccelerator(pitting2), () => {
   });
 }
 
+function pickAssetForPlatform(assets) {
+  const ext = process.platform === "win32" ? ".exe"
+    : process.platform === "darwin" ? ".dmg"
+    : ".AppImage";
+  return assets.find(a => a.name.endsWith(ext));
+}
+
+function downloadFile(url, destPath, onProgress) {
+  return new Promise((resolve, reject) => {
+    const request = (u) => {
+      https.get(u, { headers: { "User-Agent": "RaceControl-App" } }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          return request(res.headers.location);
+        }
+        if (res.statusCode !== 200) return reject(new Error(`Download failed: ${res.statusCode}`));
+        const total = parseInt(res.headers["content-length"] || "0", 10);
+        let downloaded = 0;
+        const file = fs.createWriteStream(destPath);
+        res.on("data", (chunk) => {
+          downloaded += chunk.length;
+          if (total && onProgress) onProgress(Math.round((downloaded / total) * 100));
+        });
+        res.pipe(file);
+        file.on("finish", () => file.close(() => resolve()));
+        file.on("error", reject);
+      }).on("error", reject);
+    };
+    request(url);
+  });
+}
+
 async function sendDriverAction(action) {
   if (!config.apiUrl || !config.driver) {
     mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" });
@@ -368,6 +400,49 @@ ipcMain.handle("toggle-pitting2", () => {
 });
 ipcMain.handle("resume-hotkeys",    () => { registerHotkeys(config.keybinds); return true; });
 ipcMain.handle("open-releases", () => shell.openExternal("https://github.com/AleEjx/racecontrol-app/releases/latest"));
+
+ipcMain.handle("install-release-version", async (event, tag) => {
+  const sender = event.sender;
+  try {
+    const res = await new Promise((resolve, reject) => {
+      https.get(
+        `https://api.github.com/repos/AleEjx/racecontrol-app/releases/tags/${tag}`,
+        { headers: { "User-Agent": "RaceControl-App" } },
+        (r) => {
+          let data = "";
+          r.on("data", (c) => (data += c));
+          r.on("end", () => resolve(JSON.parse(data)));
+        }
+      ).on("error", reject);
+    });
+
+    const asset = pickAssetForPlatform(res.assets || []);
+    if (!asset) throw new Error(`No build found for this OS in ${tag}`);
+
+    const destPath = path.join(os.tmpdir(), asset.name);
+    await downloadFile(asset.browser_download_url, destPath, (pct) => {
+      sender.send("version-install-progress", pct);
+    });
+
+    if (process.platform === "win32") {
+      execFile(destPath, [], { detached: true, stdio: "ignore" }).unref();
+      globalShortcut.unregisterAll();
+      app.quit();
+    } else if (process.platform === "darwin") {
+      await shell.openPath(destPath);
+      globalShortcut.unregisterAll();
+      app.quit();
+    } else {
+      fs.chmodSync(destPath, 0o755);
+      execFile(destPath, [], { detached: true, stdio: "ignore" }).unref();
+      globalShortcut.unregisterAll();
+      app.quit();
+    }
+  } catch (err) {
+    sender.send("version-install-error", err.message);
+    throw err;
+  }
+});
 function getUninstallStringFromRegistry() {
   return new Promise((resolve) => {
     const appName = "RaceLeague Driver";
