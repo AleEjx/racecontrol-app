@@ -2515,6 +2515,7 @@ async function afterLogin() {
 }
 
 function showRoleSelectScreen(isInDB) {
+  engineerPending = true;
   const screen = document.getElementById("screen-login");
   const avatarSrc = user.avatar
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
