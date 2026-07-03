@@ -15,11 +15,12 @@
     <div class="titlebar-left">
       <div class="tl-logo">Race<span>Control</span></div>
       <span id="mode-badge" class="tl-badge hidden"></span>
-      <div id="panel-switcher">
-        <button class="switch-btn" id="sw-driver" onclick="switchPanel('driver')">🏎️ Driver</button>
-        <button class="switch-btn" id="sw-marshal" onclick="switchPanel('marshal')">🏁 Marshal 🔒</button>
-        <button id="sw-dev" onclick="switchPanel('dev')" class="switch-btn" style="display:none;">⚙️ Dev</button>
-      </div>
+<div id="panel-switcher">
+  <button class="switch-btn" id="sw-driver" onclick="switchPanel('driver')">🏎️ Driver</button>
+  <button class="switch-btn" id="sw-marshal" onclick="switchPanel('marshal')">🏁 Marshal 🔒</button>
+  <button class="switch-btn" id="sw-spectate" onclick="switchPanel('spectate')">👁️ Spectate</button>
+  <button id="sw-dev" onclick="switchPanel('dev')" class="switch-btn" style="display:none;">⚙️ Dev</button>
+</div>
     </div>
     <div class="tb-btns">
       <button class="tb-btn" title="Settings" onclick="switchPanel('settings')">⚙</button>
@@ -156,7 +157,7 @@
       </div>
     </div>
   </div>
-
+  <!-- MARSHAL PANEL -->
   <div class="screen" id="screen-marshal">
     <div class="scroll-body">
       <div id="flag-notif-marshal" class="pb-4"></div>
@@ -264,8 +265,32 @@
       </div>
     </div>
   </div>
-
-
+  
+<!-- SPECTATOR PANEL -->
+<div class="screen" id="screen-spectate">
+  <div class="scroll-body">
+    <div class="status-row">
+      <div class="flex-row-gap-6">
+        <div class="status-dot live" id="sp-status-dot"></div>
+        <span class="status-label live" id="sp-status-label">Live</span>
+      </div>
+      <div id="sp-race-pill" class="text-muted-sm">● Waiting</div>
+    </div>
+    <div>
+      <div class="sec-label flex-row-between">
+        <span>Leaderboard</span>
+        <span id="sp-lap-counter" class="font-9 fw-700 text-muted"></span>
+      </div>
+      <input type="text" id="sp-lb-search" placeholder="Search driver..."
+        class="input-full" oninput="filterSpectateLeaderboard(this.value)" />
+      <div id="sp-leaderboard">
+        <div class="placeholder-text">Waiting for race...</div>
+      </div>
+    </div>
+  </div>
+</div>
+  
+<!-- DEVELOPER PANEL -->
   <div class="screen" id="screen-dev">
     <div class="scroll-body">
       <div class="dev-heading">⚙️ Developer Panel</div>
