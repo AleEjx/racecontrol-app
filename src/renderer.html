@@ -2680,9 +2680,12 @@ function skipEngineerScreen() {
   engineerPending = false;
   config.driver = "__dev__";
   config.engineer = false;
+  config.driverToken = user.driverToken || null;   // ← add this
+  config.discordId = user.id;                      // ← add this too, it's also missing
   isEngineer = false;
   hasDriver = true;
   hasDev = true;     
+  window.api.saveConfig(config);                    // ← and this — it's never saved!
   updateSwitcher();
   launchDriverPanel();
 }
