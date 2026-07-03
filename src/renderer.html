@@ -2249,6 +2249,7 @@ setInterval(async () => {
       loadDriverDB();
       config = await window.api.getConfig();
       apiUrl = config.apiUrl || "";
+      loadUserTabPrefs();
 
       document.getElementById("s-api").value = config.apiUrl || "";
       document.getElementById("kb-blue_flag").value = config.keybinds?.blue_flag || "F1";
@@ -2358,7 +2359,6 @@ if (saved && apiUrl) {
       loadTesterMode();
       loadThemePrefs();
       loadVolumePrefs();
-      loadUserTabPrefs(); 
 
 
       _initHotkeyPauseObserver();
@@ -2529,7 +2529,7 @@ async function afterLogin() {
   config.engineer = false;
   isEngineer = false;
   const driverName = DRIVER_IDS[user.id];
-  hasDriver = !!driverName;
+  hasDriver = true; 
   showRoleSelectScreen(!!driverName);
 }
 
