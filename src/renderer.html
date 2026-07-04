@@ -198,6 +198,10 @@
       </div>
 
 <div class="d-tab-panel" id="d-tab-field">
+        <div class="rc-you-pin" id="rc-you-pin" style="display:none;">
+          <div class="rc-field-divider"><span>Your position</span><div class="ln"></div></div>
+          <div class="f-row you" id="rc-you-row"></div>
+        </div>
         <div class="rc-field-divider"><span>Full field</span><div class="ln"></div></div>
         <div id="d-leaderboard">
           <div class="placeholder-text">Waiting for race...</div>
@@ -3807,24 +3811,21 @@ function filterSpectateLeaderboard(q) {
 
 function renderLeaderboard(data) {
   const lb = document.getElementById("d-leaderboard");
+  const pin = document.getElementById("rc-you-pin");
+
   if (!data.drivers?.length) {
     lb.innerHTML = '<div class="placeholder-text">Waiting for race...</div>';
+    if (pin) pin.style.display = "none";
     return;
   }
 
   const leaderLap = data.drivers[0]?.lap || 1;
 
-  lb.innerHTML = data.drivers.map((d, i) => {
+  const rowInner = (d, i) => {
     const pos = i + 1;
     const pc = pos === 1 ? "p1" : pos === 2 ? "p2" : pos === 3 ? "p3" : "";
-    const isMe = d.name === config.driver;
-    const isMe2 = d.name === config.driver2;
-
-    const rowClasses = ["f-row"];
-    if (isMe || isMe2) rowClasses.push("you");
-    if (d.dnf) rowClasses.push("dnf");
-
     let lapHtml, gapHtml = "";
+
     if (d.dnf) {
       lapHtml = `<div class="f-lap dnf-text">DNF</div>`;
     } else if (d.finished) {
@@ -3845,16 +3846,37 @@ function renderLeaderboard(data) {
     }
 
     return `
-      <div class="${rowClasses.join(" ")}">
-        <div class="f-pos ${pc}">${pos}</div>
-        <div class="f-num">${d.number}</div>
-        <div class="f-body">
-          <div class="f-name">${d.name}</div>
-          <div class="f-call">${d.callsign}</div>
-        </div>
-        <div>${lapHtml}${gapHtml}</div>
-      </div>`;
+      <div class="f-pos ${pc}">${pos}</div>
+      <div class="f-num">${d.number}</div>
+      <div class="f-body">
+        <div class="f-name">${d.name}</div>
+        <div class="f-call">${d.callsign}</div>
+      </div>
+      <div>${lapHtml}${gapHtml}</div>`;
+  };
+
+  lb.innerHTML = data.drivers.map((d, i) => {
+    const isMe = d.name === config.driver;
+    const isMe2 = d.name === config.driver2;
+    const rowClasses = ["f-row"];
+    if (isMe || isMe2) rowClasses.push("you");
+    if (d.dnf) rowClasses.push("dnf");
+    return `<div class="${rowClasses.join(" ")}">${rowInner(d, i)}</div>`;
   }).join("");
+
+  // Sticky "Your Position" pin — mirrors mockup: hidden while you're in the
+  // top 7, appears once you'd otherwise have to scroll to find yourself
+  const refName = config.driver || config.driver2;
+  if (pin) {
+    const idx = refName ? data.drivers.findIndex(d => d.name === refName) : -1;
+    if (idx === -1) {
+      pin.style.display = "none";
+    } else {
+      pin.style.display = (idx + 1) > 7 ? "block" : "none";
+      const youRow = document.getElementById("rc-you-row");
+      if (youRow) youRow.innerHTML = rowInner(data.drivers[idx], idx);
+    }
+  }
 }
 
     function showDbUpdateBanner() {
