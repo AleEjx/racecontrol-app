@@ -84,7 +84,126 @@
         <div id="race-summary-fill" style="height:100%;width:100%;background:var(--blue);"></div>
       </div>
     </div>
-<div class="scroll-body">
+<div class="scroll-body" id="driver-scroll-body">
+<template id="tpl-driver-legacy">
+<div class="status-row">
+  <div class="flex-row-gap-6">
+    <div class="status-dot" id="d-status-dot"></div>
+    <span class="status-label" id="d-status-label">Connecting...</span>
+  </div>
+  <div id="d-race-pill" class="text-muted-sm">● Waiting</div>
+</div>
+<div>
+  <div class="sec-label">Leaderboard</div>
+  <div id="d-leaderboard">
+    <div class="placeholder-text">Waiting for race...</div>
+  </div>
+</div>
+<div class="rc-plate" id="rc-plate">
+  <div class="rc-plate-top">
+    <div class="rc-plate-num"><div class="n" id="rc-plate-num">--</div><div class="l">CAR</div></div>
+    <div class="rc-plate-id">
+      <div class="rc-plate-name" id="rc-plate-name">–</div>
+      <div class="rc-plate-call" id="rc-plate-call">–</div>
+    </div>
+  </div>
+  <div class="rc-lap-graph" id="rc-lap-graph"></div>
+  <div class="rc-lap-graph-legend" id="rc-lap-graph-legend">
+    <div class="rc-lgl-item"><span class="rc-lgl-dot fastest"></span>Best lap</div>
+    <div class="rc-lgl-item"><span class="rc-lgl-dot slowest"></span>Worst lap</div>
+    <div class="rc-lgl-item"><span class="rc-lgl-dot race-fastest"></span>Race fastest</div>
+  </div>
+  <div class="rc-plate-stats">
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos">–</div></div>
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap">–</div></div>
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Lap</div><div class="rc-plate-stat-val" id="rc-plate-lap">–</div></div>
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Best</div><div class="rc-plate-stat-val" id="rc-plate-best">–</div></div>
+  </div>
+</div>
+
+<div id="d-actions-section" style="display:none;">
+  <div class="sec-label">Quick Actions</div>
+  <div id="d-action-notice" class="action-notice" style="display:none;"></div>
+  <div class="action-grid mt-6">
+    <button class="action-btn" id="btn-blue_flag" onclick="doAction('blue_flag')">
+      <span class="a-key" id="key-blue_flag">F1</span><span class="a-icon">🔵</span><span class="a-name">Blue Flag</span>
+    </button>
+    <button class="action-btn" id="btn-next_lap" onclick="doAction('next_lap')">
+      <span class="a-key" id="key-next_lap">F2</span><span class="a-icon">🏁</span><span class="a-name">Next Lap</span>
+    </button>
+    <button class="action-btn" id="btn-pitting" onclick="doTogglePitting()">
+      <span class="a-key" id="key-pitting">F3</span><span class="a-icon" id="pit-icon">🔧</span><span class="a-name" id="pit-label">Pitting</span>
+    </button>
+    <button id="btn-dnf" onclick="confirmDNF()" class="action-btn text-red border-red">
+      <span class="a-key" id="key-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
+    </button>
+  </div>
+</div>
+
+<div class="rc-plate" id="rc-plate2">
+  <div class="rc-plate-top">
+    <div class="rc-plate-num"><div class="n" id="rc-plate-num2">--</div><div class="l">CAR</div></div>
+    <div class="rc-plate-id">
+      <div class="rc-plate-name" id="rc-plate-name2">–</div>
+      <div class="rc-plate-call" id="rc-plate-call2">–</div>
+    </div>
+  </div>
+  <div class="rc-lap-graph" id="rc-lap-graph2"></div>
+  <div class="rc-lap-graph-legend" id="rc-lap-graph-legend2">
+    <div class="rc-lgl-item"><span class="rc-lgl-dot fastest"></span>Best lap</div>
+    <div class="rc-lgl-item"><span class="rc-lgl-dot slowest"></span>Worst lap</div>
+    <div class="rc-lgl-item"><span class="rc-lgl-dot race-fastest"></span>Race fastest</div>
+  </div>
+  <div class="rc-plate-stats">
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos2">–</div></div>
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap2">–</div></div>
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Lap</div><div class="rc-plate-stat-val" id="rc-plate-lap2">–</div></div>
+    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Best</div><div class="rc-plate-stat-val" id="rc-plate-best2">–</div></div>
+  </div>
+</div>
+
+<div id="d-actions-section2" style="display:none;">
+  <div id="d-driver2-label" class="sec-label mt-4">Driver 2 — Quick Actions</div>
+  <div id="d-action-notice2" class="action-notice" style="display:none;"></div>
+  <div class="action-grid mt-6">
+    <button class="action-btn" id="btn2-blue_flag" onclick="doAction2('blue_flag')">
+      <span class="a-key" id="key2-blue_flag">F4</span><span class="a-icon">🔵</span><span class="a-name">Blue Flag</span>
+    </button>
+    <button class="action-btn" id="btn2-next_lap" onclick="doAction2('next_lap')">
+      <span class="a-key" id="key2-next_lap">F5</span><span class="a-icon">🏁</span><span class="a-name">Next Lap</span>
+    </button>
+    <button class="action-btn" id="btn2-pitting" onclick="doTogglePitting2()">
+      <span class="a-key" id="key2-pitting">F6</span><span class="a-icon" id="pit2-icon">🔧</span><span class="a-name" id="pit2-label">Pitting</span>
+    </button>
+    <button id="btn2-dnf" onclick="confirmDNF2()" class="action-btn text-red border-red">
+      <span class="a-key" id="key2-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
+    </button>
+  </div>
+</div>
+
+<div id="d-keybind-info" style="display:none;">
+  <div class="sec-label">Keybinds (global)</div>
+  <div class="panel-card">
+    <div class="list-row">
+      <span class="font-11">🔵 Blue Flag</span>
+      <span class="info-blue" id="kb-display-blue_flag">F1</span>
+    </div>
+    <div class="list-row">
+      <span class="font-11">🏁 Next Lap</span>
+      <span class="info-blue" id="kb-display-next_lap">F2</span>
+    </div>
+    <div class="list-row">
+      <span class="font-11">🔧 Pit / Back on Track</span>
+      <span class="info-blue" id="kb-display-pitting">F3</span>
+    </div>
+    <div class="list-row no-border-bottom">
+      <span class="font-11">🚫 DNF</span>
+      <span class="info-blue" id="kb-display-dnf">F8</span>
+    </div>
+  </div>
+</div>
+</template>
+<template id="tpl-driver-modern">
 <div class="stripe-header" id="stripeHeader">
   <div class="sh-row">
     <div class="sh-status">
@@ -232,7 +351,7 @@
           <div class="placeholder-text">Waiting for race...</div>
         </div>
       </div>
-
+</template>
     </div>
   </div>
 
@@ -664,6 +783,21 @@
     <span id="font-size-label" class="font-11 fw-700 text-muted width-34 text-right flex-shrink-0">12px</span>
   </div>
 <div class="small-note">This setting is temporarily unavailable.</div>
+</div>
+
+<div class="s-section-title flex-row-gap-8">
+  <span>Panel Style</span>
+</div>
+<div class="s-card gap-8 mb-4">
+  <div class="grid-2-col">
+    <button id="panel-style-modern-btn" onclick="setPanelStyle('modern')" class="theme-tile">
+      <span class="theme-label">✨ Modern</span>
+    </button>
+    <button id="panel-style-legacy-btn" onclick="setPanelStyle('legacy')" class="theme-tile">
+      <span class="theme-label">🗂️ Legacy</span>
+    </button>
+  </div>
+  <div class="small-note">Switches the Driver panel layout. Marshal legacy layout coming soon.</div>
 </div>
 
 <div class="s-section-title">Driver Plate</div>
@@ -1727,6 +1861,63 @@ function testerGoto(panel) {
     showEngineerScreen();
   }
 }
+
+    let _panelStyle = "modern";
+
+function loadPanelStylePref() {
+  _panelStyle = localStorage.getItem("rc_panel_style") || "modern";
+  updatePanelStyleBtns();
+  applyDriverPanelStyle();
+}
+
+function updatePanelStyleBtns() {
+  document.getElementById("panel-style-modern-btn")?.classList.toggle("active", _panelStyle === "modern");
+  document.getElementById("panel-style-legacy-btn")?.classList.toggle("active", _panelStyle === "legacy");
+}
+
+function setPanelStyle(style) {
+  _panelStyle = style;
+  localStorage.setItem("rc_panel_style", style);
+  updatePanelStyleBtns();
+  applyDriverPanelStyle();
+  showToast(`✓ Panel style set to ${style === "legacy" ? "Legacy" : "Modern"}`, "ok");
+}
+
+function applyDriverPanelStyle() {
+  const container = document.getElementById("driver-scroll-body");
+  const tpl = document.getElementById(_panelStyle === "legacy" ? "tpl-driver-legacy" : "tpl-driver-modern");
+  if (!container || !tpl) return;
+
+  container.innerHTML = "";
+  container.appendChild(tpl.content.cloneNode(true));
+
+  if (_panelStyle === "modern") {
+    setDriverTab("overview");
+    document.getElementById("rc-car-strip"); // no-op guard, chips reset naturally on next poll
+  }
+  applyLapGraphVisibility();
+  updateKeybindLabels();
+
+  const actSection = document.getElementById("d-actions-section");
+  const kbSection = document.getElementById("d-keybind-info");
+  const actSection2 = document.getElementById("d-actions-section2");
+  if (isEngineer) {
+    if (kbSection) kbSection.style.display = "none";
+    if (actSection) actSection.style.display = config.driver2 && _panelStyle === "modern" ? "none" : "block";
+    if (actSection2 && config.driver2) actSection2.style.display = "block";
+  } else {
+    if (actSection) actSection.style.display = "none";
+    if (kbSection) kbSection.style.display = "block";
+    if (actSection2) actSection2.style.display = "none";
+  }
+
+  if (_lastRaceState) {
+    renderLeaderboard(_lastRaceState);
+    renderNearby(_lastRaceState);
+    if (config.driver) updatePlate(_lastRaceState.drivers?.find(d => d.name === config.driver), _lastRaceState);
+    if (config.driver2) updatePlate2(_lastRaceState.drivers?.find(d => d.name === config.driver2), _lastRaceState);
+  }
+}
     
     function loadThemePrefs() {
       const saved = localStorage.getItem("rc_theme");
@@ -2755,6 +2946,7 @@ if (saved && apiUrl) {
       loadFontSizePrefs();
       loadTesterMode();
       loadThemePrefs();
+      loadPanelStylePref();
       loadVolumePrefs();
       loadRaceSummaryPref();
       loadLapGraphPref();
@@ -3677,6 +3869,7 @@ const panelOn = data.webPanelEnabled !== false, raceOn = data.raceStarted;
     
 function launchDriverPanel(startPoll = true) {
       showScreen("screen-driver"); currentPanel = "driver";
+      applyDriverPanelStyle();
       document.getElementById("rc-plate")?.classList.toggle("on", !!config.driver);
       document.getElementById("rc-plate2")?.classList.toggle("on", isEngineer && !!config.driver2);
       setDriverTab('overview');
