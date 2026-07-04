@@ -2542,6 +2542,28 @@ textarea:focus {
 .rc-nr-call { font-size:8px; color:var(--muted); }
 .rc-nr-gap { font-size:10px; font-weight:800; text-align:right; }
 
+.rc-nearby-row.pitting { border-color: rgba(255,214,0,0.5); background: rgba(255,214,0,0.06); }
+
+.rc-nr-num.pitting {
+  background: rgba(255,214,0,0.15);
+  border-color: rgba(255,214,0,0.6);
+  color: var(--yellow);
+}
+
+.rc-nr-pit-badge {
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255,214,0,0.12);
+  border: 1px solid rgba(255,214,0,0.35);
+  color: var(--yellow);
+  margin-top: 2px;
+  display: inline-block;
+}
+
 /* =============================================================================
    39. Full Field Leaderboard (Driver Panel — Field Tab, Mockup D)
    ============================================================================= */
