@@ -270,7 +270,7 @@
         <div class="d-tab-panel active" id="m-tab-flags">
   <div id="m-wm-container" class="flex-col-gap-4"></div>
   <div id="m-bf-container" class="flex-col-gap-4"></div>
-  <div id="m-leaderboard-section">
+<div class="d-tab-panel active" id="m-tab-flags">
         <div class="sec-label">Global Flags</div>
         <div class="flag-grid">
           <button class="flag-btn green" onclick="triggerFlag('green')"><span class="fi">🟢</span><span
@@ -298,7 +298,7 @@
           <button class="flag-btn orange" onclick="triggerFlag('sfl')"><span class="fi">🟠</span><span
               class="fn">SFL</span></button>
         </div>
-      </div>
+</div>
 <div class="d-tab-panel" id="m-tab-setup">
      <div id="m-race-setup" style="display:none;">
         <div class="sec-label">🏁 Race Setup</div>
@@ -585,7 +585,7 @@
             Code</button>
         </div>
         <div class="flex-row-gap-4 mt-2">
-          <button class="dev-btn no-grow font-9">↺ Reset to Defaults</button>
+          <button class="dev-btn no-grow font-9" onclick="devResetDriverDB()">↺ Reset to Defaults</button>
         </div>
         <div id="dev-drivers-status" class="font-9 text-muted min-h-12 mt-2"></div>
       </div>
@@ -779,7 +779,7 @@
               type="text" class="kb-input" id="kb-dnf" readonly onclick="listenKey('dnf')" /></div>
         </div>
 
-<div id="kb-driver2-section" class="hidden flex-col-gap-0">
+<div id="kb-driver2-section" class="flex-col-gap-0">
           <div class="s-section-title">Driver 2</div>
           <div class="s-card gap-0">
             <div class="s-kb-row"><span class="settings-label">🔵 Blue Flag</span><input type="text" class="kb-input"
@@ -3183,7 +3183,8 @@ function switchPanel(panel) {
       document.getElementById("kb-practice_lap").value = config.keybinds?.practice_lap || "F10";
       document.getElementById("kb-practice_reset").value = config.keybinds?.practice_reset || "F11";
         if (document.getElementById("kb-dnf")) document.getElementById("kb-dnf").value = config.keybinds?.dnf || "F8";
-        document.getElementById("s-api-card").style.display = hasDev ? "flex" : "none";
+        const kb2 = document.getElementById("kb-driver2-section");
+        if (kb2) kb2.style.display = config.driver2 ? "flex" : "none";
         const volPct = Math.round(_flagVolume * 100);
         const slider = document.getElementById("vol-slider");
         const label = document.getElementById("vol-label");
@@ -3311,7 +3312,10 @@ function updateSwitcher() {
         _lastRaceState = data;
         const lapCounterEl = document.getElementById("d-lap-counter");
 if (lapCounterEl) {
-  const primary = data.drivers?.find(d => d.name === (config.driver || config.driver2));
+  const primaryName = (isEngineer && config.driver2)
+  ? (_engineerActiveSlot === 2 ? config.driver2 : config.driver)
+  : (config.driver || config.driver2);
+const primary = data.drivers?.find(d => d.name === primaryName);
   const curLap = primary?.lap || 1;
   lapCounterEl.innerHTML = `LAP <b>${curLap}</b>${data.totalLaps ? `/${data.totalLaps}` : ""}`;
 }
@@ -3322,17 +3326,7 @@ if (lapCounterEl) {
         renderLeaderboard({ ...data, drivers: filtered });
         renderNearby({ ...data, drivers: filtered });
 
-if (config.driver) {
-          const myDriver = data.drivers?.find(d => d.name === config.driver);
-          if (myDriver) updatePitBtn(myDriver.inPits);
-          updatePlate(myDriver, data);
-        }
-        if (config.driver2) {
-          const myDriver2 = data.drivers?.find(d => d.name === config.driver2);
-          if (myDriver2) updatePitBtn2(myDriver2.inPits);
-          updatePlate2(myDriver2, data);
-        }
-        const panelOn = data.webPanelEnabled !== false, raceOn = data.raceStarted;
+const panelOn = data.webPanelEnabled !== false, raceOn = data.raceStarted;
         if (!panelOn) {
           if (hasDev) {
             showShutdownBanner("driver");
