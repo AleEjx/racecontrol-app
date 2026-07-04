@@ -605,6 +605,19 @@
       </div>
     </div>
 
+    <div class="pm-fuel-card" id="pm-fuel-card" style="display:none;">
+  <div class="pm-fuel-row">
+    <span class="pm-block-title" style="margin:0;">Fuel</span>
+    <span class="pm-fuel-pct" id="pm-fuel-pct">--%</span>
+  </div>
+  <div class="pm-fuel-bar-track"><div class="pm-fuel-bar-fill" id="pm-fuel-bar-fill" style="width:0%;"></div></div>
+  <div class="pm-fuel-stats">
+    <span>Avg burn/lap: <b id="pm-fuel-burn">–</b></span>
+    <span>Laps remaining: <b id="pm-fuel-remaining">–</b></span>
+  </div>
+</div>
+<div class="pm-fuel-uncalibrated" id="pm-fuel-uncalibrated">⛽ Calibrate your fuel gauge in Settings → Look to enable fuel tracking here.</div>
+
     <div>
       <div class="pm-block-title"><span>Lap Graph</span></div>
       <div class="pm-graph" id="pm-graph"></div>
@@ -890,6 +903,16 @@
     <button id="lap-graph-toggle-btn" onclick="toggleLapGraphPref()" class="toggle-button"></button>
   </div>
   <div class="small-note">Replaces the plate divider with a lap-by-lap chart — marks your best/worst lap and the race's current fastest lap.</div>
+</div>
+  <div class="s-section-title">⛽ Fuel Tracking (Beta)</div>
+<div class="s-card gap-8 mb-4">
+  <div class="card-row-between">
+    <span class="font-11">📷 Screen-read fuel gauge</span>
+    <button id="fuel-tracking-toggle-btn" onclick="toggleFuelTrackingPref()" class="toggle-button"></button>
+  </div>
+  <div class="small-note">Watches a region of your screen and reads your fuel needle to log burn-per-lap in Practice Mode.</div>
+  <div id="fuel-calib-status" class="small-note text-muted">Not calibrated yet.</div>
+  <button class="btn-outline-blue" onclick="openFuelCalibration()">🎯 Calibrate Gauge</button>
 </div>
       </div>
 
@@ -1178,7 +1201,24 @@
 <div id="race-summary-modal" class="modal">
     <div class="modal-panel modal-panel-scroll" id="race-summary-body"></div>
   </div>
-
+<div id="fuel-calib-overlay" class="fuel-calib-overlay">
+  <div class="fc-steps">
+    <span class="fc-step" id="fc-step-2">1. Crop Gauge</span>
+    <span class="fc-step" id="fc-step-3">2. Mark Empty</span>
+    <span class="fc-step" id="fc-step-4">3. Mark Full</span>
+  </div>
+  <div class="fc-stage" id="fc-stage">
+    <video id="fc-video" autoplay muted playsinline></video>
+    <div id="fc-crop-box" class="fc-crop-box" style="display:none;"></div>
+    <div id="fc-handle-empty" class="fc-handle empty"></div>
+    <div id="fc-handle-full" class="fc-handle full"></div>
+  </div>
+  <div class="fc-hint" id="fc-hint">Pick the window/screen your sim is running on, then drag a box tightly around your fuel gauge.</div>
+  <div class="fc-btns">
+    <button class="secondary-btn" onclick="closeFuelCalibration()">Cancel</button>
+    <button class="save-btn" id="fc-confirm-btn" onclick="fuelCalibNext()" disabled>Next →</button>
+  </div>
+</div>
   <div id="toast"></div>
 
   <div id="bug-modal" class="modal">
@@ -3060,6 +3100,275 @@ if (saved && apiUrl) {
         updatePreview();
       }, 600);
 
+// ===================== FUEL GAUGE TRACKING =====================
+let _fuelTrackingEnabled = false;
+let _fuelCalib = null;         // {cropXPct,cropYPct,cropWPct,cropHPct,centerXPct,centerYPct,emptyAngle,fullAngle}
+let _fuelStream = null;
+let _fuelVideoEl = null;
+let _fuelSampleInterval = null;
+let _fuelSamples = [];
+let _fuelCurrentPct = null;
+let _fuelLapLog = [];
+let _fc = { step: 1, dragging: false, crop: null };
+
+function loadFuelTrackingPref() {
+  _fuelTrackingEnabled = localStorage.getItem("rc_fuel_tracking_enabled") === "1";
+  try {
+    const saved = localStorage.getItem("rc_fuel_calib");
+    if (saved) _fuelCalib = JSON.parse(saved);
+  } catch { _fuelCalib = null; }
+  updateFuelTrackingBtn();
+  updateFuelCalibStatus();
+}
+
+function updateFuelTrackingBtn() {
+  const btn = document.getElementById("fuel-tracking-toggle-btn");
+  if (!btn) return;
+  const on = _fuelTrackingEnabled;
+  btn.textContent = on ? "ON" : "OFF";
+  btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+  btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+  btn.style.color = on ? "var(--green)" : "var(--red)";
+}
+
+function toggleFuelTrackingPref() {
+  if (!_fuelCalib) { showToast("❌ Calibrate your gauge first", "err"); return; }
+  _fuelTrackingEnabled = !_fuelTrackingEnabled;
+  localStorage.setItem("rc_fuel_tracking_enabled", _fuelTrackingEnabled ? "1" : "0");
+  updateFuelTrackingBtn();
+  showToast(_fuelTrackingEnabled ? "✓ Fuel tracking ON" : "✓ Fuel tracking OFF", "ok");
+}
+
+function updateFuelCalibStatus() {
+  const el = document.getElementById("fuel-calib-status");
+  if (!el) return;
+  el.textContent = _fuelCalib ? "✓ Gauge calibrated" : "Not calibrated yet.";
+  el.style.color = _fuelCalib ? "var(--green)" : "";
+}
+
+// ---- Calibration wizard ----
+async function openFuelCalibration() {
+  _fc = { step: 2, dragging: false, crop: null };
+  document.getElementById("fuel-calib-overlay").classList.add("active");
+  updateFcSteps();
+  document.getElementById("fc-confirm-btn").disabled = true;
+  document.getElementById("fc-hint").textContent = "Drag a box tightly around your fuel gauge.";
+  ["fc-crop-box", "fc-handle-empty", "fc-handle-full"].forEach(id => document.getElementById(id).style.display = "none");
+
+  try {
+    _fuelStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 } });
+  } catch {
+    showToast("❌ Screen share cancelled", "err");
+    closeFuelCalibration();
+    return;
+  }
+  _fuelVideoEl = document.getElementById("fc-video");
+  _fuelVideoEl.srcObject = _fuelStream;
+  await _fuelVideoEl.play();
+  _initCropDrag();
+}
+
+function updateFcSteps() {
+  ["fc-step-2", "fc-step-3", "fc-step-4"].forEach((id, i) =>
+    document.getElementById(id)?.classList.toggle("active", i + 2 === _fc.step));
+}
+
+function _initCropDrag() {
+  const stage = document.getElementById("fc-stage");
+  const box = document.getElementById("fc-crop-box");
+
+  function toPct(clientX, clientY) {
+    const r = stage.getBoundingClientRect();
+    return { xPct: (clientX - r.left) / r.width, yPct: (clientY - r.top) / r.height };
+  }
+  function down(e) {
+    if (_fc.step !== 2) return;
+    _fc.dragging = true;
+    _fc.startPct = toPct(e.clientX, e.clientY);
+    box.style.display = "block";
+  }
+  function move(e) {
+    if (!_fc.dragging) return;
+    const p = toPct(e.clientX, e.clientY);
+    const r = stage.getBoundingClientRect();
+    const x0 = Math.min(_fc.startPct.xPct, p.xPct) * r.width;
+    const y0 = Math.min(_fc.startPct.yPct, p.yPct) * r.height;
+    box.style.left = x0 + "px"; box.style.top = y0 + "px";
+    box.style.width = (Math.abs(p.xPct - _fc.startPct.xPct) * r.width) + "px";
+    box.style.height = (Math.abs(p.yPct - _fc.startPct.yPct) * r.height) + "px";
+    _fc.crop = {
+      xPct: Math.min(_fc.startPct.xPct, p.xPct),
+      yPct: Math.min(_fc.startPct.yPct, p.yPct),
+      wPct: Math.abs(p.xPct - _fc.startPct.xPct),
+      hPct: Math.abs(p.yPct - _fc.startPct.yPct),
+    };
+    document.getElementById("fc-confirm-btn").disabled = !(_fc.crop.wPct > 0.02 && _fc.crop.hPct > 0.02);
+  }
+  function up() { _fc.dragging = false; }
+
+  stage.onmousedown = down;
+  stage.onmousemove = move;
+  window.addEventListener("mouseup", up);
+}
+
+function fuelCalibNext() {
+  if (_fc.step === 2) {
+    if (!_fc.crop) return;
+    _fc.step = 3;
+    updateFcSteps();
+    document.getElementById("fc-crop-box").style.display = "none";
+    document.getElementById("fc-hint").textContent = "Click the tip of the needle while your gauge shows EMPTY (or its lowest position).";
+    document.getElementById("fc-confirm-btn").disabled = true;
+    _armHandlePick("fc-handle-empty", (pct) => { _fc.emptyPct = pct; document.getElementById("fc-confirm-btn").disabled = false; });
+  } else if (_fc.step === 3) {
+    _fc.step = 4;
+    updateFcSteps();
+    document.getElementById("fc-hint").textContent = "Now click the tip of the needle while your gauge shows FULL (or its highest position).";
+    document.getElementById("fc-confirm-btn").disabled = true;
+    _armHandlePick("fc-handle-full", (pct) => { _fc.fullPct = pct; document.getElementById("fc-confirm-btn").disabled = false; });
+  } else if (_fc.step === 4) {
+    _finishFuelCalibration();
+  }
+}
+
+function _armHandlePick(handleId, onPick) {
+  const stage = document.getElementById("fc-stage");
+  const handle = document.getElementById(handleId);
+  handle.style.display = "block";
+  function click(e) {
+    const r = stage.getBoundingClientRect();
+    const xPct = (e.clientX - r.left) / r.width;
+    const yPct = (e.clientY - r.top) / r.height;
+    handle.style.left = (e.clientX - r.left) + "px";
+    handle.style.top = (e.clientY - r.top) + "px";
+    onPick({ xPct, yPct });
+    stage.removeEventListener("click", click);
+  }
+  stage.addEventListener("click", click);
+}
+
+function _finishFuelCalibration() {
+  const c = _fc.crop;
+  const cx = c.xPct + c.wPct / 2;
+  const cy = c.yPct + c.hPct / 2;
+  const ang = (pt) => Math.atan2(pt.yPct - cy, pt.xPct - cx) * 180 / Math.PI;
+
+  _fuelCalib = {
+    cropXPct: c.xPct, cropYPct: c.yPct, cropWPct: c.wPct, cropHPct: c.hPct,
+    centerXPct: cx, centerYPct: cy,
+    emptyAngle: ang(_fc.emptyPct),
+    fullAngle: ang(_fc.fullPct),
+  };
+  localStorage.setItem("rc_fuel_calib", JSON.stringify(_fuelCalib));
+  updateFuelCalibStatus();
+  showToast("✓ Gauge calibrated!", "ok");
+  closeFuelCalibration();
+}
+
+function closeFuelCalibration() {
+  document.getElementById("fuel-calib-overlay").classList.remove("active");
+  if (_fuelStream) { _fuelStream.getTracks().forEach(t => t.stop()); _fuelStream = null; }
+}
+
+// ---- Live sampling during practice ----
+const _fuelCanvas = document.createElement("canvas");
+
+async function startFuelSampling() {
+  if (!_fuelTrackingEnabled || !_fuelCalib) return;
+  document.getElementById("pm-fuel-card").style.display = "flex";
+  document.getElementById("pm-fuel-uncalibrated").style.display = "none";
+  if (!_fuelStream) {
+    try { _fuelStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 } }); }
+    catch { showToast("❌ Fuel tracking needs screen share permission", "err"); return; }
+  }
+  if (!_fuelVideoEl) { _fuelVideoEl = document.createElement("video"); _fuelVideoEl.muted = true; _fuelVideoEl.playsInline = true; }
+  _fuelVideoEl.srcObject = _fuelStream;
+  await _fuelVideoEl.play();
+  _fuelSamples = [];
+  if (_fuelSampleInterval) clearInterval(_fuelSampleInterval);
+  _fuelSampleInterval = setInterval(_sampleFuelFrame, 400);
+}
+
+function stopFuelSampling() {
+  if (_fuelSampleInterval) { clearInterval(_fuelSampleInterval); _fuelSampleInterval = null; }
+  if (_fuelStream) { _fuelStream.getTracks().forEach(t => t.stop()); _fuelStream = null; }
+}
+
+function _sampleFuelFrame() {
+  if (!_fuelVideoEl || !_fuelCalib || !_fuelVideoEl.videoWidth) return;
+  const vw = _fuelVideoEl.videoWidth, vh = _fuelVideoEl.videoHeight;
+  const cx0 = _fuelCalib.cropXPct * vw, cy0 = _fuelCalib.cropYPct * vh;
+  const cw = _fuelCalib.cropWPct * vw, ch = _fuelCalib.cropHPct * vh;
+  _fuelCanvas.width = cw; _fuelCanvas.height = ch;
+  const ctx = _fuelCanvas.getContext("2d");
+  ctx.drawImage(_fuelVideoEl, cx0, cy0, cw, ch, 0, 0, cw, ch);
+
+  const { data } = ctx.getImageData(0, 0, cw, ch);
+  let sx = 0, sy = 0, n = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    // Yellow needle threshold — tune this if your gauge's needle is a different color
+    if (r > 180 && g > 150 && b < 110 && (r - b) > 60) {
+      const px = (i / 4) % cw, py = Math.floor((i / 4) / cw);
+      sx += px; sy += py; n++;
+    }
+  }
+  if (n < 5) return;
+
+  const nx = (sx / n) / cw, ny = (sy / n) / ch;
+  const centerXInCrop = (_fuelCalib.centerXPct - _fuelCalib.cropXPct) / _fuelCalib.cropWPct;
+  const centerYInCrop = (_fuelCalib.centerYPct - _fuelCalib.cropYPct) / _fuelCalib.cropHPct;
+  const angle = Math.atan2(ny - centerYInCrop, nx - centerXInCrop) * 180 / Math.PI;
+
+  const pct = _angleToPct(angle, _fuelCalib.emptyAngle, _fuelCalib.fullAngle);
+  if (pct === null) return;
+
+  _fuelSamples.push(pct);
+  if (_fuelSamples.length > 5) _fuelSamples.shift();
+  const sorted = [..._fuelSamples].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+
+  // Reject sudden upward jumps mid-run (likely a bad read / crop drift)
+  if (_fuelCurrentPct !== null && median > _fuelCurrentPct + 3) return;
+
+  _fuelCurrentPct = median;
+  _renderFuelUI();
+}
+
+function _angleToPct(angle, emptyAngle, fullAngle) {
+  const norm = (a) => { let x = a; while (x < emptyAngle - 180) x += 360; while (x > emptyAngle + 180) x -= 360; return x; };
+  const e = emptyAngle, f = norm(fullAngle), a = norm(angle);
+  if (Math.abs(f - e) < 5) return null;
+  return Math.max(0, Math.min(100, (a - e) / (f - e) * 100));
+}
+
+function _renderFuelUI() {
+  if (_fuelCurrentPct === null) return;
+  const pctEl = document.getElementById("pm-fuel-pct");
+  const fillEl = document.getElementById("pm-fuel-bar-fill");
+  if (pctEl) pctEl.textContent = Math.round(_fuelCurrentPct) + "%";
+  if (fillEl) fillEl.style.width = _fuelCurrentPct + "%";
+}
+
+// ---- Per-lap fuel logging ----
+function _fuelSnapshotOnLap(lapNum) {
+  if (!_fuelTrackingEnabled || _fuelCurrentPct === null) return;
+  const prev = _fuelLapLog.length ? _fuelLapLog[_fuelLapLog.length - 1].pct : _fuelCurrentPct;
+  const delta = prev - _fuelCurrentPct;
+  _fuelLapLog.push({ lap: lapNum, pct: _fuelCurrentPct, delta: delta > 0 ? delta : 0 });
+  _renderFuelStats();
+}
+
+function _renderFuelStats() {
+  if (_fuelLapLog.length < 2) return;
+  const deltas = _fuelLapLog.slice(1).map(l => l.delta).filter(d => d > 0);
+  if (!deltas.length) return;
+  const avgBurn = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  const burnEl = document.getElementById("pm-fuel-burn");
+  const remEl = document.getElementById("pm-fuel-remaining");
+  if (burnEl) burnEl.textContent = avgBurn.toFixed(1) + "%";
+  if (remEl && avgBurn > 0 && _fuelCurrentPct !== null) remEl.textContent = Math.floor(_fuelCurrentPct / avgBurn);
+}
       
       loadFlagSounds();
       loadToolboxPrefs();
@@ -3073,6 +3382,7 @@ if (saved && apiUrl) {
       loadLapGraphPref();
       loadPracticeModePref();
       loadPracticeLaps();
+      loadFuelTrackingPref();
 
 
       _initHotkeyPauseObserver();
@@ -3522,6 +3832,48 @@ function skipEngineerScreen() {
       this.value = "";
     });
 
+    function practiceStart() {
+  if (_practiceRunning) return;
+  _practiceRunning = true;
+  _practiceStartTs = Date.now();
+  _practiceLastLapTs = _practiceStartTs;
+  document.getElementById("pm-stopwatch")?.classList.add("running");
+  document.getElementById("pm-time-sub").textContent = "Running";
+  document.getElementById("pm-btn-start").disabled = true;
+  document.getElementById("pm-btn-lap").disabled = false;
+  if (_practiceTickInterval) clearInterval(_practiceTickInterval);
+  _practiceTickInterval = setInterval(updatePracticeDisplay, 47);
+  _fuelLapLog = [];               
+  startFuelSampling();            
+}
+
+function practiceLap() {
+  if (!_practiceRunning) return;
+  const now = Date.now();
+  const lapTimeSec = (now - _practiceLastLapTs) / 1000;
+  _practiceLastLapTs = now;
+  const lapNum = _practiceLaps.length + 1;
+  _practiceLaps.push({ lap: lapNum, time: lapTimeSec });
+  savePracticeLaps();
+  renderPracticeLeaderboard();
+  renderPracticeGraph();
+  _fuelSnapshotOnLap(lapNum);     
+  showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok");
+}
+
+function practiceReset() {
+  _practiceRunning = false;
+  _practiceStartTs = 0;
+  _practiceLastLapTs = 0;
+  if (_practiceTickInterval) { clearInterval(_practiceTickInterval); _practiceTickInterval = null; }
+  document.getElementById("pm-stopwatch")?.classList.remove("running");
+  document.getElementById("pm-time").textContent = "00:00.00";
+  document.getElementById("pm-time-sub").textContent = "Ready";
+  document.getElementById("pm-btn-start").disabled = false;
+  document.getElementById("pm-btn-lap").disabled = true;
+  stopFuelSampling();             
+}
+    
     function reLogin() {
       sessionStorage.removeItem("rc_user"); localStorage.removeItem("rc_user");
       user = null; hasDriver = false; hasMarshal = false; hasDev = false; isEngineer = false; engineerPending = false;
