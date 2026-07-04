@@ -2563,3 +2563,11 @@ textarea:focus {
 .f-lap.finished { color:var(--green); }
 .f-lap.dnf-text { color:var(--red); }
 .f-gap { font-size:8px; color:var(--muted); text-align:right; margin-top:1px; font-family:'Arial',sans-serif; }
+
+.rc-you-pin {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  padding-bottom: 6px;
+}
