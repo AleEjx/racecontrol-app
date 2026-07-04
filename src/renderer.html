@@ -137,6 +137,23 @@
         </div>
       </div>
 
+<div class="rc-car-strip" id="rc-car-strip">
+        <div class="rc-car-chip active" id="rc-car-chip-1" onclick="setEngineerActiveCar(1)">
+          <div class="rc-car-chip-num" id="rc-car-chip-num-1">--</div>
+          <div class="rc-car-chip-body">
+            <div class="rc-car-chip-name" id="rc-car-chip-name-1">-</div>
+            <div class="rc-car-chip-meta"><span class="rc-car-chip-flag-dot" id="rc-car-chip-dot-1"></span><span id="rc-car-chip-meta-1">-</span></div>
+          </div>
+        </div>
+        <div class="rc-car-chip" id="rc-car-chip-2" onclick="setEngineerActiveCar(2)">
+          <div class="rc-car-chip-num" id="rc-car-chip-num-2">--</div>
+          <div class="rc-car-chip-body">
+            <div class="rc-car-chip-name" id="rc-car-chip-name-2">-</div>
+            <div class="rc-car-chip-meta"><span class="rc-car-chip-flag-dot" id="rc-car-chip-dot-2"></span><span id="rc-car-chip-meta-2">-</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="rc-chev-nav">
         <button class="active" id="d-tab-btn-overview" onclick="setDriverTab('overview')">Overview</button>
         <button id="d-tab-btn-field" onclick="setDriverTab('field')">Field</button>
@@ -144,8 +161,8 @@
 
       <div class="d-tab-panel active" id="d-tab-overview">
 
-      <div id="d-actions-section" style="display:none;">
-        <div class="rc-block-title">Quick Actions</div>
+<div id="d-actions-section" style="display:none;">
+        <div class="rc-block-title" id="d-actions-title">Quick Actions</div>
         <div id="d-action-notice" class="action-notice" style="display:none;"></div>
         <div class="rc-block-grid mt-6">
           <button class="rc-action-block primary" id="btn-next_lap" onclick="doAction('next_lap')">
@@ -1178,6 +1195,48 @@
     let _summaryCountdownTimer = null;
     let _prevRaceStartedForSummary = false;
 let PREFERRED_ENGINEERS = {};
+    let _engineerActiveSlot = 1;
+
+function setEngineerActiveCar(slot, silent) {
+  if (slot === 2 && !config.driver2) return;
+  _engineerActiveSlot = slot;
+
+  document.getElementById("rc-car-chip-1")?.classList.toggle("active", slot === 1);
+  document.getElementById("rc-car-chip-2")?.classList.toggle("active", slot === 2);
+
+  const plate1 = document.getElementById("rc-plate");
+  const plate2 = document.getElementById("rc-plate2");
+  if (plate1) plate1.style.display = slot === 1 ? "" : "none";
+  if (plate2) plate2.style.display = slot === 2 ? "" : "none";
+
+  const act1 = document.getElementById("d-actions-section");
+  const act2 = document.getElementById("d-actions-section2");
+  if (act1) act1.style.display = slot === 1 ? "block" : "none";
+  if (act2) act2.style.display = slot === 2 ? "block" : "none";
+
+  const title1 = document.getElementById("d-actions-title");
+  const title2 = document.getElementById("d-driver2-label");
+  if (title1) title1.textContent = `Quick Actions — ${config.callsign || config.driver || ""}`;
+  if (title2) title2.textContent = `Quick Actions — ${config.callsign2 || config.driver2 || ""}`;
+
+  if (_lastRaceState) renderNearby(_lastRaceState);
+  if (!silent) showToast(`Now controlling ${slot === 1 ? config.driver : config.driver2}`, "");
+}
+
+function updateCarChipMeta(slot, driverState) {
+  const metaEl = document.getElementById(`rc-car-chip-meta-${slot}`);
+  const dotEl = document.getElementById(`rc-car-chip-dot-${slot}`);
+  if (!metaEl) return;
+  if (!driverState) { metaEl.textContent = "–"; return; }
+  const posTxt = driverState.position ? `P${driverState.position}` : "–";
+  const gapTxt = driverState.finished ? "Finished" : driverState.dnf ? "DNF" : (driverState.gap || "–");
+  metaEl.textContent = `${posTxt} · ${gapTxt}`;
+  if (dotEl) {
+    dotEl.classList.remove("alert", "pit");
+    if (driverState.inPits) dotEl.classList.add("pit");
+    else if (driverState.watchMarshal) dotEl.classList.add("alert");
+  }
+}
 
     function updateDeltas(gaps) {
       if (!gaps) return;
@@ -3160,6 +3219,20 @@ if (config.driver) {
             }
           }
         }
+        if (config.driver) {
+          const myDriver = data.drivers?.find(d => d.name === config.driver);
+          if (myDriver) updatePitBtn(myDriver.inPits);
+          updatePlate(myDriver, data);
+        }
+        if (config.driver2) {
+          const myDriver2 = data.drivers?.find(d => d.name === config.driver2);
+          if (myDriver2) updatePitBtn2(myDriver2.inPits);
+          updatePlate2(myDriver2, data);
+        }
+        if (isEngineer && config.driver2) {
+          updateCarChipMeta(1, data.drivers?.find(d => d.name === config.driver));
+          updateCarChipMeta(2, data.drivers?.find(d => d.name === config.driver2));
+        }
         if (data.currentFlag) {
           if (_lastFlagTimestamp === null) { _lastFlagTimestamp = data.currentFlag.timestamp; }
           else if (data.currentFlag.timestamp !== _lastFlagTimestamp) {
@@ -3332,17 +3405,30 @@ function launchDriverPanel(startPoll = true) {
       const kbSection = document.getElementById("d-keybind-info");
       const actSection2 = document.getElementById("d-actions-section2");
       const labelEl2 = document.getElementById("d-driver2-label");
+      const carStrip = document.getElementById("rc-car-strip");
       if (isEngineer) {
-        actSection.style.display = "block";
         kbSection.style.display = "none";
-        if (actSection2) {
-          actSection2.style.display = config.driver2 ? "block" : "none";
-          if (config.driver2 && labelEl2) labelEl2.textContent = `${config.driver2} — Quick Actions`;
+        if (config.driver2) {
+          carStrip?.classList.add("on");
+          document.getElementById("rc-car-chip-num-1").textContent = config.number || "--";
+          document.getElementById("rc-car-chip-name-1").textContent = config.driver || "-";
+          document.getElementById("rc-car-chip-num-2").textContent = config.number2 || "--";
+          document.getElementById("rc-car-chip-name-2").textContent = config.driver2 || "-";
+          setEngineerActiveCar(1, true);
+        } else {
+          carStrip?.classList.remove("on");
+          actSection.style.display = "block";
+          if (actSection2) actSection2.style.display = "none";
+          const title1 = document.getElementById("d-actions-title");
+          if (title1) title1.textContent = `Quick Actions — ${config.callsign || config.driver || ""}`;
+          const plate1 = document.getElementById("rc-plate");
+          if (plate1) plate1.style.display = "";
         }
       } else {
         actSection.style.display = "none";
         kbSection.style.display = "block";
         if (actSection2) actSection2.style.display = "none";
+        carStrip?.classList.remove("on");
       }
       if (startPoll) {
         if (_driverPollInterval) clearInterval(_driverPollInterval);
@@ -3396,7 +3482,9 @@ function setDriverTab(tab) {
 function renderNearby(data) {
   const el = document.getElementById("d-nearby");
   if (!el) return;
-  const refName = config.driver || config.driver2;
+  const refName = (isEngineer && config.driver2)
+    ? (_engineerActiveSlot === 2 ? config.driver2 : config.driver)
+    : (config.driver || config.driver2);
   if (!refName || !data.drivers?.length) {
     el.innerHTML = '<div class="placeholder-text">No data yet.</div>';
     return;
