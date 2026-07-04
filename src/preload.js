@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("api", {
   suspendHotkeys:   ()       => ipcRenderer.invoke("suspend-hotkeys"),
   resumeHotkeys:    ()       => ipcRenderer.invoke("resume-hotkeys"),
   uninstall:        ()       => ipcRenderer.invoke("uninstall"),
+  onFuelSourcePickerOpen: (cb) => ipcRenderer.on('fuel-source-picker-open', (_e, sources) => cb(sources)),
+selectFuelSource: (id) => ipcRenderer.send('fuel-source-picker-result', id),
   openReleases:     ()       => ipcRenderer.invoke("open-releases"),
   devAuthPassword:  ()       => ipcRenderer.invoke("dev-auth-password"),
   onUpdateAvailable:  (cb) => safeOn("update-available",   cb),
