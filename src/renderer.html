@@ -247,10 +247,11 @@
         </div>
         <div id="m-race-pill" class="text-muted-sm">● Waiting</div>
       </div>
-      <div class="rc-chev-nav" style="margin-top:8px;">
+<div class="rc-chev-nav" style="margin-top:8px;">
         <button class="active" id="m-tab-btn-flags" onclick="setMarshalTab('flags')">Flags</button>
         <button id="m-tab-btn-setup" onclick="setMarshalTab('setup')">Setup</button>
         <button id="m-tab-btn-team" onclick="setMarshalTab('team')">Team</button>
+        <button id="m-tab-btn-control" onclick="setMarshalTab('control')">Control</button>
       </div>
 
       <div class="d-tab-panel active" id="m-tab-flags">
@@ -335,9 +336,21 @@
         </div>
       </div>
 
-      <div class="d-tab-panel" id="m-tab-team">
+<div class="d-tab-panel" id="m-tab-team">
         <div class="sec-label">Attendance</div>
         <div id="m-attendance" class="flex-col-gap-4"></div>
+      </div>
+
+      <div class="d-tab-panel" id="m-tab-control">
+        <div class="sec-label flex-row-between">
+          <span>Race Control</span>
+          <span id="mc-lap-counter" class="font-9 fw-700 text-muted"></span>
+        </div>
+        <input type="text" id="mc-search" placeholder="Search driver..."
+          class="input-full" oninput="filterControlList(this.value)" />
+        <div id="mc-driver-list" class="flex-col-gap-4 mt-4">
+          <div class="placeholder-text">Waiting for race...</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1110,6 +1123,39 @@
     </div>
   </div>
 
+<div id="control-modal" class="modal">
+    <div class="modal-panel modal-panel-compact">
+      <div class="flex-row-between">
+        <div class="font-13 fw-800" id="control-modal-title">Edit Driver</div>
+        <button onclick="closeControlModal()" class="modal-close">✕</button>
+      </div>
+      <input type="hidden" id="cm-name" />
+      <div>
+        <div class="label-muted">Lap</div>
+        <input type="number" id="cm-lap" min="1" max="99" />
+      </div>
+      <div>
+        <div class="label-muted">Status</div>
+        <select id="cm-status">
+          <option value="racing">Racing</option>
+          <option value="pit">In Pits</option>
+          <option value="dnf">DNF</option>
+          <option value="finished">Finished</option>
+        </select>
+      </div>
+      <div>
+        <div class="label-muted">Position</div>
+        <input type="number" id="cm-position" min="1" />
+        <div class="small-note">Moves this driver to the given position — others shift to make room.</div>
+      </div>
+      <div id="cm-error" class="text-error-sm"></div>
+      <div class="flex-row-gap-6">
+        <button onclick="closeControlModal()" class="secondary-btn flex-1">Cancel</button>
+        <button onclick="saveControlEntry()" class="save-btn flex-1">Save Changes</button>
+      </div>
+    </div>
+  </div>
+  
 <div id="driver-export-modal" class="modal">
     <div class="modal-panel">
       <div class="flex-row-between">
@@ -1340,13 +1386,16 @@ function updateCarChipMeta(slot, driverState) {
       }
     }
 
-    function setMarshalTab(tab) {
+function setMarshalTab(tab) {
   document.getElementById("m-tab-btn-flags")?.classList.toggle("active", tab === "flags");
   document.getElementById("m-tab-btn-setup")?.classList.toggle("active", tab === "setup");
   document.getElementById("m-tab-btn-team")?.classList.toggle("active", tab === "team");
+  document.getElementById("m-tab-btn-control")?.classList.toggle("active", tab === "control");
   document.getElementById("m-tab-flags")?.classList.toggle("active", tab === "flags");
   document.getElementById("m-tab-setup")?.classList.toggle("active", tab === "setup");
   document.getElementById("m-tab-team")?.classList.toggle("active", tab === "team");
+  document.getElementById("m-tab-control")?.classList.toggle("active", tab === "control");
+  if (tab === "control") renderControlList();
 }
     
     function setTheme(theme) {
@@ -1862,6 +1911,116 @@ function renderAttendance() {
   }).join("");
   if (!canManage && !document.getElementById("attendance-permission-note")) {
     el.insertAdjacentHTML("beforeend", `<div id="attendance-permission-note" class="small-note" style="text-align:center;padding:6px;">Only Admins and Directors can edit attendance.</div>`);
+  }
+}
+
+function renderControlList(filterQ) {
+  const el = document.getElementById("mc-driver-list");
+  if (!el) return;
+  const drivers = _lastRaceState?.drivers || [];
+
+  const lapEl = document.getElementById("mc-lap-counter");
+  if (lapEl && _lastRaceState?.totalLaps && drivers.length) {
+    const maxLap = Math.max(...drivers.map(d => d.lap || 1));
+    lapEl.textContent = `Lap ${maxLap} / ${_lastRaceState.totalLaps}`;
+  } else if (lapEl) lapEl.textContent = "";
+
+  if (!drivers.length) {
+    el.innerHTML = '<div class="placeholder-text">Waiting for race...</div>';
+    return;
+  }
+
+  const term = (filterQ ?? document.getElementById("mc-search")?.value ?? "").toLowerCase().trim();
+  const rows = drivers.map((d, i) => {
+    if (term && !d.name.toLowerCase().includes(term) && !(d.callsign || "").toLowerCase().includes(term)) return "";
+    const pos = i + 1;
+    const statusLabel = d.dnf ? "DNF" : d.finished ? "Finished" : d.inPits ? "In Pits" : "Racing";
+    const statusColor = d.dnf ? "var(--red)" : d.finished ? "var(--blue)" : d.inPits ? "var(--yellow)" : "var(--green)";
+    return `
+      <div class="lb-row" onclick="openControlModal('${d.name}')" style="cursor:pointer;">
+        <div class="lb-pos">${pos}</div>
+        <div class="lb-num">#${d.number}</div>
+        <div class="lb-info">
+          <div class="lb-name">${d.name}</div>
+          <div class="lb-call">${d.callsign}</div>
+        </div>
+        <div class="lb-lap" style="text-align:right;">
+          <div>Lap ${d.lap || 1}</div>
+          <div style="font-size:8px;color:${statusColor};">${statusLabel}</div>
+        </div>
+      </div>`;
+  }).join("");
+
+  el.innerHTML = rows || '<div class="placeholder-text">No drivers match your search.</div>';
+}
+
+function filterControlList(q) { renderControlList(q); }
+
+function openControlModal(name) {
+  const drivers = _lastRaceState?.drivers || [];
+  const idx = drivers.findIndex(d => d.name === name);
+  if (idx === -1) return;
+  const d = drivers[idx];
+
+  document.getElementById("cm-name").value = name;
+  document.getElementById("control-modal-title").textContent = `Edit — ${name}`;
+  document.getElementById("cm-lap").value = d.lap || 1;
+  document.getElementById("cm-status").value = d.dnf ? "dnf" : d.finished ? "finished" : d.inPits ? "pit" : "racing";
+  document.getElementById("cm-position").value = idx + 1;
+  document.getElementById("cm-error").textContent = "";
+  document.getElementById("control-modal").style.display = "flex";
+}
+
+function closeControlModal() {
+  document.getElementById("control-modal").style.display = "none";
+}
+
+async function saveControlEntry() {
+  const name = document.getElementById("cm-name").value;
+  const lap = parseInt(document.getElementById("cm-lap").value, 10) || 1;
+  const status = document.getElementById("cm-status").value;
+  const targetPos = parseInt(document.getElementById("cm-position").value, 10) || 1;
+  const errEl = document.getElementById("cm-error");
+
+  if (!user?.token) { errEl.textContent = "❌ Not authenticated as marshal."; return; }
+
+  let drivers = JSON.parse(JSON.stringify(_lastRaceState?.drivers || []));
+  const idx = drivers.findIndex(d => d.name === name);
+  if (idx === -1) { errEl.textContent = "❌ Driver not found."; return; }
+
+  const d = drivers[idx];
+  d.lap = lap;
+  d.dnf = status === "dnf";
+  d.finished = status === "finished";
+  d.inPits = status === "pit";
+
+  drivers.splice(idx, 1);
+  const insertAt = Math.min(Math.max(targetPos - 1, 0), drivers.length);
+  drivers.splice(insertAt, 0, d);
+
+  drivers.forEach((dr, i) => {
+    dr.position = i + 1;
+    if (i === 0) dr.gap = "Leader";
+  });
+
+  errEl.textContent = "";
+  try {
+    const res = await fetch(`${apiUrl}/driver/state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+      body: JSON.stringify({ drivers }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      _lastRaceState = { ..._lastRaceState, drivers };
+      closeControlModal();
+      renderControlList();
+      showToast(`✓ Updated ${name}`, "ok");
+    } else {
+      errEl.textContent = `❌ ${data.error || "Failed to save."}`;
+    }
+  } catch {
+    errEl.textContent = "❌ Bot unreachable.";
   }
 }
 
@@ -4628,7 +4787,8 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
           ${d.inPits ? '<div style="font-size:8px;color:var(--yellow);">🔧 IN PITS</div>' : (d.gap && d.gap !== "Leader" ? `<div style="font-size:8px;color:var(--muted);">${d.gap}</div>` : "")}
         </div>
       </div>`;
-          }).join("");
+}).join("");
+          if (currentPanel === "marshal") renderControlList();
         } catch (e) { console.warn("[Marshal LB]", e.message); }
       }
 
