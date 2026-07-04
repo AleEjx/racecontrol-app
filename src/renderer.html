@@ -3859,111 +3859,6 @@ function renderLeaderboard(data) {
   }).join("");
 }
 
-        const positionChanges = {};
-        data.drivers.forEach((d, i) => {
-          const pos = i + 1;
-          const prev = _prevPositions[d.name];
-          if (prev === undefined) positionChanges[d.name] = 'new';
-          else if (pos < prev) positionChanges[d.name] = 'up';
-          else if (pos > prev) positionChanges[d.name] = 'down';
-          else positionChanges[d.name] = 'same';
-        });
-
-        const newPositions = {};
-        data.drivers.forEach((d, i) => { newPositions[d.name] = i + 1; });
-        _prevPositions = newPositions;
-
-        lb.innerHTML = data.drivers.map((d, i) => {
-          const pos = i + 1;
-          const isMe = d.name === config.driver;
-          const isMe2 = d.name === config.driver2;
-          const change = positionChanges[d.name];
-          const team = getTeamFromCallsign(d.callsign);
-          const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : null;
-          const posColor = pos === 1 ? '#ffd600' : pos === 2 ? '#c0c0c0' : pos === 3 ? '#cd7f32' : 'var(--muted)';
-
-          const arrowHtml = change === 'up'
-            ? `<span style="font-size:9px;font-weight:900;color:#00e676;line-height:1;animation:arrowPop 0.4s cubic-bezier(0.34,1.56,0.64,1);">▲</span>`
-            : change === 'down'
-              ? `<span style="font-size:9px;font-weight:900;color:#ff1744;line-height:1;animation:arrowPop 0.4s cubic-bezier(0.34,1.56,0.64,1);">▼</span>`
-              : `<span style="font-size:9px;line-height:1;opacity:0;">▲</span>`;
-
-          let gapHtml = '';
-          if (!d.dnf && !d.finished) {
-            if (i === 0) {
-              gapHtml = `<span style="font-size:8px;font-weight:800;color:var(--yellow);letter-spacing:0.5px;">LEADER</span>`;
-            } else {
-              const delta = _deltaSeconds[d.name];
-              if (typeof delta === 'number') {
-                const abs = Math.abs(delta);
-                const mins = Math.floor(abs / 60);
-                const secs = (abs % 60).toFixed(3);
-                const str = mins > 0 ? `${mins}:${secs.padStart(6, '0')}` : `${secs}s`;
-                gapHtml = `<span style="font-size:9px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;">+${str}</span>`;
-              } else {
-                const lapDiff = (data.drivers[0]?.lap || 1) - (d.lap || 1);
-                if (lapDiff > 0)
-                  gapHtml = `<span style="font-size:8px;color:var(--muted);">+${lapDiff} LAP${lapDiff > 1 ? 'S' : ''}</span>`;
-                else if (d.gap && d.gap !== 'Leader')
-                  gapHtml = `<span style="font-size:8px;color:var(--muted);">${d.gap}</span>`;
-              }
-            }
-          }
-
-          const pitsBadge = (d.inPits && !d.dnf && !d.finished)
-            ? `<span style="font-size:7px;font-weight:800;letter-spacing:0.5px;padding:1px 5px;border-radius:3px;background:rgba(255,214,0,0.12);border:1px solid rgba(255,214,0,0.35);color:var(--yellow);">PIT STOP</span>`
-            : '';
-
-          let rowExtra = '';
-          if (isMe) rowExtra = 'border-color:rgba(41,121,255,0.5);background:rgba(41,121,255,0.07);';
-          if (isMe2) rowExtra = 'border-color:rgba(0,230,118,0.5);background:rgba(0,230,118,0.07);';
-          if (d.dnf) rowExtra += 'opacity:0.38;filter:grayscale(0.6);';
-
-          return `
-      <div class="lb-row"
-        style="border-left:3px solid ${tc || 'var(--border)'};
-               padding:8px 10px 8px 10px;gap:8px;
-               transition:border-color 0.2s,background 0.2s;
-               ${rowExtra}">
-
-        <div style="display:flex;flex-direction:column;align-items:center;width:18px;flex-shrink:0;gap:1px;">
-          <div style="font-size:13px;font-weight:900;color:${posColor};line-height:1;letter-spacing:-1px;">${pos}</div>
-          <div style="height:10px;display:flex;align-items:center;justify-content:center;">${arrowHtml}</div>
-        </div>
-
-        <div style="width:30px;height:30px;border-radius:4px;flex-shrink:0;
-             background:${tc ? tc + '1a' : 'rgba(255,255,255,0.04)'};
-             border:1px solid ${tc ? tc + '55' : 'var(--border)'};
-             display:flex;align-items:center;justify-content:center;flex-direction:column;">
-          <span style="font-size:10px;font-weight:900;color:${tc || 'var(--muted)'};line-height:1;">${d.number}</span>
-        </div>
-
-        <div style="flex:1;min-width:0;overflow:hidden;">
-          <div style="display:flex;align-items:center;gap:5px;">
-            <span style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name}</span>
-            ${d.watchMarshal ? `<span title="WatchMarshal flagged" style="font-size:11px;flex-shrink:0;">⚠️</span>` : ''}
-            ${isMe ? `<span style="font-size:7px;font-weight:900;padding:1px 4px;border-radius:3px;background:rgba(41,121,255,0.2);border:1px solid rgba(41,121,255,0.4);color:var(--blue);flex-shrink:0;">YOU</span>` : ''}
-            ${isMe2 ? `<span style="font-size:7px;font-weight:900;padding:1px 4px;border-radius:3px;background:rgba(0,230,118,0.2);border:1px solid rgba(0,230,118,0.4);color:var(--green);flex-shrink:0;">D2</span>` : ''}
-          </div>
-          <div style="font-size:8px;color:var(--muted);margin-top:1px;">${d.callsign}</div>
-        </div>
-
-        <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
-          ${d.dnf
-              ? `<span style="font-size:9px;font-weight:900;color:var(--red);letter-spacing:1px;padding:2px 6px;border-radius:3px;background:rgba(255,23,68,0.12);border:1px solid rgba(255,23,68,0.3);">DNF</span>`
-              : d.finished
-                ? `<span style="font-size:9px;font-weight:800;color:var(--green);">FINISHED 🏁</span>`
-                : `<span style="font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;">Lap ${d.lap || 1}${data.totalLaps ? `<span style="font-size:9px;color:var(--muted);font-weight:400;">/${data.totalLaps}</span>` : ''}</span>`
-            }
-          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
-            ${pitsBadge}
-            ${gapHtml}
-          </div>
-        </div>
-      </div>`;
-        }).join('');
-      }
-
     function showDbUpdateBanner() {
   if (document.getElementById("db-update-banner")) return;
   const banner = document.createElement("div");
@@ -3981,6 +3876,7 @@ function renderLeaderboard(data) {
       setTimeout(() => location.reload(), 1200);
     });
   });
+    }
 
 async function checkDriverDbVersion() {
   if (!apiUrl) return;
