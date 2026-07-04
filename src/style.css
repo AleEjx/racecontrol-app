@@ -1215,6 +1215,7 @@ textarea:focus {
 }
 
 .flag-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1226,9 +1227,39 @@ textarea:focus {
   border-radius: var(--radius);
   cursor: pointer;
   color: var(--text);
+  --accent: rgba(255,255,255,0.35);
   font-family: 'Oxanium', sans-serif;
   transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  overflow: hidden;
 }
+.flag-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: var(--radius);
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  -webkit-mask-image: radial-gradient(circle at 0% 100%, #000 0%, rgba(0,0,0,.5) 40%, transparent 75%);
+  mask-image: radial-gradient(circle at 0% 100%, #000 0%, rgba(0,0,0,.5) 40%, transparent 75%);
+}
+.flag-btn:active { transform: scale(0.93); }
+.flag-btn .fi    { font-size: 18px; }
+.flag-btn .fn    { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+
+.flag-btn.green  { --accent: var(--green); }
+.flag-btn.yellow { --accent: var(--yellow); }
+.flag-btn.red    { --accent: var(--red); }
+.flag-btn.blue   { --accent: var(--blue); }
+.flag-btn.orange { --accent: var(--orange); }
+.flag-btn.white  { --accent: #fff; }
+
+.flag-btn.green:hover  { border-color: var(--green);  background: rgba(0,230,118,0.07); }
+.flag-btn.yellow:hover { border-color: var(--yellow); background: rgba(255,214,0,0.07); }
+.flag-btn.red:hover    { border-color: var(--red);    background: rgba(255,23,68,0.07); }
+.flag-btn.blue:hover   { border-color: var(--blue);   background: rgba(41,121,255,0.07); }
+.flag-btn.orange:hover { border-color: var(--orange); background: rgba(255,109,0,0.07); }
+.flag-btn.white:hover  { border-color: #fff;          background: rgba(255,255,255,0.05); }
 .flag-btn:active { transform: scale(0.93); }
 .flag-btn .fi    { font-size: 18px; }
 .flag-btn .fn    { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
@@ -1426,6 +1457,11 @@ textarea:focus {
   border-radius: 4px;
   cursor: pointer;
   font-family: 'Oxanium', sans-serif;
+}
+
+#m-wm-container,
+#m-bf-container {
+  gap: 10px;
 }
 
 
