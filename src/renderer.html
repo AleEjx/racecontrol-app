@@ -2737,6 +2737,9 @@ function chooseRoleRacer() {
   config.discordId = user.id;
   config.driverToken = user.driverToken || null;
   config.engineer = false;
+  config.driver2 = "";
+  config.number2 = "";
+  config.callsign2 = "";
   isEngineer = false;
   hasDriver = true;
   engineerPending = false;
@@ -2826,12 +2829,15 @@ function skipEngineerScreen() {
   engineerPending = false;
   config.driver = "__dev__";
   config.engineer = false;
-  config.driverToken = user.driverToken || null;   
-  config.discordId = user.id;                      
+  config.driver2 = "";
+  config.number2 = "";
+  config.callsign2 = "";
+  config.driverToken = user.driverToken || null;
+  config.discordId = user.id;
   isEngineer = false;
   hasDriver = true;
-  hasDev = true;     
-  window.api.saveConfig(config);          
+  hasDev = true;
+  window.api.saveConfig(config);
   updateSwitcher();
   launchDriverPanel();
 }
@@ -3398,7 +3404,7 @@ if (config.driver) {
 function launchDriverPanel(startPoll = true) {
       showScreen("screen-driver"); currentPanel = "driver";
       document.getElementById("rc-plate")?.classList.toggle("on", !!config.driver);
-      document.getElementById("rc-plate2")?.classList.toggle("on", !!config.driver2);
+      document.getElementById("rc-plate2")?.classList.toggle("on", isEngineer && !!config.driver2);
       setDriverTab('overview');
       document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "");
       document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
