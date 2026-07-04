@@ -2750,14 +2750,13 @@ async function afterLogin() {
   config.driver = "";
   config.engineer = false;
   isEngineer = false;
-const driverName = DRIVER_IDS[user.id];
+  const driverName = DRIVER_IDS[user.id];
   hasDriver = true;
   if (_practiceModeEnabled) {
     launchPracticePanel();
     return;
   }
-  showRoleSelectScreen(!!driverName);
-}
+showRoleSelectScreen(!!driverName);
 }
 
 function showRoleSelectScreen(isInDB) {
