@@ -3410,7 +3410,7 @@ function renderNearby(data) {
     const team = getTeamFromCallsign(d.callsign);
     const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : null;
     const arrow = kind === "ahead" ? "▲" : kind === "behind" ? "▼" : "●";
-    const gapTxt = d.dnf ? "DNF" : d.finished ? "FIN" : (d.gap || "–");
+    const gapTxt = d.dnf ? "DNF" : d.finished ? "Finished" : (d.gap || "–");
     return `
       <div class="rc-nearby-row ${kind}" style="${tc ? `border-color:${tc}66;` : ""}">
         <span class="rc-nr-arrow">${arrow}</span>
