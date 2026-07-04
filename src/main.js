@@ -225,9 +225,19 @@ if (pitting2) globalShortcut.register(toElectronAccelerator(pitting2), () => {
     enterPits(2);
   });
 
-  const { dnf } = keybinds || {};
+const { dnf, practice_start, practice_lap, practice_reset } = keybinds || {};
   if (dnf) globalShortcut.register(toElectronAccelerator(dnf), () => {
     mainWindow?.webContents.send("keybind-fired", "dnf");
+  });
+
+  if (practice_start) globalShortcut.register(toElectronAccelerator(practice_start), () => {
+    mainWindow?.webContents.send("keybind-fired", "practice_start");
+  });
+  if (practice_lap) globalShortcut.register(toElectronAccelerator(practice_lap), () => {
+    mainWindow?.webContents.send("keybind-fired", "practice_lap");
+  });
+  if (practice_reset) globalShortcut.register(toElectronAccelerator(practice_reset), () => {
+    mainWindow?.webContents.send("keybind-fired", "practice_reset");
   });
 }
 
