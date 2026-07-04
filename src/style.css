@@ -2458,3 +2458,67 @@ textarea:focus {
 .rc-lgl-dot.fastest { background: var(--green); }
 .rc-lgl-dot.slowest { background: var(--red); }
 .rc-lgl-dot.race-fastest { background: #a855f7; }
+
+/* =============================================================================
+   38. Driver Panel Tabs + Mockup-style Actions
+   ============================================================================= */
+
+.rc-chev-nav { display:flex; gap:0; margin-top:8px; }
+.rc-chev-nav button {
+  flex:1; padding:8px; border:none; background:var(--surface); color:var(--muted);
+  font-family:'Oxanium',sans-serif; font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase;
+  cursor:pointer; border-bottom:2px solid var(--border);
+}
+.rc-chev-nav button.active { color:var(--text); border-bottom-color:var(--red); background:rgba(255,23,68,0.06); }
+
+.d-tab-panel { display:none; }
+.d-tab-panel.active { display:block; }
+
+.rc-block-title { font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:10px 0 8px; }
+.rc-block-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:7px; }
+.rc-action-block {
+  position:relative; overflow:hidden;
+  display:flex; align-items:center; gap:9px; padding:12px;
+  background:var(--surface); border:2px solid var(--border); cursor:pointer;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  transition:.12s; color:var(--text); font-family:'Oxanium',sans-serif;
+}
+.rc-action-block:active { transform:scale(.97); }
+.rc-action-block.primary { grid-column:span 2; border-color:var(--blue); background:rgba(41,121,255,.07); }
+.rc-action-block .ai { font-size:18px; }
+.rc-action-block .al { font-size:9px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; }
+.rc-action-block .a-key { margin-left:auto; font-size:7px; color:var(--muted); background:var(--bg); padding:1px 3px; border-radius:2px; }
+.rc-action-block.pit-active { border-color:var(--yellow); background:rgba(255,214,0,.08); }
+.rc-action-block.fired { animation: btnPop 0.25s ease; }
+.rc-action-block:disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
+
+.rc-dnf-block {
+  width:100%; padding:9px; margin-top:5px; border:2px solid var(--red); background:rgba(255,23,68,.08);
+  color:var(--red); font-family:'Oxanium',sans-serif; font-size:9px; font-weight:900; letter-spacing:1.5px;
+  text-transform:uppercase; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
+}
+.rc-dnf-block .a-key { margin-left:6px; font-size:7px; color:var(--red); background:rgba(255,23,68,.15); padding:1px 3px; border-radius:2px; }
+.rc-dnf-block:disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
+
+.rc-kb-strip { display:flex; flex-direction:column; gap:6px; }
+.rc-kb-row { display:flex; align-items:center; gap:0; background:var(--surface); border:2px solid var(--border); overflow:hidden; }
+.rc-kb-chip { font-weight:900; font-size:10px; background:var(--bg); color:var(--blue); padding:8px 11px; border-right:2px solid var(--border); min-width:18px; text-align:center; }
+.rc-kb-icon { font-size:13px; padding:0 9px; }
+.rc-kb-label { font-size:9px; font-weight:700; flex:1; padding:0 11px 0 0; letter-spacing:.3px; }
+
+.rc-nearby-row { display:flex; align-items:center; gap:9px; padding:8px 10px; background:var(--surface); border:2px solid var(--border); margin-bottom:6px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.rc-nearby-row.ahead { border-color:rgba(0,230,118,.4); }
+.rc-nearby-row.behind { border-color:rgba(255,23,68,.4); }
+.rc-nearby-row.you { border-color:var(--blue); background:rgba(41,121,255,.08); }
+.rc-nr-arrow { font-size:12px; width:16px; text-align:center; flex-shrink:0; }
+.rc-nearby-row.ahead .rc-nr-arrow { color:var(--green); }
+.rc-nearby-row.behind .rc-nr-arrow { color:var(--red); }
+.rc-nearby-row.you .rc-nr-arrow { color:var(--blue); }
+.rc-nr-pos { font-weight:900; width:18px; text-align:center; color:var(--muted); font-size:12px; }
+.rc-nr-num { width:24px; height:24px; background:rgba(255,255,255,.05); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:900; flex-shrink:0; }
+.rc-nr-body { flex:1; min-width:0; }
+.rc-nr-name { font-size:10px; font-weight:800; letter-spacing:.3px; }
+.rc-nr-call { font-size:8px; color:var(--muted); }
+.rc-nr-gap { font-size:10px; font-weight:800; text-align:right; }
