@@ -1979,29 +1979,31 @@ async function saveControlEntry() {
   const name = document.getElementById("cm-name").value;
   const lap = parseInt(document.getElementById("cm-lap").value, 10) || 1;
   const status = document.getElementById("cm-status").value;
-  const targetPos = parseInt(document.getElementById("cm-position").value, 10) || 1;
+  const position = parseInt(document.getElementById("cm-position").value, 10) || 1;
   const errEl = document.getElementById("cm-error");
 
   if (!user?.token) { errEl.textContent = "❌ Not authenticated as marshal."; return; }
 
-  let drivers = JSON.parse(JSON.stringify(_lastRaceState?.drivers || []));
-  const idx = drivers.findIndex(d => d.name === name);
-  if (idx === -1) { errEl.textContent = "❌ Driver not found."; return; }
-
-  const d = drivers[idx];
-  d.lap = lap;
-  d.dnf = status === "dnf";
-  d.finished = status === "finished";
-  d.inPits = status === "pit";
-
-  drivers.splice(idx, 1);
-  const insertAt = Math.min(Math.max(targetPos - 1, 0), drivers.length);
-  drivers.splice(insertAt, 0, d);
-
-  drivers.forEach((dr, i) => {
-    dr.position = i + 1;
-    if (i === 0) dr.gap = "Leader";
-  });
+  errEl.textContent = "";
+  try {
+    const res = await fetch(`${apiUrl}/marshal/control-update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+      body: JSON.stringify({ name, lap, status, position }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      _lastRaceState = data.state;
+      closeControlModal();
+      renderControlList();
+      showToast(`✓ Updated ${name}`, "ok");
+    } else {
+      errEl.textContent = `❌ ${data.error || "Failed to save."}`;
+    }
+  } catch {
+    errEl.textContent = "❌ Bot unreachable.";
+  }
+}
 
   errEl.textContent = "";
   try {
