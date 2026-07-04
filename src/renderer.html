@@ -1087,6 +1087,10 @@
     const DEV_USER_ID = "790254318389166111";
     const GIST_ID = "746339b1b2924446563e6349ef89ce8a";
 
+    function canManageAttendance() {
+  return !!(user?.isAdmin || DIRECTOR_ROLES.some(r => user?.roles?.includes(r)));
+}
+
     const FLAG_DEFS = {
       green: { emoji: "🟢", title: "Green Flag", sub: "Green flag — race on!", color: "green", sound: "GreenFlag.mp4" },
       yellow: { emoji: "🟡", title: "Yellow Flag", sub: "Caution — no overtaking.", color: "yellow", sound: "YellowFlag.mp4" },
@@ -1765,14 +1769,16 @@ function toggleUserTab(tab) {
       showToast("✓ Local engineers cleared", "ok");
     }
 
-    function renderAttendance() {
-      const el = document.getElementById("m-attendance");
-      if (!el) return;
-      const drivers = Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number));
-      el.innerHTML = drivers.map(([name, info]) => {
-        const present = _attendance[name] !== false;
-        const btnClass = present ? "btn-outline-green" : "btn-outline-red";
-        return `
+function renderAttendance() {
+  const el = document.getElementById("m-attendance");
+  if (!el) return;
+  const canManage = canManageAttendance();
+  const drivers = Object.entries(DRIVER_INFO).sort((a, b) => parseInt(a[1].number) - parseInt(b[1].number));
+  el.innerHTML = drivers.map(([name, info]) => {
+    const present = _attendance[name] !== false;
+    const btnClass = present ? "btn-outline-green" : "btn-outline-red";
+    const disabledAttrs = canManage ? "" : `disabled style="opacity:0.4;cursor:not-allowed;"`;
+    return `
       <div class="attendance-row ${present ? "" : "absent"}">
         <div class="flex-row-gap-8">
           <div class="attendance-meta">#${info.number}</div>
@@ -1781,21 +1787,28 @@ function toggleUserTab(tab) {
             <div class="attendance-sub">${info.callsign}</div>
           </div>
         </div>
-        <button onclick="toggleAttendance('${name}')" class="toggle-button ${btnClass}">
+        <button onclick="toggleAttendance('${name}')" class="toggle-button ${btnClass}" ${disabledAttrs}>
           ${present ? "✓ HERE" : "✗ ABSENT"}
         </button>
       </div>`;
-      }).join("");
-    }
+  }).join("");
+  if (!canManage && !document.getElementById("attendance-permission-note")) {
+    el.insertAdjacentHTML("beforeend", `<div id="attendance-permission-note" class="small-note" style="text-align:center;padding:6px;">Only Admins and Directors can edit attendance.</div>`);
+  }
+}
 
-    async function toggleAttendance(name) {
-      const present = _attendance[name] !== false;
-      _attendance[name] = !present;
-      localStorage.setItem("rc_attendance", JSON.stringify(_attendance));
-      renderAttendance();
-      syncAttendanceToLeaderboard();
-      await pushAttendanceToServer();
-    }
+async function toggleAttendance(name) {
+  if (!canManageAttendance()) {
+    showToast("❌ Only Admins and Directors can edit attendance", "err");
+    return;
+  }
+  const present = _attendance[name] !== false;
+  _attendance[name] = !present;
+  localStorage.setItem("rc_attendance", JSON.stringify(_attendance));
+  renderAttendance();
+  syncAttendanceToLeaderboard();
+  await pushAttendanceToServer();
+}
 
     async function pushAttendanceToServer() {
       if (!apiUrl || !user?.token) return;
