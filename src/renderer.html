@@ -251,10 +251,11 @@
   <button class="active" id="m-tab-btn-flags" onclick="setMarshalTab('flags')">Flags</button>
   <button id="m-tab-btn-setup" onclick="setMarshalTab('setup')">Setup</button>
   <button id="m-tab-btn-team" onclick="setMarshalTab('team')">Team</button>
-</div>
-      <div id="m-wm-container" class="flex-col-gap-4"></div>
-      <div id="m-bf-container" class="flex-col-gap-4"></div>
-      <div id="m-leaderboard-section">
+<div>
+        <div class="d-tab-panel active" id="m-tab-flags">
+  <div id="m-wm-container" class="flex-col-gap-4"></div>
+  <div id="m-bf-container" class="flex-col-gap-4"></div>
+  <div id="m-leaderboard-section">
         <div class="sec-label flex-row-between">
           <span>Leaderboard</span>
           <span id="m-lap-counter" class="font-9 fw-700 text-muted"></span>
@@ -266,11 +267,6 @@
           <div class="placeholder-text">Waiting for race...</div>
         </div>
       </div>
-      <div>
-        <div class="d-tab-panel active" id="m-tab-flags">
-  <div id="m-wm-container" class="flex-col-gap-4"></div>
-  <div id="m-bf-container" class="flex-col-gap-4"></div>
-<div class="d-tab-panel active" id="m-tab-flags">
         <div class="sec-label">Global Flags</div>
         <div class="flag-grid">
           <button class="flag-btn green" onclick="triggerFlag('green')"><span class="fi">🟢</span><span
@@ -297,7 +293,6 @@
               class="fn">Speed Up</span></button>
           <button class="flag-btn orange" onclick="triggerFlag('sfl')"><span class="fi">🟠</span><span
               class="fn">SFL</span></button>
-        </div>
 </div>
 <div class="d-tab-panel" id="m-tab-setup">
      <div id="m-race-setup" style="display:none;">
