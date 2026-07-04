@@ -2873,3 +2873,15 @@ textarea:focus {
 .pm-fuel-stats b { color:var(--text); }
 .pm-fuel-uncalibrated { font-size:10px; color:var(--muted); text-align:center; padding:8px; }
 
+.fuel-source-modal { position:fixed; inset:0; z-index:6000; background:rgba(0,0,0,.85);
+  display:none; align-items:center; justify-content:center; padding:20px; }
+.fuel-source-modal.active { display:flex; }
+.fsm-panel { background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:16px; width:100%; max-width:520px; max-height:80vh; overflow-y:auto;
+  display:flex; flex-direction:column; gap:10px; }
+.fsm-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.fsm-item { border:2px solid var(--border); border-radius:6px; padding:6px; cursor:pointer;
+  display:flex; flex-direction:column; gap:4px; background:var(--bg); transition:border-color .12s; }
+.fsm-item:hover { border-color:var(--blue); }
+.fsm-item img { width:100%; height:80px; object-fit:cover; border-radius:4px; background:#000; }
+.fsm-item .fsm-name { font-size:9px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
