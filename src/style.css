@@ -84,6 +84,7 @@ body {
   --blue:    #2979ff;
   --yellow:  #ffd600;
   --orange:  #ff6d00;
+  --flag: var(--green);
   --discord: #5865F2;
 
   /* Shared */
@@ -2477,6 +2478,44 @@ textarea:focus {
   z-index: 1;
 }
 .rc-plate.pitting .rc-plate-pit-flag { display: block; }
+
+/* Stripe Header — flag-aware status bar */
+.stripe-header {
+  position: relative;
+  overflow: hidden;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 2px solid var(--flag);
+  transition: border-color .3s;
+  flex-shrink: 0;
+}
+.stripe-header::before {
+  content: '';
+  position: absolute;
+  top: 0; right: -30px;
+  width: 110px; height: 200%;
+  background: var(--flag);
+  opacity: .14;
+  transform: rotate(18deg);
+  transition: background .3s;
+}
+.sh-row { display: flex; justify-content: space-between; align-items: center; position: relative; }
+.sh-status { display: flex; align-items: center; gap: 6px; }
+.sh-flag { font-size: 10px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: var(--flag); transition: color .3s; }
+.sh-lap { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
+.sh-lap b { color: var(--text); }
+.sh-gear-btn {
+  width: 22px; height: 22px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sh-gear-btn:hover { color: var(--text); border-color: var(--muted); }
 
 /* =============================================================================
    38. Driver Panel Tabs + Mockup-style Actions
