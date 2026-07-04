@@ -42,6 +42,7 @@
     39.  Full Field Leaderboard (Driver Panel — Field Tab redesign)
     40. Engineer Dual-Car Switcher (redesign)
     41. Practice mode
+    42. Fuel Gauge Calibration & Tracking
     
    ============================================================================= */
 
@@ -2835,3 +2836,40 @@ textarea:focus {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
 }
+
+/* =============================================================================
+   42. Fuel Gauge Calibration & Tracking
+   ============================================================================= */
+
+.fuel-calib-overlay { position:fixed; inset:0; z-index:5000; background:rgba(0,0,0,.9);
+  display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; padding:16px; }
+.fuel-calib-overlay.active { display:flex; }
+
+.fc-stage { position:relative; max-width:640px; width:100%; border:2px solid var(--border);
+  border-radius:8px; overflow:hidden; background:#000; cursor:crosshair; }
+.fc-stage video { display:block; width:100%; height:auto; }
+.fc-crop-box { position:absolute; border:2px dashed var(--blue); background:rgba(41,121,255,0.08); pointer-events:none; }
+.fc-handle { position:absolute; width:14px; height:14px; border-radius:50%;
+  background:var(--yellow); border:2px solid #000; transform:translate(-50%,-50%); display:none; pointer-events:none; }
+.fc-handle.empty { background:var(--red); }
+.fc-handle.full  { background:var(--green); }
+
+.fc-steps { display:flex; gap:6px; }
+.fc-step { font-size:9px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+  padding:4px 9px; border-radius:12px; background:var(--bg); border:1px solid var(--border); color:var(--muted); }
+.fc-step.active { color:var(--text); border-color:var(--blue); background:rgba(41,121,255,.12); }
+
+.fc-hint { font-size:10px; color:var(--muted); text-align:center; max-width:500px; }
+.fc-btns { display:flex; gap:8px; }
+
+.pm-fuel-card { background:var(--surface); border:2px solid var(--border);
+  clip-path:polygon(0 0,100% 0,100% 100%,10px 100%,0 calc(100% - 10px));
+  padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+.pm-fuel-row { display:flex; align-items:center; justify-content:space-between; }
+.pm-fuel-pct { font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+.pm-fuel-bar-track { height:8px; border-radius:4px; background:var(--bg); border:1px solid var(--border); overflow:hidden; }
+.pm-fuel-bar-fill { height:100%; background:linear-gradient(90deg,var(--red),var(--yellow),var(--green)); transition:width .3s; }
+.pm-fuel-stats { display:flex; gap:10px; font-size:9px; color:var(--muted); }
+.pm-fuel-stats b { color:var(--text); }
+.pm-fuel-uncalibrated { font-size:10px; color:var(--muted); text-align:center; padding:8px; }
+
