@@ -235,7 +235,7 @@
 
     </div>
   </div>
-  <!-- MARSHAL PANEL -->
+
   <!-- MARSHAL PANEL -->
   <div class="screen" id="screen-marshal">
     <div class="scroll-body">
@@ -247,6 +247,11 @@
         </div>
         <div id="m-race-pill" class="text-muted-sm">● Waiting</div>
       </div>
+      <div class="rc-chev-nav" style="margin-top:8px;">
+  <button class="active" id="m-tab-btn-flags" onclick="setMarshalTab('flags')">Flags</button>
+  <button id="m-tab-btn-setup" onclick="setMarshalTab('setup')">Setup</button>
+  <button id="m-tab-btn-team" onclick="setMarshalTab('team')">Team</button>
+</div>
       <div id="m-wm-container" class="flex-col-gap-4"></div>
       <div id="m-bf-container" class="flex-col-gap-4"></div>
       <div id="m-leaderboard-section">
@@ -262,6 +267,10 @@
         </div>
       </div>
       <div>
+        <div class="d-tab-panel active" id="m-tab-flags">
+  <div id="m-wm-container" class="flex-col-gap-4"></div>
+  <div id="m-bf-container" class="flex-col-gap-4"></div>
+  <div id="m-leaderboard-section">
         <div class="sec-label">Global Flags</div>
         <div class="flag-grid">
           <button class="flag-btn green" onclick="triggerFlag('green')"><span class="fi">🟢</span><span
@@ -290,7 +299,7 @@
               class="fn">SFL</span></button>
         </div>
       </div>
-      <div class="divider"></div>
+<div class="d-tab-panel" id="m-tab-setup">
      <div id="m-race-setup" style="display:none;">
         <div class="sec-label">🏁 Race Setup</div>
         <div
@@ -333,15 +342,16 @@
             <div id="ac-yes-list" class="flex-col-gap-3"></div>
             <div id="ac-no-list" class="flex-col-gap-3"></div>
             <div id="ac-summary" class="font-10 text-muted text-center py-0"></div>
-          </div>
+        </div>
         </div>
       </div>
-
-      <div class="divider"></div>
-      <div>
-        <div class="sec-label">Attendance</div>
-        <div id="m-attendance" class="flex-col-gap-4"></div>
       </div>
+
+      <div class="d-tab-panel" id="m-tab-team">
+        <div class="sec-label">Attendance</div>
+<div id="m-attendance" class="flex-col-gap-4"></div>
+      </div>
+    </div>
     </div>
   </div>
   
@@ -1343,6 +1353,15 @@ function updateCarChipMeta(slot, driverState) {
       }
     }
 
+    function setMarshalTab(tab) {
+  document.getElementById("m-tab-btn-flags")?.classList.toggle("active", tab === "flags");
+  document.getElementById("m-tab-btn-setup")?.classList.toggle("active", tab === "setup");
+  document.getElementById("m-tab-btn-team")?.classList.toggle("active", tab === "team");
+  document.getElementById("m-tab-flags")?.classList.toggle("active", tab === "flags");
+  document.getElementById("m-tab-setup")?.classList.toggle("active", tab === "setup");
+  document.getElementById("m-tab-team")?.classList.toggle("active", tab === "team");
+}
+    
     function setTheme(theme) {
       const colors = { light: "#ffffff", dark: "#0a0a0f", transparent: "rgba(0,0,0,0.01)" };
       const color = colors[theme] || "#0a0a0f";
