@@ -2196,27 +2196,6 @@ async function saveControlEntry() {
   }
 }
 
-  errEl.textContent = "";
-  try {
-    const res = await fetch(`${apiUrl}/driver/state`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-      body: JSON.stringify({ drivers }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      _lastRaceState = { ..._lastRaceState, drivers };
-      closeControlModal();
-      renderControlList();
-      showToast(`✓ Updated ${name}`, "ok");
-    } else {
-      errEl.textContent = `❌ ${data.error || "Failed to save."}`;
-    }
-  } catch {
-    errEl.textContent = "❌ Bot unreachable.";
-  }
-}
-
 async function toggleAttendance(name) {
   if (!canManageAttendance()) {
     showToast("❌ Only Admins and Directors can edit attendance", "err");
