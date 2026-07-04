@@ -41,6 +41,7 @@
     38  Driver Panel Tabs (redesign) 
     39.  Full Field Leaderboard (Driver Panel — Field Tab redesign)
     40. Engineer Dual-Car Switcher (redesign)
+    41. Practice mode
     
    ============================================================================= */
 
@@ -2709,3 +2710,92 @@ textarea:focus {
 .rc-car-chip-flag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
 .rc-car-chip-flag-dot.alert { background: var(--yellow); box-shadow: 0 0 0 3px rgba(255,214,0,0.18); }
 .rc-car-chip-flag-dot.pit { background: var(--orange); box-shadow: 0 0 0 3px rgba(255,109,0,0.18); }
+
+/* Practice-mode badge (titlebar) */
+.tl-badge.practice { background: rgba(168,85,247,0.12); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
+
+/* =============================================================================
+   41. Practice Mode
+   ============================================================================= */
+
+.pm-wrap { display:flex; flex-direction:column; gap:12px; padding:12px; }
+
+.pm-stopwatch {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  padding: 18px 16px;
+  text-align: center;
+}
+.pm-stopwatch.running { border-color: var(--green); }
+.pm-time {
+  font-family: 'Oxanium', sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.pm-time-sub { font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+.pm-controls { display: flex; gap: 7px; margin-top: 14px; }
+.pm-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 6px; background: var(--bg); border: 2px solid var(--border); cursor: pointer;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  color: var(--text); font-family: 'Oxanium', sans-serif; transition: .12s;
+}
+.pm-btn:active { transform: scale(.95); }
+.pm-btn .pi { font-size: 16px; }
+.pm-btn .pl { font-size: 9px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.pm-btn .pk { font-size: 7px; color: var(--muted); background: var(--border); padding: 1px 4px; border-radius: 2px; margin-top: 2px; }
+.pm-btn.start { border-color: rgba(0,230,118,0.4); }
+.pm-btn.start:hover:not(:disabled) { background: rgba(0,230,118,0.07); }
+.pm-btn.lap { border-color: rgba(41,121,255,0.4); }
+.pm-btn.lap:hover:not(:disabled) { background: rgba(41,121,255,0.07); }
+.pm-btn.reset { border-color: rgba(255,23,68,0.4); }
+.pm-btn.reset:hover:not(:disabled) { background: rgba(255,23,68,0.07); }
+.pm-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+.pm-block-title { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin: 4px 0 8px; display: flex; justify-content: space-between; align-items: center; }
+.pm-clear-btn { font-size: 8px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--border); padding: 2px 7px; border-radius: 4px; cursor: pointer; font-family: 'Oxanium', sans-serif; }
+.pm-clear-btn:hover { color: var(--red); border-color: var(--red); }
+
+.pm-graph { height: 70px; margin-bottom: 10px; }
+.pm-graph svg { width: 100%; height: 100%; overflow: visible; }
+.pm-line { fill: none; stroke: var(--muted); stroke-width: 1.5; opacity: .4; }
+.pm-dot.normal { fill: var(--green); }
+.pm-dot.best { fill: #a855f7; }
+.pm-dot.worst { fill: var(--red); }
+.pm-dot-label { font-family: 'Oxanium', sans-serif; font-size: 7.5px; font-weight: 800; }
+.pm-dot-label.normal { fill: var(--green); }
+.pm-dot-label.best { fill: #a855f7; }
+.pm-dot-label.worst { fill: var(--red); }
+.pm-lap-num-label { font-family: 'Oxanium', sans-serif; font-size: 5.5px; font-weight: 700; fill: var(--muted); opacity: .6; }
+
+.pm-legend { display: flex; gap: 10px; margin-bottom: 10px; }
+.pm-legend-item { display: flex; align-items: center; gap: 3px; font-size: 6.5px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+.pm-legend-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.pm-legend-dot.best { background: #a855f7; }
+.pm-legend-dot.normal { background: var(--green); }
+.pm-legend-dot.worst { background: var(--red); }
+
+.pm-row {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px; margin-bottom: 6px;
+  background: var(--surface); border: 2px solid var(--border);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.pm-row.best  { border-color: rgba(168,85,247,0.5); background: rgba(168,85,247,0.06); }
+.pm-row.worst { border-color: rgba(255,23,68,0.4);  background: rgba(255,23,68,0.05); }
+.pm-row-num { font-weight: 900; width: 22px; text-align: center; color: var(--muted); font-size: 11px; }
+.pm-row-time { flex: 1; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pm-row.best .pm-row-time  { color: #a855f7; }
+.pm-row.worst .pm-row-time { color: var(--red); }
+.pm-row-badge { font-size: 7px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; }
+.pm-row-badge.best  { background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.4); color: #a855f7; }
+.pm-row-badge.worst { background: rgba(255,23,68,0.12);  border: 1px solid rgba(255,23,68,0.35);  color: var(--red); }
+
+.pm-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+}
