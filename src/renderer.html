@@ -368,6 +368,49 @@
     </div>
   </div>
 </div>
+
+<!-- PRACTICE MODE PANEL -->
+<div class="screen" id="screen-practice">
+  <div class="scroll-body pm-wrap">
+
+    <div class="pm-stopwatch" id="pm-stopwatch">
+      <div class="pm-time" id="pm-time">00:00.00</div>
+      <div class="pm-time-sub" id="pm-time-sub">Ready</div>
+      <div class="pm-controls">
+        <button class="pm-btn start" id="pm-btn-start" onclick="practiceStart()">
+          <span class="pi">▶</span><span class="pl">Start</span><span class="pk" id="pm-key-start">F9</span>
+        </button>
+        <button class="pm-btn lap" id="pm-btn-lap" onclick="practiceLap()" disabled>
+          <span class="pi">🏁</span><span class="pl">Lap</span><span class="pk" id="pm-key-lap">F10</span>
+        </button>
+        <button class="pm-btn reset" id="pm-btn-reset" onclick="practiceReset()">
+          <span class="pi">↺</span><span class="pl">Reset</span><span class="pk" id="pm-key-reset">F11</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="pm-block-title"><span>Lap Graph</span></div>
+      <div class="pm-graph" id="pm-graph"></div>
+      <div class="pm-legend">
+        <div class="pm-legend-item"><span class="pm-legend-dot best"></span>Best lap</div>
+        <div class="pm-legend-item"><span class="pm-legend-dot normal"></span>Normal</div>
+        <div class="pm-legend-item"><span class="pm-legend-dot worst"></span>Slowest</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="pm-block-title">
+        <span>Your Laps</span>
+        <button class="pm-clear-btn" onclick="clearPracticeLaps()">✕ Clear Session</button>
+      </div>
+      <div id="pm-leaderboard">
+        <div class="placeholder-text">No laps yet — hit Start, then Lap after each lap.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
   
 <!-- DEVELOPER PANEL -->
   <div class="screen" id="screen-dev">
@@ -726,7 +769,7 @@
               type="text" class="kb-input" id="kb-dnf" readonly onclick="listenKey('dnf')" /></div>
         </div>
 
-        <div id="kb-driver2-section" class="hidden flex-col-gap-0">
+<div id="kb-driver2-section" class="hidden flex-col-gap-0">
           <div class="s-section-title">Driver 2</div>
           <div class="s-card gap-0">
             <div class="s-kb-row"><span class="settings-label">🔵 Blue Flag</span><input type="text" class="kb-input"
@@ -737,6 +780,13 @@
                 Pitting</span><input type="text" class="kb-input" id="kb-pitting2" readonly
                 onclick="listenKey('pitting2')" /></div>
           </div>
+        </div>
+
+        <div class="s-section-title mt-4">Practice Stopwatch</div>
+        <div class="s-card gap-0">
+          <div class="s-kb-row"><span class="settings-label">▶ Start</span><input type="text" class="kb-input" id="kb-practice_start" readonly onclick="listenKey('practice_start')" /></div>
+          <div class="s-kb-row"><span class="settings-label">🏁 Lap</span><input type="text" class="kb-input" id="kb-practice_lap" readonly onclick="listenKey('practice_lap')" /></div>
+          <div class="s-kb-row no-border-bottom"><span class="settings-label">↺ Reset</span><input type="text" class="kb-input" id="kb-practice_reset" readonly onclick="listenKey('practice_reset')" /></div>
         </div>
       </div>
 
@@ -2417,10 +2467,13 @@ setInterval(async () => {
       document.getElementById("kb-blue_flag").value = config.keybinds?.blue_flag || "F1";
       document.getElementById("kb-next_lap").value = config.keybinds?.next_lap || "F2";
       document.getElementById("kb-pitting").value = config.keybinds?.pitting || "F3";
+        if (document.getElementById("kb-dnf")) document.getElementById("kb-dnf").value = config.keybinds?.dnf || "F8";
+        if (document.getElementById("kb-practice_start")) document.getElementById("kb-practice_start").value = config.keybinds?.practice_start || "F9";
+        if (document.getElementById("kb-practice_lap")) document.getElementById("kb-practice_lap").value = config.keybinds?.practice_lap || "F10";
+        if (document.getElementById("kb-practice_reset")) document.getElementById("kb-practice_reset").value = config.keybinds?.practice_reset || "F11";
       if (document.getElementById("kb-blue_flag2")) document.getElementById("kb-blue_flag2").value = config.keybinds?.blue_flag2 || "F4";
       if (document.getElementById("kb-next_lap2")) document.getElementById("kb-next_lap2").value = config.keybinds?.next_lap2 || "F5";
       if (document.getElementById("kb-pitting2")) document.getElementById("kb-pitting2").value = config.keybinds?.pitting2 || "F6";
-      if (document.getElementById("kb-dnf")) document.getElementById("kb-dnf").value = config.keybinds?.dnf || "F8";
       document.getElementById("btn-discord-login")?.addEventListener("click", loginWithDiscord);
 
       window.api.onToast(({ msg, type }) => showToast(msg, type));
@@ -2451,6 +2504,9 @@ window.api.onVersionInstallError?.(msg => {
         if (action === 'blue_flag2') doAction2('blue_flag');
         else if (action === 'next_lap2') doAction2('next_lap');
         else if (action === 'pitting2') doTogglePitting2();
+        else if (action === 'practice_start') practiceStart();
+        else if (action === 'practice_lap') practiceLap();
+        else if (action === 'practice_reset') practiceReset();
       });
 
       window.api.onUpdateAvailable(v => {
@@ -2523,6 +2579,8 @@ if (saved && apiUrl) {
       loadVolumePrefs();
       loadRaceSummaryPref();
       loadLapGraphPref();
+      loadPracticeModePref();
+      loadPracticeLaps();
 
 
       _initHotkeyPauseObserver();
@@ -2692,9 +2750,14 @@ async function afterLogin() {
   config.driver = "";
   config.engineer = false;
   isEngineer = false;
-  const driverName = DRIVER_IDS[user.id];
-  hasDriver = true; 
+const driverName = DRIVER_IDS[user.id];
+  hasDriver = true;
+  if (_practiceModeEnabled) {
+    launchPracticePanel();
+    return;
+  }
   showRoleSelectScreen(!!driverName);
+}
 }
 
 function showRoleSelectScreen(isInDB) {
@@ -3089,6 +3152,9 @@ function switchPanel(panel) {
         document.getElementById("kb-blue_flag").value = config.keybinds?.blue_flag || "F1";
         document.getElementById("kb-next_lap").value = config.keybinds?.next_lap || "F2";
         document.getElementById("kb-pitting").value = config.keybinds?.pitting || "F3";
+        document.getElementById("kb-practice_start").value = config.keybinds?.practice_start || "F9";
+      document.getElementById("kb-practice_lap").value = config.keybinds?.practice_lap || "F10";
+      document.getElementById("kb-practice_reset").value = config.keybinds?.practice_reset || "F11";
         if (document.getElementById("kb-dnf")) document.getElementById("kb-dnf").value = config.keybinds?.dnf || "F8";
         document.getElementById("s-api-card").style.display = hasDev ? "flex" : "none";
         const volPct = Math.round(_flagVolume * 100);
@@ -3100,6 +3166,7 @@ function switchPanel(panel) {
         updateUserTabToggleBtns();
         updateRaceSummaryToggleBtn();
         updateLapGraphToggleBtn();
+        updatePracticeModeToggleBtn();
         openSettingsTab('appearance');
         showScreen("screen-settings");
         currentPanel = "settings";
@@ -3158,39 +3225,49 @@ async function installReleaseVersion(tag) {
   }
 }
     
-    function goBack() {
-      const v = ["driver", "marshal", "dev"];
-      if (prevPanel && v.includes(prevPanel)) switchPanel(prevPanel);
-      else if (hasDriver) switchPanel("driver");
-      else if (hasMarshal) switchPanel("marshal");
-      else showScreen("screen-login");
-    }
+function goBack() {
+  if (_practiceModeEnabled) { launchPracticePanel(); return; }
+  const v = ["driver", "marshal", "dev"];
+  if (prevPanel && v.includes(prevPanel)) switchPanel(prevPanel);
+  else if (hasDriver) switchPanel("driver");
+  else if (hasMarshal) switchPanel("marshal");
+  else showScreen("screen-login");
+}
 
 function updateSwitcher() {
-      const show = hasDriver || hasMarshal || hasDev;
-      document.getElementById("panel-switcher").style.display = show ? "flex" : "none";
-      const driverTabAllowed = hasDriver && (config.driver || engineerPending || hasMarshal);
-      const swDriverBtn = document.getElementById("sw-driver");
-      swDriverBtn.style.display = (driverTabAllowed && _userTabPrefs.driver !== false) ? "" : "none";
-      const driverNeedsChoice = engineerPending && !config.driver;
-      swDriverBtn.style.opacity = driverNeedsChoice ? "0.4" : "";
-      swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
-      swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
-      document.getElementById("sw-marshal").style.display = _userTabPrefs.marshal !== false ? "" : "none";
-      document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
-      document.getElementById("sw-dev").style.display = hasDev ? "" : "none";
-      document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
-      const aId = currentPanel === "driver" ? "sw-driver"
-        : currentPanel === "marshal" ? "sw-marshal"
-        : currentPanel === "spectate" ? "sw-spectate"
-        : "sw-dev";
-      document.getElementById(aId)?.classList.add("active");
-      const badge = document.getElementById("mode-badge");
-      if (currentPanel === "driver") { badge.textContent = "Driver"; badge.className = "tl-badge driver"; badge.style.display = ""; }
-      if (currentPanel === "marshal") { badge.textContent = "Marshal"; badge.className = "tl-badge marshal"; badge.style.display = ""; }
-      if (currentPanel === "spectate") { badge.textContent = "Spectate"; badge.className = "tl-badge"; badge.style.display = ""; }
-      if (currentPanel === "dev") { badge.textContent = "Dev"; badge.className = "tl-badge dev"; badge.style.display = ""; }
-    }
+  if (_practiceModeEnabled) {
+    document.getElementById("panel-switcher").style.display = "none";
+    const badge = document.getElementById("mode-badge");
+    badge.textContent = "Practice";
+    badge.className = "tl-badge practice";
+    badge.style.display = "";
+    return;
+  }
+
+  const show = hasDriver || hasMarshal || hasDev;
+  document.getElementById("panel-switcher").style.display = show ? "flex" : "none";
+  const driverTabAllowed = hasDriver && (config.driver || engineerPending || hasMarshal);
+  const swDriverBtn = document.getElementById("sw-driver");
+  swDriverBtn.style.display = (driverTabAllowed && _userTabPrefs.driver !== false) ? "" : "none";
+  const driverNeedsChoice = engineerPending && !config.driver;
+  swDriverBtn.style.opacity = driverNeedsChoice ? "0.4" : "";
+  swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
+  swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
+  document.getElementById("sw-marshal").style.display = _userTabPrefs.marshal !== false ? "" : "none";
+  document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
+  document.getElementById("sw-dev").style.display = hasDev ? "" : "none";
+  document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
+  const aId = currentPanel === "driver" ? "sw-driver"
+    : currentPanel === "marshal" ? "sw-marshal"
+    : currentPanel === "spectate" ? "sw-spectate"
+    : "sw-dev";
+  document.getElementById(aId)?.classList.add("active");
+  const badge = document.getElementById("mode-badge");
+  if (currentPanel === "driver")   { badge.textContent = "Driver";   badge.className = "tl-badge driver";   badge.style.display = ""; }
+  if (currentPanel === "marshal")  { badge.textContent = "Marshal";  badge.className = "tl-badge marshal";  badge.style.display = ""; }
+  if (currentPanel === "spectate") { badge.textContent = "Spectate"; badge.className = "tl-badge";          badge.style.display = ""; }
+  if (currentPanel === "dev")      { badge.textContent = "Dev";      badge.className = "tl-badge dev";      badge.style.display = ""; }
+}
 
     async function pollDriverState() {
       if (!apiUrl) return;
@@ -3650,6 +3727,12 @@ function _rcRenderLapGraph(suffix, laps, raceFastest) {
 }
 
 let _rcLapGraphEnabled = false;
+let _practiceModeEnabled = false;
+let _practiceRunning = false;
+let _practiceStartTs = 0;
+let _practiceLastLapTs = 0;
+let _practiceLaps = []; // [{ lap, time }]
+let _practiceTickInterval = null;
 
 function loadLapGraphPref() {
   _rcLapGraphEnabled = localStorage.getItem("rc_lap_graph_enabled") === "1";
@@ -3671,6 +3754,51 @@ function applyLapGraphVisibility() {
     document.getElementById(`rc-lap-graph-legend${s}`)?.classList.toggle("on", _rcLapGraphEnabled);
   });
 }
+function loadPracticeLaps() {
+  try {
+    const saved = localStorage.getItem("rc_practice_laps");
+    _practiceLaps = saved ? JSON.parse(saved) : [];
+  } catch { _practiceLaps = []; }
+}
+function savePracticeLaps() {
+  localStorage.setItem("rc_practice_laps", JSON.stringify(_practiceLaps));
+}
+function clearPracticeLaps() {
+  if (_practiceLaps.length && !confirm("Clear all practice laps? This can't be undone.")) return;
+  _practiceLaps = [];
+  savePracticeLaps();
+  renderPracticeLeaderboard();
+  renderPracticeGraph();
+  showToast("✓ Practice laps cleared", "ok");
+}
+
+function loadPracticeModePref() {
+  _practiceModeEnabled = localStorage.getItem("rc_practice_mode_enabled") === "1";
+  updatePracticeModeToggleBtn();
+}
+function updatePracticeModeToggleBtn() {
+  const btn = document.getElementById("practice-mode-toggle-btn");
+  if (!btn) return;
+  const on = _practiceModeEnabled;
+  btn.textContent = on ? "ON" : "OFF";
+  btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+  btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+  btn.style.color = on ? "var(--green)" : "var(--red)";
+}
+function togglePracticeModePref() {
+  _practiceModeEnabled = !_practiceModeEnabled;
+  localStorage.setItem("rc_practice_mode_enabled", _practiceModeEnabled ? "1" : "0");
+  updatePracticeModeToggleBtn();
+  updateSwitcher();
+  showToast(_practiceModeEnabled ? "✓ Practice Mode ON" : "✓ Practice Mode OFF", "ok");
+  if (_practiceModeEnabled) {
+    launchPracticePanel();
+  } else if (user) {
+    if (config.driver) launchDriverPanel();
+    else showRoleSelectScreen(!!DRIVER_IDS[user.id]);
+  }
+}
+    
 function toggleLapGraphPref() {
   _rcLapGraphEnabled = !_rcLapGraphEnabled;
   localStorage.setItem("rc_lap_graph_enabled", _rcLapGraphEnabled ? "1" : "0");
@@ -3866,6 +3994,126 @@ function filterSpectateLeaderboard(q) {
         document.getElementById("toolbox-modal").style.display = "flex";
       }
 
+function practiceStart() {
+  if (_practiceRunning) return;
+  _practiceRunning = true;
+  _practiceStartTs = Date.now();
+  _practiceLastLapTs = _practiceStartTs;
+  document.getElementById("pm-stopwatch")?.classList.add("running");
+  document.getElementById("pm-time-sub").textContent = "Running";
+  document.getElementById("pm-btn-start").disabled = true;
+  document.getElementById("pm-btn-lap").disabled = false;
+  if (_practiceTickInterval) clearInterval(_practiceTickInterval);
+  _practiceTickInterval = setInterval(updatePracticeDisplay, 47);
+}
+
+function practiceLap() {
+  if (!_practiceRunning) return;
+  const now = Date.now();
+  const lapTimeSec = (now - _practiceLastLapTs) / 1000;
+  _practiceLastLapTs = now;
+  const lapNum = _practiceLaps.length + 1;
+  _practiceLaps.push({ lap: lapNum, time: lapTimeSec });
+  savePracticeLaps();
+  renderPracticeLeaderboard();
+  renderPracticeGraph();
+  showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok");
+}
+
+function practiceReset() {
+  _practiceRunning = false;
+  _practiceStartTs = 0;
+  _practiceLastLapTs = 0;
+  if (_practiceTickInterval) { clearInterval(_practiceTickInterval); _practiceTickInterval = null; }
+  document.getElementById("pm-stopwatch")?.classList.remove("running");
+  document.getElementById("pm-time").textContent = "00:00.00";
+  document.getElementById("pm-time-sub").textContent = "Ready";
+  document.getElementById("pm-btn-start").disabled = false;
+  document.getElementById("pm-btn-lap").disabled = true;
+}
+
+function updatePracticeDisplay() {
+  if (!_practiceRunning) return;
+  const elapsed = (Date.now() - _practiceLastLapTs) / 1000;
+  document.getElementById("pm-time").textContent = formatStopwatchTime(elapsed);
+}
+
+function formatStopwatchTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = (seconds % 60).toFixed(2);
+  return `${String(mins).padStart(2, "0")}:${secs.padStart(5, "0")}`;
+}
+
+function renderPracticeLeaderboard() {
+  const el = document.getElementById("pm-leaderboard");
+  if (!el) return;
+  if (!_practiceLaps.length) {
+    el.innerHTML = '<div class="placeholder-text">No laps yet — hit Start, then Lap after each lap.</div>';
+    return;
+  }
+  const times = _practiceLaps.map(l => l.time);
+  const best = Math.min(...times);
+  const worst = Math.max(...times);
+  el.innerHTML = _practiceLaps.slice().reverse().map(l => {
+    const isBest = l.time === best;
+    const isWorst = l.time === worst && !isBest;
+    const cls = isBest ? "best" : isWorst ? "worst" : "";
+    const badge = isBest ? '<span class="pm-row-badge best">Best</span>' : isWorst ? '<span class="pm-row-badge worst">Slowest</span>' : "";
+    return `
+      <div class="pm-row ${cls}">
+        <div class="pm-row-num">L${l.lap}</div>
+        <div class="pm-row-time">${formatLapTime(l.time)}</div>
+        ${badge}
+      </div>`;
+  }).join("");
+}
+
+function renderPracticeGraph() {
+  const el = document.getElementById("pm-graph");
+  if (!el) return;
+  if (!_practiceLaps.length) { el.innerHTML = ""; return; }
+
+  const times = _practiceLaps.map(l => l.time);
+  const best = Math.min(...times);
+  const worst = Math.max(...times);
+  const range = Math.max(worst - best, 0.1);
+
+  const W = 300, H = 70, PADX = 6, plotTop = 16, plotBottom = H - 12;
+  const n = _practiceLaps.length;
+  const x = i => n === 1 ? W / 2 : PADX + (i / (n - 1)) * (W - PADX * 2);
+  const y = t => plotTop + ((t - best) / range) * (plotBottom - plotTop);
+
+  const points = _practiceLaps.map((l, i) => ({ x: x(i), y: y(l.time), l }));
+  const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+
+  const parts = points.map(p => {
+    const isBest = p.l.time === best;
+    const isWorst = p.l.time === worst && !isBest;
+    const cls = isBest ? "best" : isWorst ? "worst" : "normal";
+    return `<circle class="pm-dot ${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.8"></circle>` +
+      `<text class="pm-dot-label ${cls}" x="${p.x.toFixed(1)}" y="${(p.y - 6).toFixed(1)}" text-anchor="middle">${formatLapTime(p.l.time)}</text>` +
+      `<text class="pm-lap-num-label" x="${p.x.toFixed(1)}" y="${(H - 2).toFixed(1)}" text-anchor="middle">L${p.l.lap}</text>`;
+  }).join("");
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path class="pm-line" d="${pathD}"></path>${parts}</svg>`;
+}
+
+function launchPracticePanel() {
+  showScreen("screen-practice");
+  currentPanel = "practice";
+  updateSwitcher();
+  updatePracticeKeyLabels();
+  renderPracticeLeaderboard();
+  renderPracticeGraph();
+}
+
+function updatePracticeKeyLabels() {
+  const kb = config.keybinds || {};
+  const s = document.getElementById("pm-key-start"); if (s) s.textContent = kb.practice_start || "F9";
+  const l = document.getElementById("pm-key-lap");   if (l) l.textContent = kb.practice_lap   || "F10";
+  const r = document.getElementById("pm-key-reset"); if (r) r.textContent = kb.practice_reset || "F11";
+}
+    
       function toggleToolboxSection(id) {
         const visible = _toolboxVisible[id] !== false;
         _toolboxVisible[id] = !visible;
@@ -4871,6 +5119,9 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
           next_lap2: document.getElementById("kb-next_lap2")?.value || "F5",
           pitting2: document.getElementById("kb-pitting2")?.value || "F6",
           dnf: document.getElementById("kb-dnf")?.value || "F8",
+          practice_start: document.getElementById("kb-practice_start")?.value || "F9",
+          practice_lap: document.getElementById("kb-practice_lap")?.value || "F10",
+          practice_reset: document.getElementById("kb-practice_reset")?.value || "F11",
         };
         const newConfig = { ...config, apiUrl: newApi, keybinds };
         await window.api.saveConfig(newConfig); await window.api.registerHotkeys(keybinds);
@@ -4892,6 +5143,7 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         if (dnfD) dnfD.textContent = kb.dnf || "F8";
         const dnfI = document.getElementById("kb-dnf");
         if (dnfI) dnfI.value = kb.dnf || "F8";
+        updatePracticeKeyLabels();
       }
 
       function listenKey(action) {
