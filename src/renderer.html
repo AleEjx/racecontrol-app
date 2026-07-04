@@ -198,7 +198,7 @@
       </div>
 
 <div class="d-tab-panel" id="d-tab-field">
-        <div class="rc-ff-title">Full Field</div>
+        <div class="rc-field-divider"><span>Full field</span><div class="ln"></div></div>
         <div id="d-leaderboard">
           <div class="placeholder-text">Waiting for race...</div>
         </div>
@@ -3819,42 +3819,40 @@ function renderLeaderboard(data) {
     const pc = pos === 1 ? "p1" : pos === 2 ? "p2" : pos === 3 ? "p3" : "";
     const isMe = d.name === config.driver;
     const isMe2 = d.name === config.driver2;
-    const lapped = !d.dnf && !d.finished && (d.lap || 1) < leaderLap;
 
-    const rowClasses = ["rc-ff-row"];
-    if (isMe || isMe2) rowClasses.push("current");
+    const rowClasses = ["f-row"];
+    if (isMe || isMe2) rowClasses.push("you");
     if (d.dnf) rowClasses.push("dnf");
-    else if (lapped) rowClasses.push("lapped");
 
-    let rightHtml;
+    let lapHtml, gapHtml = "";
     if (d.dnf) {
-      rightHtml = `<div class="rc-ff-lap dnf-text">DNF</div>`;
+      lapHtml = `<div class="f-lap dnf-text">DNF</div>`;
     } else if (d.finished) {
-      rightHtml = `<div class="rc-ff-lap finished">Finished</div>`;
+      lapHtml = `<div class="f-lap finished">Finished</div>`;
     } else {
-      let sub;
+      lapHtml = `<div class="f-lap">Lap ${d.lap || 1}</div>`;
       if (pos === 1) {
-        sub = "Leader";
+        gapHtml = `<div class="f-gap">Leader</div>`;
       } else if (typeof _deltaSeconds[d.name] === "number") {
-        sub = `+${_deltaSeconds[d.name].toFixed(3)}s`;
+        gapHtml = `<div class="f-gap">+${_deltaSeconds[d.name].toFixed(3)}s</div>`;
       } else {
         const lapDiff = leaderLap - (d.lap || 1);
-        sub = lapDiff > 0
+        const txt = lapDiff > 0
           ? `+${lapDiff} LAP${lapDiff > 1 ? "S" : ""}`
           : (d.gap && d.gap !== "Leader" ? d.gap : "");
+        if (txt) gapHtml = `<div class="f-gap">${txt}</div>`;
       }
-      rightHtml = `<div class="rc-ff-lap">Lap ${d.lap || 1}</div><div class="rc-ff-sub">${sub}</div>`;
     }
 
     return `
       <div class="${rowClasses.join(" ")}">
-        <div class="rc-ff-pos ${pc}">${pos}</div>
-        <div class="rc-ff-num">${d.number}</div>
-        <div class="rc-ff-info">
-          <div class="rc-ff-name">${d.name}</div>
-          <div class="rc-ff-call">${d.callsign}</div>
+        <div class="f-pos ${pc}">${pos}</div>
+        <div class="f-num">${d.number}</div>
+        <div class="f-body">
+          <div class="f-name">${d.name}</div>
+          <div class="f-call">${d.callsign}</div>
         </div>
-        <div class="rc-ff-right">${rightHtml}</div>
+        <div>${lapHtml}${gapHtml}</div>
       </div>`;
   }).join("");
 }
