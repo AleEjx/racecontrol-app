@@ -236,7 +236,7 @@
     </div>
   </div>
 
-  <!-- MARSHAL PANEL -->
+<!-- MARSHAL PANEL -->
   <div class="screen" id="screen-marshal">
     <div class="scroll-body">
       <div id="flag-notif-marshal" class="pb-4"></div>
@@ -248,105 +248,97 @@
         <div id="m-race-pill" class="text-muted-sm">● Waiting</div>
       </div>
       <div class="rc-chev-nav" style="margin-top:8px;">
-  <button class="active" id="m-tab-btn-flags" onclick="setMarshalTab('flags')">Flags</button>
-  <button id="m-tab-btn-setup" onclick="setMarshalTab('setup')">Setup</button>
-  <button id="m-tab-btn-team" onclick="setMarshalTab('team')">Team</button>
-<div>
-        <div class="d-tab-panel active" id="m-tab-flags">
-  <div id="m-wm-container" class="flex-col-gap-4"></div>
-  <div id="m-bf-container" class="flex-col-gap-4"></div>
-  <div id="m-leaderboard-section">
-        <div class="sec-label flex-row-between">
-          <span>Leaderboard</span>
-          <span id="m-lap-counter" class="font-9 fw-700 text-muted"></span>
-        </div>
-        <input type="text" id="m-lb-search" placeholder="Search driver..."
-          class="input-full"
-          oninput="filterMarshalLeaderboard(this.value)" />
-        <div id="m-leaderboard">
-          <div class="placeholder-text">Waiting for race...</div>
-        </div>
+        <button class="active" id="m-tab-btn-flags" onclick="setMarshalTab('flags')">Flags</button>
+        <button id="m-tab-btn-setup" onclick="setMarshalTab('setup')">Setup</button>
+        <button id="m-tab-btn-team" onclick="setMarshalTab('team')">Team</button>
       </div>
-        <div class="sec-label">Global Flags</div>
-        <div class="flag-grid">
-          <button class="flag-btn green" onclick="triggerFlag('green')"><span class="fi">🟢</span><span
-              class="fn">Green</span></button>
-          <button class="flag-btn red" onclick="triggerFlag('red')"><span class="fi">🔴</span><span
-              class="fn">Red</span></button>
-          <button class="flag-btn yellow" onclick="openSectorModal()"><span class="fi">🟡</span><span
-              class="fn">Yellow</span></button>
-          <button class="flag-btn yellow" onclick="triggerFlag('fcy')"><span class="fi">🟡</span><span
-              class="fn">FCY</span></button>
-          <button onclick="openBlueFlagModal()" class="flag-btn blue grid-span-2"><span
-              class="fi">🔵</span><span class="fn">Blue Flag</span></button>
+
+      <div class="d-tab-panel active" id="m-tab-flags">
+        <div id="m-wm-container" class="flex-col-gap-4"></div>
+        <div id="m-bf-container" class="flex-col-gap-4"></div>
+        <div id="m-leaderboard-section">
+          <div class="sec-label flex-row-between">
+            <span>Leaderboard</span>
+            <span id="m-lap-counter" class="font-9 fw-700 text-muted"></span>
+          </div>
+          <input type="text" id="m-lb-search" placeholder="Search driver..."
+            class="input-full"
+            oninput="filterMarshalLeaderboard(this.value)" />
+          <div id="m-leaderboard">
+            <div class="placeholder-text">Waiting for race...</div>
+          </div>
         </div>
-      </div>
-      <div class="divider"></div>
-      <div>
-        <div class="sec-label">Safety Car</div>
-        <div class="flag-grid">
-          <button class="flag-btn orange" onclick="triggerFlag('safety_car')"><span class="fi">🟠</span><span
-              class="fn">Deploy</span></button>
-          <button class="flag-btn orange" onclick="triggerFlag('sc_ending')"><span class="fi">🟠</span><span
-              class="fn">Ending</span></button>
-          <button class="flag-btn orange" onclick="triggerFlag('sc_speedup')"><span class="fi">🟠</span><span
-              class="fn">Speed Up</span></button>
-          <button class="flag-btn orange" onclick="triggerFlag('sfl')"><span class="fi">🟠</span><span
-              class="fn">SFL</span></button>
-</div>
-<div class="d-tab-panel" id="m-tab-setup">
-     <div id="m-race-setup" style="display:none;">
-        <div class="sec-label">🏁 Race Setup</div>
-        <div
-          class="panel-card">
-          <div class="setup-row"><span class="setup-label">Total Laps</span><input type="number" class="num-input"
-              id="m-laps" min="1" max="99" value="10" /></div>
-          <div class="setup-row">
-            <div>
-              <div class="setup-label">Mandatory Pits</div>
-              <div class="small-note">0 = off</div>
-            </div><input type="number" class="num-input" id="m-pits" min="0" max="9" value="0" />
+        <div class="divider"></div>
+        <div>
+          <div class="sec-label">Global Flags</div>
+          <div class="flag-grid">
+            <button class="flag-btn green" onclick="triggerFlag('green')"><span class="fi">🟢</span><span class="fn">Green</span></button>
+            <button class="flag-btn red" onclick="triggerFlag('red')"><span class="fi">🔴</span><span class="fn">Red</span></button>
+            <button class="flag-btn yellow" onclick="openSectorModal()"><span class="fi">🟡</span><span class="fn">Yellow</span></button>
+            <button class="flag-btn yellow" onclick="triggerFlag('fcy')"><span class="fi">🟡</span><span class="fn">FCY</span></button>
+            <button onclick="openBlueFlagModal()" class="flag-btn blue grid-span-2"><span class="fi">🔵</span><span class="fn">Blue Flag</span></button>
           </div>
-          <div class="setup-row">
-            <div>
-              <div class="setup-label">Lap Cooldown</div>
-              <div class="small-note">seconds</div>
-            </div><input type="number" class="num-input" id="m-interval" min="0" max="3600" value="0" />
+        </div>
+        <div class="divider"></div>
+        <div>
+          <div class="sec-label">Safety Car</div>
+          <div class="flag-grid">
+            <button class="flag-btn orange" onclick="triggerFlag('safety_car')"><span class="fi">🟠</span><span class="fn">Deploy</span></button>
+            <button class="flag-btn orange" onclick="triggerFlag('sc_ending')"><span class="fi">🟠</span><span class="fn">Ending</span></button>
+            <button class="flag-btn orange" onclick="triggerFlag('sc_speedup')"><span class="fi">🟠</span><span class="fn">Speed Up</span></button>
+            <button class="flag-btn orange" onclick="triggerFlag('sfl')"><span class="fi">🟠</span><span class="fn">SFL</span></button>
           </div>
-          <div class="flex-row-gap-6">
-            <button class="race-btn start" onclick="marshalStartRace()">🏁 Start</button>
-            <button class="race-btn reset no-grow" onclick="marshalResetRace()">Reset</button>
-          </div>
-          <div id="m-race-status" class="font-10 text-muted text-center min-h-12"></div>
         </div>
       </div>
 
-      <div class="divider"></div>
-      <div>
-        <div class="sec-label">Audio Check</div>
-        <div
-          class="panel-card">
-          <div class="text-muted-sm">Sends a flag-style notification to all drivers with a Yes/No
-            vote. Results appear here live.</div>
-          <button onclick="sendAudioCheck()" class="race-btn start w-full">🎙️ Send Audio Check</button>
-          <div id="ac-results" class="hidden flex-col-gap-4 mt-4">
-            <div class="list-row">
-              <span class="font-10 fw-700">Responses</span>
-              <button onclick="clearAudioCheck()" class="btn-small">Clear</button>
+      <div class="d-tab-panel" id="m-tab-setup">
+        <div id="m-race-setup" style="display:none;">
+          <div class="sec-label">🏁 Race Setup</div>
+          <div class="panel-card">
+            <div class="setup-row"><span class="setup-label">Total Laps</span><input type="number" class="num-input" id="m-laps" min="1" max="99" value="10" /></div>
+            <div class="setup-row">
+              <div>
+                <div class="setup-label">Mandatory Pits</div>
+                <div class="small-note">0 = off</div>
+              </div><input type="number" class="num-input" id="m-pits" min="0" max="9" value="0" />
             </div>
-            <div id="ac-yes-list" class="flex-col-gap-3"></div>
-            <div id="ac-no-list" class="flex-col-gap-3"></div>
-            <div id="ac-summary" class="font-10 text-muted text-center py-0"></div>
+            <div class="setup-row">
+              <div>
+                <div class="setup-label">Lap Cooldown</div>
+                <div class="small-note">seconds</div>
+              </div><input type="number" class="num-input" id="m-interval" min="0" max="3600" value="0" />
+            </div>
+            <div class="flex-row-gap-6">
+              <button class="race-btn start" onclick="marshalStartRace()">🏁 Start</button>
+              <button class="race-btn reset no-grow" onclick="marshalResetRace()">Reset</button>
+            </div>
+            <div id="m-race-status" class="font-10 text-muted text-center min-h-12"></div>
+          </div>
         </div>
+
+        <div class="divider"></div>
+        <div>
+          <div class="sec-label">Audio Check</div>
+          <div class="panel-card">
+            <div class="text-muted-sm">Sends a flag-style notification to all drivers with a Yes/No vote. Results appear here live.</div>
+            <button onclick="sendAudioCheck()" class="race-btn start w-full">🎙️ Send Audio Check</button>
+            <div id="ac-results" class="hidden flex-col-gap-4 mt-4">
+              <div class="list-row">
+                <span class="font-10 fw-700">Responses</span>
+                <button onclick="clearAudioCheck()" class="btn-small">Clear</button>
+              </div>
+              <div id="ac-yes-list" class="flex-col-gap-3"></div>
+              <div id="ac-no-list" class="flex-col-gap-3"></div>
+              <div id="ac-summary" class="font-10 text-muted text-center py-0"></div>
+            </div>
+          </div>
         </div>
-      </div>
       </div>
 
       <div class="d-tab-panel" id="m-tab-team">
         <div class="sec-label">Attendance</div>
-<div id="m-attendance" class="flex-col-gap-4"></div>
+        <div id="m-attendance" class="flex-col-gap-4"></div>
       </div>
-    </div>
     </div>
   </div>
   
@@ -1850,7 +1842,8 @@ function renderAttendance() {
   el.innerHTML = drivers.map(([name, info]) => {
     const present = _attendance[name] !== false;
     const btnClass = present ? "btn-outline-green" : "btn-outline-red";
-    const disabledAttrs = canManage ? "" : `disabled style="opacity:0.4;cursor:not-allowed;"`;
+    const disabledAttrs = canManage ? "" : "disabled";
+    const disabledOpacity = canManage ? "" : "opacity:0.4;cursor:not-allowed;";
     return `
       <div class="attendance-row ${present ? "" : "absent"}">
         <div class="flex-row-gap-8">
@@ -1860,7 +1853,9 @@ function renderAttendance() {
             <div class="attendance-sub">${info.callsign}</div>
           </div>
         </div>
-        <button onclick="toggleAttendance('${name}')" class="toggle-button ${btnClass}" ${disabledAttrs}>
+        <button onclick="toggleAttendance('${name}')" class="toggle-button ${btnClass}"
+          style="background:${present ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)"};border-color:${present ? "var(--green)" : "var(--red)"};color:${present ? "var(--green)" : "var(--red)"};${disabledOpacity}"
+          ${disabledAttrs}>
           ${present ? "✓ HERE" : "✗ ABSENT"}
         </button>
       </div>`;
