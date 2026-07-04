@@ -2462,6 +2462,22 @@ textarea:focus {
 .rc-lgl-dot.slowest { background: var(--red); }
 .rc-lgl-dot.race-fastest { background: #a855f7; }
 
+.rc-plate-pit-flag {
+  display: none;
+  position: absolute;
+  top: -2px;
+  left: 16px;
+  background: var(--yellow);
+  color: #000;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%);
+  z-index: 1;
+}
+.rc-plate.pitting .rc-plate-pit-flag { display: block; }
+
 /* =============================================================================
    38. Driver Panel Tabs + Mockup-style Actions
    ============================================================================= */
@@ -2571,6 +2587,28 @@ textarea:focus {
   z-index: 5;
   background: var(--bg);
   padding-bottom: 6px;
+}
+
+.f-row.pitting { border-color: rgba(255,214,0,0.5); background: rgba(255,214,0,0.05); }
+
+.f-num.pitting {
+  background: rgba(255,214,0,0.15);
+  border-color: rgba(255,214,0,0.6);
+  color: var(--yellow);
+}
+
+.f-pit-badge {
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255,214,0,0.12);
+  border: 1px solid rgba(255,214,0,0.35);
+  color: var(--yellow);
+  margin-top: 2px;
+  display: inline-block;
 }
 
 /* =============================================================================
