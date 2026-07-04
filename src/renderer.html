@@ -84,7 +84,7 @@
         <div id="race-summary-fill" style="height:100%;width:100%;background:var(--blue);"></div>
       </div>
     </div>
-    <div class="scroll-body">
+<div class="scroll-body">
       <div class="status-row">
         <div class="flex-row-gap-6">
           <div class="status-dot" id="d-status-dot"></div>
@@ -92,12 +92,7 @@
         </div>
         <div id="d-race-pill" class="text-muted-sm">● Waiting</div>
       </div>
-      <div>
-        <div class="sec-label">Leaderboard</div>
-        <div id="d-leaderboard">
-          <div class="placeholder-text">Waiting for race...</div>
-        </div>
-      </div>
+
 <div class="rc-plate" id="rc-plate">
         <div class="rc-plate-top">
           <div class="rc-plate-num"><div class="n" id="rc-plate-num">--</div><div class="l">CAR</div></div>
@@ -120,27 +115,6 @@
         </div>
       </div>
 
-      <div id="d-actions-section" style="display:none;">
-        <div class="sec-label">Quick Actions</div>
-        <div id="d-action-notice" class="action-notice" style="display:none;"></div>
-        <div class="action-grid mt-6">
-          <button class="action-btn" id="btn-blue_flag" onclick="doAction('blue_flag')">
-            <span class="a-key" id="key-blue_flag">F1</span><span class="a-icon">🔵</span><span class="a-name">Blue
-              Flag</span>
-          </button>
-          <button class="action-btn" id="btn-next_lap" onclick="doAction('next_lap')">
-            <span class="a-key" id="key-next_lap">F2</span><span class="a-icon">🏁</span><span class="a-name">Next
-              Lap</span>
-          </button>
-          <button class="action-btn" id="btn-pitting" onclick="doTogglePitting()">
-            <span class="a-key" id="key-pitting">F3</span><span class="a-icon" id="pit-icon">🔧</span><span
-              class="a-name" id="pit-label">Pitting</span>
-          </button>
-          <button id="btn-dnf" onclick="confirmDNF()" class="action-btn text-red border-red">
-            <span class="a-key" id="key-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
-          </button>
-        </div>
-      </div>
 <div class="rc-plate" id="rc-plate2">
         <div class="rc-plate-top">
           <div class="rc-plate-num"><div class="n" id="rc-plate-num2">--</div><div class="l">CAR</div></div>
@@ -163,50 +137,76 @@
         </div>
       </div>
 
+      <div class="rc-chev-nav">
+        <button class="active" id="d-tab-btn-overview" onclick="setDriverTab('overview')">Overview</button>
+        <button id="d-tab-btn-field" onclick="setDriverTab('field')">Field</button>
+      </div>
+
+      <div class="d-tab-panel active" id="d-tab-overview">
+
+      <div id="d-actions-section" style="display:none;">
+        <div class="rc-block-title">Quick Actions</div>
+        <div id="d-action-notice" class="action-notice" style="display:none;"></div>
+        <div class="rc-block-grid mt-6">
+          <button class="rc-action-block primary" id="btn-next_lap" onclick="doAction('next_lap')">
+            <span class="ai">🏁</span><span class="al">Next Lap</span><span class="a-key" id="key-next_lap">F2</span>
+          </button>
+          <button class="rc-action-block" id="btn-blue_flag" onclick="doAction('blue_flag')">
+            <span class="ai">🔵</span><span class="al">Blue Flag</span><span class="a-key" id="key-blue_flag">F1</span>
+          </button>
+          <button class="rc-action-block" id="btn-pitting" onclick="doTogglePitting()">
+            <span class="ai" id="pit-icon">🔧</span><span class="al" id="pit-label">Pitting</span><span class="a-key" id="key-pitting">F3</span>
+          </button>
+        </div>
+        <button id="btn-dnf" onclick="confirmDNF()" class="rc-dnf-block">
+          🚫 DNF <span class="a-key" id="key-dnf">F8</span>
+        </button>
+      </div>
+
       <div id="d-actions-section2" style="display:none;">
-        <div id="d-driver2-label" class="sec-label mt-4">Driver 2 — Quick Actions</div>
+        <div id="d-driver2-label" class="rc-block-title mt-4">Driver 2 — Quick Actions</div>
         <div id="d-action-notice2" class="action-notice" style="display:none;"></div>
-        <div class="action-grid mt-6">
-          <button class="action-btn" id="btn2-blue_flag" onclick="doAction2('blue_flag')">
-            <span class="a-key" id="key2-blue_flag">F4</span><span class="a-icon">🔵</span><span class="a-name">Blue
-              Flag</span>
+        <div class="rc-block-grid mt-6">
+          <button class="rc-action-block primary" id="btn2-next_lap" onclick="doAction2('next_lap')">
+            <span class="ai">🏁</span><span class="al">Next Lap</span><span class="a-key" id="key2-next_lap">F5</span>
           </button>
-          <button class="action-btn" id="btn2-next_lap" onclick="doAction2('next_lap')">
-            <span class="a-key" id="key2-next_lap">F5</span><span class="a-icon">🏁</span><span class="a-name">Next
-              Lap</span>
+          <button class="rc-action-block" id="btn2-blue_flag" onclick="doAction2('blue_flag')">
+            <span class="ai">🔵</span><span class="al">Blue Flag</span><span class="a-key" id="key2-blue_flag">F4</span>
           </button>
-          <button class="action-btn" id="btn2-pitting" onclick="doTogglePitting2()">
-            <span class="a-key" id="key2-pitting">F6</span><span class="a-icon" id="pit2-icon">🔧</span><span
-              class="a-name" id="pit2-label">Pitting</span>
-          </button>
-          <button id="btn2-dnf" onclick="confirmDNF2()" class="action-btn text-red border-red">
-            <span class="a-key" id="key2-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
+          <button class="rc-action-block" id="btn2-pitting" onclick="doTogglePitting2()">
+            <span class="ai" id="pit2-icon">🔧</span><span class="al" id="pit2-label">Pitting</span><span class="a-key" id="key2-pitting">F6</span>
           </button>
         </div>
+        <button id="btn2-dnf" onclick="confirmDNF2()" class="rc-dnf-block">
+          🚫 DNF <span class="a-key" id="key2-dnf">F8</span>
+        </button>
       </div>
+
       <div id="d-keybind-info" style="display:none;">
-        <div class="sec-label">Keybinds (global)</div>
-        <div class="panel-card">
-          <div class="list-row">
-            <span class="font-11">🔵 Blue Flag</span>
-            <span class="info-blue" id="kb-display-blue_flag">F1</span>
-          </div>
-          <div class="list-row">
-            <span class="font-11">🏁 Next Lap</span>
-            <span class="info-blue" id="kb-display-next_lap">F2</span>
-          </div>
-          <div class="list-row">
-            <span class="font-11">🔧 Pit / Back on Track</span>
-            <span class="info-blue" id="kb-display-pitting">F3</span>
-          </div>
-          <div class="list-row no-border-bottom">
-            <span class="font-11">🚫 DNF</span>
-            <span class="info-blue" id="kb-display-dnf">F8</span>
-          </div>
+        <div class="rc-block-title">Keybinds (global)</div>
+        <div class="rc-kb-strip">
+          <div class="rc-kb-row"><span class="rc-kb-chip" id="kb-display-blue_flag">F1</span><span class="rc-kb-icon">🔵</span><span class="rc-kb-label">Blue Flag</span></div>
+          <div class="rc-kb-row"><span class="rc-kb-chip" id="kb-display-next_lap">F2</span><span class="rc-kb-icon">🏁</span><span class="rc-kb-label">Next Lap</span></div>
+          <div class="rc-kb-row"><span class="rc-kb-chip" id="kb-display-pitting">F3</span><span class="rc-kb-icon">🔧</span><span class="rc-kb-label">Pit / Back on Track</span></div>
+          <div class="rc-kb-row"><span class="rc-kb-chip" id="kb-display-dnf">F8</span><span class="rc-kb-icon">🚫</span><span class="rc-kb-label">DNF</span></div>
         </div>
       </div>
+
+      <div class="rc-block-title mt-4">Nearby on Track</div>
+      <div id="d-nearby"></div>
+
+      </div>
+
+      <div class="d-tab-panel" id="d-tab-field">
+        <div class="sec-label">Leaderboard</div>
+        <div id="d-leaderboard">
+          <div class="placeholder-text">Waiting for race...</div>
+        </div>
+      </div>
+
     </div>
   </div>
+  <!-- MARSHAL PANEL -->
   <!-- MARSHAL PANEL -->
   <div class="screen" id="screen-marshal">
     <div class="scroll-body">
@@ -3120,6 +3120,7 @@ function updateSwitcher() {
 
         const filtered = (data.drivers || []).filter(d => _attendance[d.name] !== false);
         renderLeaderboard({ ...data, drivers: filtered });
+        renderNearby({ ...data, drivers: filtered });
 
 if (config.driver) {
           const myDriver = data.drivers?.find(d => d.name === config.driver);
@@ -3319,6 +3320,7 @@ function launchDriverPanel(startPoll = true) {
       showScreen("screen-driver"); currentPanel = "driver";
       document.getElementById("rc-plate")?.classList.toggle("on", !!config.driver);
       document.getElementById("rc-plate2")?.classList.toggle("on", !!config.driver2);
+      setDriverTab('overview');
       document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "");
       document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
       updateSwitcher(); updateKeybindLabels();
@@ -3378,6 +3380,52 @@ function launchSpectatePanel(startPoll = true) {
     pollSpectateState();
     _spectatePollInterval = setInterval(pollSpectateState, 3000);
   }
+}
+
+function setDriverTab(tab) {
+  document.getElementById("d-tab-btn-overview")?.classList.toggle("active", tab === "overview");
+  document.getElementById("d-tab-btn-field")?.classList.toggle("active", tab === "field");
+  document.getElementById("d-tab-overview")?.classList.toggle("active", tab === "overview");
+  document.getElementById("d-tab-field")?.classList.toggle("active", tab === "field");
+}
+
+function renderNearby(data) {
+  const el = document.getElementById("d-nearby");
+  if (!el) return;
+  const refName = config.driver || config.driver2;
+  if (!refName || !data.drivers?.length) {
+    el.innerHTML = '<div class="placeholder-text">No data yet.</div>';
+    return;
+  }
+  const idx = data.drivers.findIndex(d => d.name === refName);
+  if (idx === -1) {
+    el.innerHTML = '<div class="placeholder-text">Not currently on track.</div>';
+    return;
+  }
+  const you = data.drivers[idx];
+  const ahead = data.drivers.slice(Math.max(0, idx - 2), idx).reverse();
+  const behind = data.drivers.slice(idx + 1, idx + 3);
+
+  const row = (d, kind) => {
+    const team = getTeamFromCallsign(d.callsign);
+    const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : null;
+    const arrow = kind === "ahead" ? "▲" : kind === "behind" ? "▼" : "●";
+    const gapTxt = d.dnf ? "DNF" : d.finished ? "FIN" : (d.gap || "–");
+    return `
+      <div class="rc-nearby-row ${kind}" style="${tc ? `border-color:${tc}66;` : ""}">
+        <span class="rc-nr-arrow">${arrow}</span>
+        <div class="rc-nr-pos">${data.drivers.indexOf(d) + 1}</div>
+        <div class="rc-nr-num" style="${tc ? `background:${tc}22;color:${tc};` : ""}">${d.number}</div>
+        <div class="rc-nr-body"><div class="rc-nr-name">${d.name}</div><div class="rc-nr-call">${d.callsign}</div></div>
+        <div class="rc-nr-gap">${gapTxt}</div>
+      </div>`;
+  };
+
+  let html = "";
+  ahead.forEach(d => html += row(d, "ahead"));
+  html += row(you, "you");
+  behind.forEach(d => html += row(d, "behind"));
+  el.innerHTML = html;
 }
 
 function formatLapTime(seconds) {
