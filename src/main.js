@@ -70,6 +70,7 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   setupAutoUpdater();
+  setupFuelDisplayMediaHandler();
 });
 
 
@@ -170,33 +171,33 @@ function createTray() {
   tray.on("click", () => { mainWindow?.show(); mainWindow?.focus(); });
 }
 
-session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-  desktopCapturer.getSources({
-    types: ['window', 'screen'],
-    thumbnailSize: { width: 300, height: 200 },
-    fetchWindowIcons: true,
-  }).then(sources => {
-    const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
-    if (!win) { callback({}); return; }
+function setupFuelDisplayMediaHandler() {
+  session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer.getSources({
+      types: ['window', 'screen'],
+      thumbnailSize: { width: 300, height: 200 },
+      fetchWindowIcons: true,
+    }).then(sources => {
+      const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+      if (!win) { callback({}); return; }
 
-    const payload = sources.map(s => ({
-      id: s.id,
-      name: s.name,
-      thumbnail: s.thumbnail.toDataURL(),
-      appIcon: s.appIcon ? s.appIcon.toDataURL() : null,
-    }));
-    win.webContents.send('fuel-source-picker-open', payload);
+      const payload = sources.map(s => ({
+        id: s.id,
+        name: s.name,
+        thumbnail: s.thumbnail.toDataURL(),
+        appIcon: s.appIcon ? s.appIcon.toDataURL() : null,
+      }));
+      win.webContents.send('fuel-source-picker-open', payload);
 
-    const onResult = (event, sourceId) => {
-      ipcMain.removeListener('fuel-source-picker-result', onResult);
-      const chosen = sources.find(s => s.id === sourceId);
-      callback(chosen ? { video: chosen } : {}); // {} = user cancelled, getDisplayMedia() promise rejects
-    };
-    ipcMain.on('fuel-source-picker-result', onResult);
-  }).catch(() => callback({}));
-}, { useSystemPicker: true });
-// useSystemPicker only takes effect on macOS 14+ (native OS picker there);
-// on Windows/Linux it's ignored and our custom picker below runs instead.
+      const onResult = (event, sourceId) => {
+        ipcMain.removeListener('fuel-source-picker-result', onResult);
+        const chosen = sources.find(s => s.id === sourceId);
+        callback(chosen ? { video: chosen } : {});
+      };
+      ipcMain.on('fuel-source-picker-result', onResult);
+    }).catch(() => callback({}));
+  }, { useSystemPicker: true });
+}
 
 function registerHotkeys(keybinds) {
   globalShortcut.unregisterAll();
