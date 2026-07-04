@@ -3500,18 +3500,21 @@ function renderNearby(data) {
   const ahead = data.drivers.slice(Math.max(0, idx - 2), idx).reverse();
   const behind = data.drivers.slice(idx + 1, idx + 3);
 
-  const row = (d, kind) => {
+const row = (d, kind) => {
     const team = getTeamFromCallsign(d.callsign);
     const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : null;
     const arrow = kind === "ahead" ? "▲" : kind === "behind" ? "▼" : "●";
     const gapTxt = d.dnf ? "DNF" : d.finished ? "Finished" : (d.gap || "–");
+    const pitting = !!d.inPits && !d.dnf && !d.finished;
+    const numStyle = pitting ? "" : (tc ? `background:${tc}22;color:${tc};` : "");
+    const pitBadge = pitting ? `<div class="rc-nr-pit-badge">🔧 Pit</div>` : "";
     return `
-      <div class="rc-nearby-row ${kind}" style="${tc ? `border-color:${tc}66;` : ""}">
+      <div class="rc-nearby-row ${kind} ${pitting ? "pitting" : ""}" style="${(!pitting && tc) ? `border-color:${tc}66;` : ""}">
         <span class="rc-nr-arrow">${arrow}</span>
         <div class="rc-nr-pos">${data.drivers.indexOf(d) + 1}</div>
-        <div class="rc-nr-num" style="${tc ? `background:${tc}22;color:${tc};` : ""}">${d.number}</div>
+        <div class="rc-nr-num ${pitting ? "pitting" : ""}" style="${numStyle}">${d.number}</div>
         <div class="rc-nr-body"><div class="rc-nr-name">${d.name}</div><div class="rc-nr-call">${d.callsign}</div></div>
-        <div class="rc-nr-gap">${gapTxt}</div>
+        <div><div class="rc-nr-gap">${gapTxt}</div>${pitBadge}</div>
       </div>`;
   };
 
