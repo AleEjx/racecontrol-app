@@ -1221,6 +1221,15 @@
 </div>
   <div id="toast"></div>
 
+  <div id="fuel-source-modal" class="fuel-source-modal">
+  <div class="fsm-panel">
+    <div class="font-13 fw-800">🖥️ Choose what to share</div>
+    <div class="small-note">Pick the window or screen showing your sim's dashboard.</div>
+    <div class="fsm-grid" id="fsm-grid"></div>
+    <button class="secondary-btn" onclick="document.getElementById('fuel-source-modal').classList.remove('active')">Cancel</button>
+  </div>
+</div>
+
   <div id="bug-modal" class="modal">
     <div class="modal-panel modal-panel-scroll">
       <div class="flex-row-between">
@@ -2964,7 +2973,21 @@ async function toggleActionLogging() {
       }
       updatePreview();
     }
+window.api.onFuelSourcePickerOpen(sources => {
+  const grid = document.getElementById("fsm-grid");
+  grid.innerHTML = sources.map(s => `
+    <div class="fsm-item" onclick="pickFuelSource('${s.id}')">
+      <img src="${s.thumbnail}" />
+      <div class="fsm-name">${s.name}</div>
+    </div>`).join("");
+  document.getElementById("fuel-source-modal").classList.add("active");
+});
 
+function pickFuelSource(id) {
+  document.getElementById("fuel-source-modal").classList.remove("active");
+  window.api.selectFuelSource(id);
+}
+    
     window.addEventListener("DOMContentLoaded", async () => {
 
 setInterval(async () => {
@@ -3304,11 +3327,16 @@ function _sampleFuelFrame() {
   ctx.drawImage(_fuelVideoEl, cx0, cy0, cw, ch, 0, 0, cw, ch);
 
   const { data } = ctx.getImageData(0, 0, cw, ch);
+
+ 
+  const TR = 255, TG = 206, TB = 10;
+  const TOLERANCE = 55; 
+
   let sx = 0, sy = 0, n = 0;
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
-    // Yellow needle threshold — tune this if your gauge's needle is a different color
-    if (r > 180 && g > 150 && b < 110 && (r - b) > 60) {
+    const dist = Math.sqrt((r - TR) ** 2 + (g - TG) ** 2 + (b - TB) ** 2);
+    if (dist < TOLERANCE) {
       const px = (i / 4) % cw, py = Math.floor((i / 4) / cw);
       sx += px; sy += py; n++;
     }
@@ -3328,7 +3356,6 @@ function _sampleFuelFrame() {
   const sorted = [..._fuelSamples].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
 
-  // Reject sudden upward jumps mid-run (likely a bad read / crop drift)
   if (_fuelCurrentPct !== null && median > _fuelCurrentPct + 3) return;
 
   _fuelCurrentPct = median;
