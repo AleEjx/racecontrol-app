@@ -98,6 +98,28 @@
           <div class="placeholder-text">Waiting for race...</div>
         </div>
       </div>
+<div class="rc-plate" id="rc-plate">
+        <div class="rc-plate-top">
+          <div class="rc-plate-num"><div class="n" id="rc-plate-num">--</div><div class="l">CAR</div></div>
+          <div class="rc-plate-id">
+            <div class="rc-plate-name" id="rc-plate-name">–</div>
+            <div class="rc-plate-call" id="rc-plate-call">–</div>
+          </div>
+        </div>
+        <div class="rc-lap-graph" id="rc-lap-graph"></div>
+        <div class="rc-lap-graph-legend" id="rc-lap-graph-legend">
+          <div class="rc-lgl-item"><span class="rc-lgl-dot fastest"></span>Best lap</div>
+          <div class="rc-lgl-item"><span class="rc-lgl-dot slowest"></span>Worst lap</div>
+          <div class="rc-lgl-item"><span class="rc-lgl-dot race-fastest"></span>Race fastest</div>
+        </div>
+        <div class="rc-plate-stats">
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos">–</div></div>
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap">–</div></div>
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Lap</div><div class="rc-plate-stat-val" id="rc-plate-lap">–</div></div>
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Best</div><div class="rc-plate-stat-val" id="rc-plate-best">–</div></div>
+        </div>
+      </div>
+
       <div id="d-actions-section" style="display:none;">
         <div class="sec-label">Quick Actions</div>
         <div id="d-action-notice" class="action-notice" style="display:none;"></div>
@@ -119,6 +141,28 @@
           </button>
         </div>
       </div>
+<div class="rc-plate" id="rc-plate2">
+        <div class="rc-plate-top">
+          <div class="rc-plate-num"><div class="n" id="rc-plate-num2">--</div><div class="l">CAR</div></div>
+          <div class="rc-plate-id">
+            <div class="rc-plate-name" id="rc-plate-name2">–</div>
+            <div class="rc-plate-call" id="rc-plate-call2">–</div>
+          </div>
+        </div>
+        <div class="rc-lap-graph" id="rc-lap-graph2"></div>
+        <div class="rc-lap-graph-legend" id="rc-lap-graph-legend2">
+          <div class="rc-lgl-item"><span class="rc-lgl-dot fastest"></span>Best lap</div>
+          <div class="rc-lgl-item"><span class="rc-lgl-dot slowest"></span>Worst lap</div>
+          <div class="rc-lgl-item"><span class="rc-lgl-dot race-fastest"></span>Race fastest</div>
+        </div>
+        <div class="rc-plate-stats">
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos2">–</div></div>
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap2">–</div></div>
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Lap</div><div class="rc-plate-stat-val" id="rc-plate-lap2">–</div></div>
+          <div class="rc-plate-stat"><div class="rc-plate-stat-label">Best</div><div class="rc-plate-stat-val" id="rc-plate-best2">–</div></div>
+        </div>
+      </div>
+
       <div id="d-actions-section2" style="display:none;">
         <div id="d-driver2-label" class="sec-label mt-4">Driver 2 — Quick Actions</div>
         <div id="d-action-notice2" class="action-notice" style="display:none;"></div>
@@ -538,6 +582,15 @@
     <span id="font-size-label" class="font-11 fw-700 text-muted width-34 text-right flex-shrink-0">12px</span>
   </div>
 <div class="small-note">This setting is temporarily unavailable.</div>
+</div>
+
+<div class="s-section-title">Driver Plate</div>
+<div class="s-card gap-8 mb-4">
+  <div class="card-row-between">
+    <span class="font-11">📈 Show lap time graph</span>
+    <button id="lap-graph-toggle-btn" onclick="toggleLapGraphPref()" class="toggle-button"></button>
+  </div>
+  <div class="small-note">Replaces the plate divider with a lap-by-lap chart — marks your best/worst lap and the race's current fastest lap.</div>
 </div>
       </div>
 
@@ -2385,6 +2438,7 @@ if (saved && apiUrl) {
       loadThemePrefs();
       loadVolumePrefs();
       loadRaceSummaryPref();
+      loadLapGraphPref();
 
 
       _initHotkeyPauseObserver();
@@ -2955,6 +3009,7 @@ function switchPanel(panel) {
         updateThemeBtns();
         updateUserTabToggleBtns();
         updateRaceSummaryToggleBtn();
+        updateLapGraphToggleBtn();
         openSettingsTab('appearance');
         showScreen("screen-settings");
         currentPanel = "settings";
@@ -3066,13 +3121,15 @@ function updateSwitcher() {
         const filtered = (data.drivers || []).filter(d => _attendance[d.name] !== false);
         renderLeaderboard({ ...data, drivers: filtered });
 
-        if (config.driver) {
+if (config.driver) {
           const myDriver = data.drivers?.find(d => d.name === config.driver);
           if (myDriver) updatePitBtn(myDriver.inPits);
+          updatePlate(myDriver, data);
         }
         if (config.driver2) {
           const myDriver2 = data.drivers?.find(d => d.name === config.driver2);
           if (myDriver2) updatePitBtn2(myDriver2.inPits);
+          updatePlate2(myDriver2, data);
         }
         const panelOn = data.webPanelEnabled !== false, raceOn = data.raceStarted;
         if (!panelOn) {
@@ -3258,8 +3315,10 @@ function updateSwitcher() {
       updateRaceSummaryToggleBtn();
     }
     
-    function launchDriverPanel(startPoll = true) {
+function launchDriverPanel(startPoll = true) {
       showScreen("screen-driver"); currentPanel = "driver";
+      document.getElementById("rc-plate")?.classList.toggle("on", !!config.driver);
+      document.getElementById("rc-plate2")?.classList.toggle("on", !!config.driver2);
       document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "");
       document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
       updateSwitcher(); updateKeybindLabels();
@@ -3326,6 +3385,121 @@ function formatLapTime(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = (seconds % 60).toFixed(2);
   return mins > 0 ? `${mins}:${secs.padStart(5, "0")}` : `${secs}s`;
+}
+
+
+function _rcCleanLaps(lapDurations) {
+  return (lapDurations || []).filter(l => !l.pit && typeof l.time === "number");
+}
+
+function _rcRaceFastest(allDrivers) {
+  let best = null;
+  (allDrivers || []).forEach(d => {
+    _rcCleanLaps(d.lapDurations).forEach(l => {
+      if (!best || l.time < best.time) best = { driver: d.name, lap: l.lap, time: l.time };
+    });
+  });
+  return best;
+}
+
+function _rcUpdatePlate(suffix, driverName, number, callsign, driverState, allDrivers) {
+  const plate = document.getElementById(`rc-plate${suffix}`);
+  if (!plate || !driverName) return;
+
+  document.getElementById(`rc-plate-num${suffix}`).textContent = number || "??";
+  document.getElementById(`rc-plate-name${suffix}`).textContent = driverName;
+  document.getElementById(`rc-plate-call${suffix}`).textContent = callsign || "";
+
+  const pos = driverState?.position;
+  document.getElementById(`rc-plate-pos${suffix}`).textContent = pos ? `P${pos}` : "–";
+  document.getElementById(`rc-plate-gap${suffix}`).textContent =
+    driverState?.finished ? "FIN" : driverState?.dnf ? "DNF" : (driverState?.gap || "–");
+  document.getElementById(`rc-plate-lap${suffix}`).textContent = driverState ? `${driverState.lap || 1}` : "–";
+  plate.classList.toggle("pitting", !!driverState?.inPits);
+
+  const laps = _rcCleanLaps(driverState?.lapDurations);
+  const bestEl = document.getElementById(`rc-plate-best${suffix}`);
+  if (!laps.length) { bestEl.textContent = "–"; _rcRenderLapGraph(suffix, [], null); return; }
+
+  bestEl.textContent = formatLapTime(Math.min(...laps.map(l => l.time)));
+  _rcRenderLapGraph(suffix, laps, _rcRaceFastest(allDrivers));
+}
+
+function updatePlate(driverState, data) {
+  _rcUpdatePlate("", config.driver, config.number, config.callsign, driverState, data.drivers);
+}
+function updatePlate2(driverState, data) {
+  _rcUpdatePlate("2", config.driver2, config.number2, config.callsign2, driverState, data.drivers);
+}
+
+function _rcRenderLapGraph(suffix, laps, raceFastest) {
+  const el = document.getElementById(`rc-lap-graph${suffix}`);
+  if (!el) return;
+  if (!laps.length) { el.innerHTML = ""; return; }
+
+  const times = laps.map(l => l.time);
+  const ownFastest = Math.min(...times);
+  const ownSlowest = Math.max(...times);
+  const youHoldRaceFastest = !raceFastest || ownFastest <= raceFastest.time;
+
+  const minT = Math.min(ownFastest, raceFastest ? raceFastest.time : ownFastest);
+  const range = Math.max(ownSlowest - minT, 0.1);
+
+  const W = 300, H = 46, PADX = 5, plotTop = 14, plotBottom = H - 10;
+  const n = laps.length;
+  const x = i => n === 1 ? W / 2 : PADX + (i / (n - 1)) * (W - PADX * 2);
+  const y = t => plotTop + ((t - minT) / range) * (plotBottom - plotTop);
+
+  const points = laps.map((l, i) => ({ x: x(i), y: y(l.time), l }));
+  const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+
+  const parts = points.map(p => {
+    let cls = "rc-lap-dot", labelCls = "";
+    if (youHoldRaceFastest && p.l.time === ownFastest) { cls += " race-fastest"; labelCls = "race-fastest"; }
+    else if (p.l.time === ownFastest) { cls += " fastest"; labelCls = "fastest"; }
+    else if (p.l.time === ownSlowest) { cls += " slowest"; labelCls = "slowest"; }
+    return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4"></circle>` +
+      `<text class="rc-lap-dot-label ${labelCls}" x="${p.x.toFixed(1)}" y="${(p.y - 5).toFixed(1)}" text-anchor="middle">${p.l.time.toFixed(1)}</text>` +
+      `<text class="rc-lap-num-label" x="${p.x.toFixed(1)}" y="${(H - 1).toFixed(1)}" text-anchor="middle">L${p.l.lap}</text>`;
+  }).join("");
+
+  let refLine = "";
+  if (raceFastest && !youHoldRaceFastest) {
+    const ry = y(raceFastest.time);
+    refLine = `<line class="rc-race-fastest-ref" x1="${PADX}" y1="${ry.toFixed(1)}" x2="${(W - PADX).toFixed(1)}" y2="${ry.toFixed(1)}"></line>
+      <text class="rc-race-fastest-ref-label" x="${(W - PADX).toFixed(1)}" y="${(ry - 3).toFixed(1)}" text-anchor="end">${raceFastest.driver} · ${raceFastest.time.toFixed(1)}</text>`;
+  }
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${refLine}<path class="rc-lap-line" d="${pathD}"></path>${parts}</svg>`;
+}
+
+let _rcLapGraphEnabled = false;
+
+function loadLapGraphPref() {
+  _rcLapGraphEnabled = localStorage.getItem("rc_lap_graph_enabled") === "1";
+  updateLapGraphToggleBtn();
+  applyLapGraphVisibility();
+}
+function updateLapGraphToggleBtn() {
+  const btn = document.getElementById("lap-graph-toggle-btn");
+  if (!btn) return;
+  const on = _rcLapGraphEnabled;
+  btn.textContent = on ? "ON" : "OFF";
+  btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+  btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+  btn.style.color = on ? "var(--green)" : "var(--red)";
+}
+function applyLapGraphVisibility() {
+  ["", "2"].forEach(s => {
+    document.getElementById(`rc-lap-graph${s}`)?.classList.toggle("on", _rcLapGraphEnabled);
+    document.getElementById(`rc-lap-graph-legend${s}`)?.classList.toggle("on", _rcLapGraphEnabled);
+  });
+}
+function toggleLapGraphPref() {
+  _rcLapGraphEnabled = !_rcLapGraphEnabled;
+  localStorage.setItem("rc_lap_graph_enabled", _rcLapGraphEnabled ? "1" : "0");
+  updateLapGraphToggleBtn();
+  applyLapGraphVisibility();
 }
 
 async function pollSpectateState() {
