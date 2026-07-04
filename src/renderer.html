@@ -94,7 +94,8 @@
       </div>
 
 <div class="rc-plate" id="rc-plate">
-        <div class="rc-plate-top">
+  <div class="rc-plate-pit-flag">IN PITS</div>
+  <div class="rc-plate-top">
           <div class="rc-plate-num"><div class="n" id="rc-plate-num">--</div><div class="l">CAR</div></div>
           <div class="rc-plate-id">
             <div class="rc-plate-name" id="rc-plate-name">–</div>
@@ -116,7 +117,8 @@
       </div>
 
 <div class="rc-plate" id="rc-plate2">
-        <div class="rc-plate-top">
+  <div class="rc-plate-pit-flag">IN PITS</div>
+  <div class="rc-plate-top">
           <div class="rc-plate-num"><div class="n" id="rc-plate-num2">--</div><div class="l">CAR</div></div>
           <div class="rc-plate-id">
             <div class="rc-plate-name" id="rc-plate-name2">–</div>
@@ -3933,14 +3935,17 @@ function renderLeaderboard(data) {
       }
     }
 
+const pitting = !!d.inPits && !d.dnf && !d.finished;
+    const pitBadge = pitting ? `<div class="f-pit-badge">🔧 Pit</div>` : "";
+
     return `
       <div class="f-pos ${pc}">${pos}</div>
-      <div class="f-num">${d.number}</div>
+      <div class="f-num ${pitting ? "pitting" : ""}">${d.number}</div>
       <div class="f-body">
         <div class="f-name">${d.name}</div>
         <div class="f-call">${d.callsign}</div>
       </div>
-      <div>${lapHtml}${gapHtml}</div>`;
+      <div>${lapHtml}${gapHtml}${pitBadge}</div>`;
   };
 
   lb.innerHTML = data.drivers.map((d, i) => {
@@ -3949,6 +3954,7 @@ function renderLeaderboard(data) {
     const rowClasses = ["f-row"];
     if (isMe || isMe2) rowClasses.push("you");
     if (d.dnf) rowClasses.push("dnf");
+    else if (d.inPits) rowClasses.push("pitting");
     return `<div class="${rowClasses.join(" ")}">${rowInner(d, i)}</div>`;
   }).join("");
 
