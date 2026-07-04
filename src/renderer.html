@@ -1411,6 +1411,32 @@
     const DEV_USER_ID = "790254318389166111";
     const GIST_ID = "746339b1b2924446563e6349ef89ce8a";
 
+    const INVALID_KEYBIND_VALUES = new Set([
+  "Pause", "CapsLock", "ScrollLock", "NumLock", "Meta", "ContextMenu",
+  "Dead", "Unidentified", "Process", "Control", "Shift", "Alt", "AltGraph",
+  "OS", "Super", "Hyper", "Fn", "FnLock", "Symbol", "SymbolLock"
+]);
+
+const KEYBIND_DEFAULTS = {
+  blue_flag: "F1", next_lap: "F2", pitting: "F3", dnf: "F8",
+  blue_flag2: "F4", next_lap2: "F5", pitting2: "F6",
+  practice_start: "F9", practice_lap: "F10", practice_reset: "F11",
+};
+
+function sanitizeKeybinds(keybinds) {
+  const clean = { ...(keybinds || {}) };
+  let changed = false;
+  Object.keys(KEYBIND_DEFAULTS).forEach(action => {
+    if (INVALID_KEYBIND_VALUES.has(clean[action])) {
+      changed = true;
+      clean[action] = KEYBIND_DEFAULTS[action];
+    } else if (!clean[action]) {
+      clean[action] = KEYBIND_DEFAULTS[action];
+    }
+  });
+  return { keybinds: clean, changed };
+}
+
     function canManageAttendance() {
   return !!(user?.isAdmin || DIRECTOR_ROLES.some(r => user?.roles?.includes(r)));
 }
@@ -2923,6 +2949,14 @@ setInterval(async () => {
       loadDriverDB();
       config = await window.api.getConfig();
       apiUrl = config.apiUrl || "";
+      {
+  const { keybinds, changed } = sanitizeKeybinds(config.keybinds);
+  config.keybinds = keybinds;
+  if (changed) {
+    await window.api.saveConfig(config);
+    console.log("[Keybinds] Sanitized invalid keybind values on load");
+  }
+}
       loadUserTabPrefs();
 
       document.getElementById("s-api").value = config.apiUrl || "";
@@ -5582,8 +5616,10 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
           practice_lap: document.getElementById("kb-practice_lap")?.value || "F10",
           practice_reset: document.getElementById("kb-practice_reset")?.value || "F11",
         };
-        const newConfig = { ...config, apiUrl: newApi, keybinds };
-        await window.api.saveConfig(newConfig); await window.api.registerHotkeys(keybinds);
+        const { keybinds: cleanKeybinds, changed } = sanitizeKeybinds(keybinds);
+        if (changed) showToast("⚠️ Invalid keybind detected — reset to default", "err");
+        const newConfig = { ...config, apiUrl: newApi, keybinds: cleanKeybinds };
+        await window.api.saveConfig(newConfig); await window.api.registerHotkeys(cleanKeybinds);
         localStorage.setItem("rc_flag_volume", Math.round(_flagVolume * 100));
         config = newConfig; updateKeybindLabels(); showToast("✓ Settings saved", "ok"); goBack();
       }
@@ -5610,7 +5646,7 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         listeningKey = action; const el = document.getElementById(`kb-${action}`);
         el.classList.add("listening"); el.value = "Press a key...";
       }
-      document.addEventListener("keydown", e => {
+document.addEventListener("keydown", e => {
         if (!listeningKey) return; e.preventDefault();
         const numpadMap = {
           Numpad0: "Num0", Numpad1: "Num1", Numpad2: "Num2", Numpad3: "Num3",
@@ -5623,8 +5659,18 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
           : e.key === " " ? "Space"
             : e.key.length === 1 ? e.key.toUpperCase()
               : e.key;
-        document.getElementById(`kb-${listeningKey}`).value = key;
-        document.getElementById(`kb-${listeningKey}`).classList.remove("listening");
+
+        const kbInput = document.getElementById(`kb-${listeningKey}`);
+        if (INVALID_KEYBIND_VALUES.has(key)) {
+          showToast(`❌ "${key}" can't be used as a hotkey — try another key`, "err");
+          kbInput.value = config.keybinds?.[listeningKey] || KEYBIND_DEFAULTS[listeningKey] || "";
+          kbInput.classList.remove("listening");
+          listeningKey = null;
+          return;
+        }
+
+        kbInput.value = key;
+        kbInput.classList.remove("listening");
         listeningKey = null;
       });
 
