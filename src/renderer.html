@@ -85,13 +85,19 @@
       </div>
     </div>
 <div class="scroll-body">
-      <div class="status-row">
-        <div class="flex-row-gap-6">
-          <div class="status-dot" id="d-status-dot"></div>
-          <span class="status-label" id="d-status-label">Connecting...</span>
-        </div>
-        <div id="d-race-pill" class="text-muted-sm">● Waiting</div>
-      </div>
+<div class="stripe-header" id="stripeHeader">
+  <div class="sh-row">
+    <div class="sh-status">
+      <div class="status-dot" id="d-status-dot"></div>
+      <span class="status-label" id="d-status-label">Connecting...</span>
+    </div>
+    <div class="sh-flag" id="d-race-pill">● Waiting</div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="sh-lap" id="d-lap-counter">LAP <b>–</b>/–</div>
+      <button class="sh-gear-btn" onclick="switchPanel('settings')" aria-label="Settings">⚙</button>
+    </div>
+  </div>
+</div>
 
 <div class="rc-plate" id="rc-plate">
   <div class="rc-plate-pit-flag">IN PITS</div>
@@ -3186,6 +3192,12 @@ function updateSwitcher() {
         }
         const data = await res.json();
         _lastRaceState = data;
+        const lapCounterEl = document.getElementById("d-lap-counter");
+if (lapCounterEl) {
+  const primary = data.drivers?.find(d => d.name === (config.driver || config.driver2));
+  const curLap = primary?.lap || 1;
+  lapCounterEl.innerHTML = `LAP <b>${curLap}</b>${data.totalLaps ? `/${data.totalLaps}` : ""}`;
+}
         checkRaceSummaryTriggers(data);
         if (data.gaps) updateDeltas(data.gaps);
 
@@ -4073,11 +4085,14 @@ if (flag === "__driver_db_update__") {
         document.getElementById("flag-notif-marshal").innerHTML = html;
         document.getElementById("flag-notif-marshal").style.display = "block";
         if (def.sound) playFlagAudio(def.sound);
-        const colors = { green: "var(--green)", yellow: "var(--yellow)", red: "var(--red)", orange: "var(--orange)", blue: "var(--blue)", white: "#fff" };
-        ["d-race-pill", "m-race-pill"].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) { el.style.color = colors[def.color] || "#fff"; el.textContent = `${def.emoji} ${def.title}`; }
-        });
+const colors = { green: "var(--green)", yellow: "var(--yellow)", red: "var(--red)", orange: "var(--orange)", blue: "var(--blue)", white: "#fff" };
+document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff");
+["d-race-pill", "m-race-pill"].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.color = colors[def.color] || "#fff";
+  el.textContent = id === "d-race-pill" ? def.title : `${def.emoji} ${def.title}`;
+});
       }
 
       function setDriverBtnsEnabled(on) {
