@@ -2526,81 +2526,40 @@ textarea:focus {
 .rc-nr-gap { font-size:10px; font-weight:800; text-align:right; }
 
 /* =============================================================================
-   39. Full Field Leaderboard (Driver Panel — Field Tab redesign)
+   39. Full Field Leaderboard (Driver Panel — Field Tab, Mockup D)
    ============================================================================= */
 
-.rc-ff-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-.rc-ff-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.rc-field-divider { display:flex; align-items:center; gap:8px; margin:10px 0 8px; }
+.rc-field-divider .ln { flex:1; height:1px; background:var(--border); }
+.rc-field-divider span { font-size:8px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
 
-.rc-ff-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  transition: border-color 0.15s, opacity 0.15s;
+.f-row {
+  display:flex; align-items:center; gap:9px;
+  padding:8px 10px; margin-bottom:6px;
+  background:var(--surface); border:2px solid var(--border);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
-.rc-ff-row:last-child { margin-bottom: 0; }
-.rc-ff-row.current { border-color: var(--blue); }
-.rc-ff-row.lapped  { opacity: 0.55; }
-.rc-ff-row.dnf     { opacity: 0.35; filter: grayscale(0.6); }
+.f-row:last-child { margin-bottom:0; }
+.f-row.you { border-color:var(--blue); background:rgba(41,121,255,.06); }
+.f-row.dnf { opacity:.4; filter:grayscale(.6); }
 
-.rc-ff-pos {
-  width: 20px;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 900;
-  color: var(--text);
-  flex-shrink: 0;
-  font-family: 'Arial', sans-serif;
-}
-.rc-ff-pos.p1 { color: var(--yellow); }
-.rc-ff-pos.p2 { color: #c0c0c0; }
-.rc-ff-pos.p3 { color: #cd7f32; }
+.f-pos { font-weight:900; width:20px; text-align:center; color:var(--muted); font-size:13px; font-family:'Arial',sans-serif; }
+.f-pos.p1 { color:var(--yellow); }
+.f-pos.p2 { color:#c0c0c0; }
+.f-pos.p3 { color:#cd7f32; }
 
-.rc-ff-num {
-  width: 34px;
-  height: 28px;
-  flex-shrink: 0;
-  border-radius: 5px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--text);
-  font-family: 'Arial', sans-serif;
+.f-num {
+  width:26px; height:26px; flex-shrink:0;
+  background:rgba(255,255,255,.05); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:900; font-family:'Arial',sans-serif;
 }
 
-.rc-ff-info { flex: 1; min-width: 0; }
-.rc-ff-name {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: 'Arial', sans-serif;
-}
-.rc-ff-call { font-size: 9px; color: var(--muted); margin-top: 2px; font-family: 'Arial', sans-serif; }
+.f-body { flex:1; min-width:0; }
+.f-name { font-size:11px; font-weight:800; letter-spacing:.3px; font-family:'Arial',sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.f-call { font-size:8px; color:var(--muted); letter-spacing:.5px; margin-top:1px; font-family:'Arial',sans-serif; }
 
-.rc-ff-right { text-align: right; flex-shrink: 0; }
-.rc-ff-lap { font-size: 12px; font-weight: 800; font-family: 'Arial', sans-serif; }
-.rc-ff-lap.finished { color: var(--green); }
-.rc-ff-lap.dnf-text { color: var(--red); }
-.rc-ff-sub { font-size: 9px; color: var(--muted); margin-top: 2px; font-family: 'Arial', sans-serif; }
+.f-lap { font-size:10px; font-weight:800; text-align:right; font-family:'Arial',sans-serif; }
+.f-lap.finished { color:var(--green); }
+.f-lap.dnf-text { color:var(--red); }
+.f-gap { font-size:8px; color:var(--muted); text-align:right; margin-top:1px; font-family:'Arial',sans-serif; }
