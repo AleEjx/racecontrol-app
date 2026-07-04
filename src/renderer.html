@@ -197,8 +197,8 @@
 
       </div>
 
-      <div class="d-tab-panel" id="d-tab-field">
-        <div class="sec-label">Leaderboard</div>
+<div class="d-tab-panel" id="d-tab-field">
+        <div class="rc-ff-title">Full Field</div>
         <div id="d-leaderboard">
           <div class="placeholder-text">Waiting for race...</div>
         </div>
@@ -3805,13 +3805,59 @@ function filterSpectateLeaderboard(q) {
         } catch { }
       }
 
-      function renderLeaderboard(data) {
-        const lb = document.getElementById("d-leaderboard");
-        if (!data.drivers?.length) {
-          lb.innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px 12px;">Waiting for race...</div>';
-          _prevPositions = {};
-          return;
-        }
+function renderLeaderboard(data) {
+  const lb = document.getElementById("d-leaderboard");
+  if (!data.drivers?.length) {
+    lb.innerHTML = '<div class="placeholder-text">Waiting for race...</div>';
+    return;
+  }
+
+  const leaderLap = data.drivers[0]?.lap || 1;
+
+  lb.innerHTML = data.drivers.map((d, i) => {
+    const pos = i + 1;
+    const pc = pos === 1 ? "p1" : pos === 2 ? "p2" : pos === 3 ? "p3" : "";
+    const isMe = d.name === config.driver;
+    const isMe2 = d.name === config.driver2;
+    const lapped = !d.dnf && !d.finished && (d.lap || 1) < leaderLap;
+
+    const rowClasses = ["rc-ff-row"];
+    if (isMe || isMe2) rowClasses.push("current");
+    if (d.dnf) rowClasses.push("dnf");
+    else if (lapped) rowClasses.push("lapped");
+
+    let rightHtml;
+    if (d.dnf) {
+      rightHtml = `<div class="rc-ff-lap dnf-text">DNF</div>`;
+    } else if (d.finished) {
+      rightHtml = `<div class="rc-ff-lap finished">Finished</div>`;
+    } else {
+      let sub;
+      if (pos === 1) {
+        sub = "Leader";
+      } else if (typeof _deltaSeconds[d.name] === "number") {
+        sub = `+${_deltaSeconds[d.name].toFixed(3)}s`;
+      } else {
+        const lapDiff = leaderLap - (d.lap || 1);
+        sub = lapDiff > 0
+          ? `+${lapDiff} LAP${lapDiff > 1 ? "S" : ""}`
+          : (d.gap && d.gap !== "Leader" ? d.gap : "");
+      }
+      rightHtml = `<div class="rc-ff-lap">Lap ${d.lap || 1}</div><div class="rc-ff-sub">${sub}</div>`;
+    }
+
+    return `
+      <div class="${rowClasses.join(" ")}">
+        <div class="rc-ff-pos ${pc}">${pos}</div>
+        <div class="rc-ff-num">${d.number}</div>
+        <div class="rc-ff-info">
+          <div class="rc-ff-name">${d.name}</div>
+          <div class="rc-ff-call">${d.callsign}</div>
+        </div>
+        <div class="rc-ff-right">${rightHtml}</div>
+      </div>`;
+  }).join("");
+}
 
         const positionChanges = {};
         data.drivers.forEach((d, i) => {
