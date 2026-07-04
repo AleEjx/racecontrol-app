@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage, shell } = require("electron");
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage, shell, session, desktopCapturer } = require("electron");
 const path = require("path");
 const fs   = require("fs");
 const os   = require("os");
@@ -170,8 +170,6 @@ function createTray() {
   tray.on("click", () => { mainWindow?.show(); mainWindow?.focus(); });
 }
 
-const { session, desktopCapturer, ipcMain, BrowserWindow } = require('electron');
-
 session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
   desktopCapturer.getSources({
     types: ['window', 'screen'],
@@ -196,29 +194,9 @@ session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
     };
     ipcMain.on('fuel-source-picker-result', onResult);
   }).catch(() => callback({}));
-}, { useSystemPicker: true }); 
+}, { useSystemPicker: true });
 // useSystemPicker only takes effect on macOS 14+ (native OS picker there);
 // on Windows/Linux it's ignored and our custom picker below runs instead.
-
-function enterPits(slot) {
-  if (slot === 1) {
-    inPits = true;
-    sendDriverAction("pitting");
-    mainWindow?.webContents.send("pit-state-changed", true);
-    setTimeout(() => {
-      inPits = false;
-      mainWindow?.webContents.send("pit-state-changed", false);
-    }, 15000);
-  } else {
-    inPits2 = true;
-    sendDriverAction2("pitting");
-    mainWindow?.webContents.send("pit-state-changed2", true);
-    setTimeout(() => {
-      inPits2 = false;
-      mainWindow?.webContents.send("pit-state-changed2", false);
-    }, 15000);
-  }
-}
 
 function registerHotkeys(keybinds) {
   globalShortcut.unregisterAll();
