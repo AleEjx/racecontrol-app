@@ -84,7 +84,7 @@
         <div id="race-summary-fill" style="height:100%;width:100%;background:var(--blue);"></div>
       </div>
     </div>
-<div class="scroll-body" id="driver-scroll-body">
+<div class="scroll-body" id="driver-scroll-body"></div>
 <template id="tpl-driver-legacy">
 <div class="status-row">
   <div class="flex-row-gap-6">
@@ -352,7 +352,6 @@
         </div>
       </div>
 </template>
-    </div>
   </div>
 
 <!-- MARSHAL PANEL -->
@@ -859,18 +858,14 @@
         </div>
 
 <div class="s-section-title flex-row-gap-8">
-  <span>Font Size</span>
-  <span style="font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border-radius:8px;background:rgba(255,23,68,0.12);border:1px solid rgba(255,23,68,0.35);color:var(--red);">Unavailable</span>
+  <span>Panel Style</span>
 </div>
-<div class="s-card gap-10 opacity-50 mb-0">
-  <div class="flex-row-gap-10">
-    <span class="font-10 fw-700 text-muted flex-shrink-0">A</span>
-    <input type="range" id="font-size-slider" class="vol-slider cursor-not-allowed" min="10" max="16" step="1" value="12"
-      oninput="onFontSizeSlider(this.value)" disabled />
-    <span class="font-15 text-muted flex-shrink-0">A</span>
-    <span id="font-size-label" class="font-11 fw-700 text-muted width-34 text-right flex-shrink-0">12px</span>
-  </div>
-<div class="small-note">This setting is temporarily unavailable.</div>
+<div class="s-card gap-8 mb-4">
+  <select id="panel-style-select" onchange="setPanelStyle(this.value)">
+    <option value="modern">✨ Modern</option>
+    <option value="legacy">🗂️ Legacy</option>
+  </select>
+  <div class="small-note">Switches the Driver and Marshal panel layouts.</div>
 </div>
 
 <div class="s-section-title flex-row-gap-8">
@@ -1986,8 +1981,8 @@ function loadPanelStylePref() {
 }
 
 function updatePanelStyleBtns() {
-  document.getElementById("panel-style-modern-btn")?.classList.toggle("active", _panelStyle === "modern");
-  document.getElementById("panel-style-legacy-btn")?.classList.toggle("active", _panelStyle === "legacy");
+  const sel = document.getElementById("panel-style-select");
+  if (sel) sel.value = _panelStyle;
 }
 
 function setPanelStyle(style) {
