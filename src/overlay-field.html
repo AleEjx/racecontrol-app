@@ -62,7 +62,7 @@
     }
     window.addEventListener("resize", updateScale);
 
-    // ↓ this is the part that was missing ↓
+
     window.addEventListener("keydown", (e) => {
       const step = e.shiftKey ? 20 : 4;
       let dx = 0, dy = 0;
@@ -92,7 +92,6 @@
       window.api.overlayResizeBy(dw, dh);
     });
     window.addEventListener("mouseup", () => { resizing = false; });
-    // ↑ end of the missing part ↑
 
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
