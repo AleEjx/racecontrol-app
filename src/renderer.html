@@ -4751,13 +4751,23 @@ function _rcRenderLapGraph(suffix, laps, raceFastest) {
   const points = laps.map((l, i) => ({ x: x(i), y: y(l.time), l }));
   const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
 
-  const parts = points.map(p => {
+  function _rcFormatGraphTime(seconds) {
+  if (typeof seconds !== "number" || isNaN(seconds)) return "–";
+  if (seconds >= 60) {
+    const mins = Math.floor(seconds / 60);
+    const secs = (seconds % 60).toFixed(1).padStart(4, "0");
+    return `${mins}:${secs}`;
+  }
+  return seconds.toFixed(1);
+}
+
+const parts = points.map(p => {
     let cls = "rc-lap-dot", labelCls = "";
     if (youHoldRaceFastest && p.l.time === ownFastest) { cls += " race-fastest"; labelCls = "race-fastest"; }
     else if (p.l.time === ownFastest) { cls += " fastest"; labelCls = "fastest"; }
     else if (p.l.time === ownSlowest) { cls += " slowest"; labelCls = "slowest"; }
     return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4"></circle>` +
-      `<text class="rc-lap-dot-label ${labelCls}" x="${p.x.toFixed(1)}" y="${(p.y - 5).toFixed(1)}" text-anchor="middle">${p.l.time.toFixed(1)}</text>` +
+      `<text class="rc-lap-dot-label ${labelCls}" x="${p.x.toFixed(1)}" y="${(p.y - 5).toFixed(1)}" text-anchor="middle">${_rcFormatGraphTime(p.l.time)}</text>` +
       `<text class="rc-lap-num-label" x="${p.x.toFixed(1)}" y="${(H - 1).toFixed(1)}" text-anchor="middle">L${p.l.lap}</text>`;
   }).join("");
 
@@ -4765,7 +4775,7 @@ function _rcRenderLapGraph(suffix, laps, raceFastest) {
   if (raceFastest && !youHoldRaceFastest) {
     const ry = y(raceFastest.time);
     refLine = `<line class="rc-race-fastest-ref" x1="${PADX}" y1="${ry.toFixed(1)}" x2="${(W - PADX).toFixed(1)}" y2="${ry.toFixed(1)}"></line>
-      <text class="rc-race-fastest-ref-label" x="${(W - PADX).toFixed(1)}" y="${(ry - 3).toFixed(1)}" text-anchor="end">${raceFastest.driver} · ${raceFastest.time.toFixed(1)}</text>`;
+      <text class="rc-race-fastest-ref-label" x="${(W - PADX).toFixed(1)}" y="${(ry - 3).toFixed(1)}" text-anchor="end">${raceFastest.driver} · ${_rcFormatGraphTime(raceFastest.time)}</text>`;
   }
 
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${refLine}<path class="rc-lap-line" d="${pathD}"></path>${parts}</svg>`;
@@ -5520,8 +5530,22 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
       let _dnfTimer = null;
       let _dnfCountdown = null;
 
-      function confirmDNF() { _dnfSlot = 1; showDNFModal(config.driver); }
-      function confirmDNF2() { _dnfSlot = 2; showDNFModal(config.driver2); }
+function confirmDNF() {
+  if (!_lastRaceState?.raceStarted) {
+    showToast("⏳ Race not started", "err");
+    return;
+  }
+  _dnfSlot = 1;
+  showDNFModal(config.driver);
+}
+function confirmDNF2() {
+  if (!_lastRaceState?.raceStarted) {
+    showToast("⏳ Race not started", "err");
+    return;
+  }
+  _dnfSlot = 2;
+  showDNFModal(config.driver2);
+}
 
       function showDNFModal(name) {
         document.getElementById("dnf-modal-text").textContent = `Are you sure you want to DNF ${name}?`;
@@ -5550,8 +5574,12 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         if (_dnfCountdown) { clearInterval(_dnfCountdown); _dnfCountdown = null; }
       }
 
-      async function submitDNF() {
+async function submitDNF() {
         closeDNFModal();
+        if (!_lastRaceState?.raceStarted) {
+          showToast("⏳ Race not started", "err");
+          return;
+        }
         const driver = _dnfSlot === 1 ? config.driver : config.driver2;
         const number = _dnfSlot === 1 ? config.number : config.number2;
         const callsign = _dnfSlot === 1 ? config.callsign : config.callsign2;
