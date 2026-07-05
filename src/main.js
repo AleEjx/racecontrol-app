@@ -266,6 +266,73 @@ function downloadFile(url, destPath, onProgress) {
   });
 }
 
+let plateWin = null;
+let fieldWin = null;
+
+function createOverlayWindow(key, defaultBounds) {
+  const saved = config.overlayBounds?.[key] || defaultBounds;
+  const win = new BrowserWindow({
+    ...saved,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+    },
+  });
+  win.setAlwaysOnTop(true, "screen-saver"); // stays above fullscreen sims on most setups
+  win.loadFile(path.join(__dirname, `overlay-${key}.html`));
+
+  const persist = () => {
+    config.overlayBounds = config.overlayBounds || {};
+    config.overlayBounds[key] = win.getBounds();
+    saveConfigToDisk(config); // ← replace with your existing config-save function
+  };
+  win.on("moved", persist);
+  win.on("resized", persist);
+  win.on("closed", () => { if (key === "plate") plateWin = null; else fieldWin = null; });
+
+  return win;
+}
+
+ipcMain.handle("overlay:toggle-split", (e, enable) => {
+  config.splitViewEnabled = enable;
+  saveConfigToDisk(config);
+
+  if (enable) {
+    if (!plateWin) plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
+    if (!fieldWin) fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
+    mainWindow.hide();
+  } else {
+    plateWin?.close(); plateWin = null;
+    fieldWin?.close(); fieldWin = null;
+    mainWindow.show();
+  }
+  return true;
+});
+
+ipcMain.handle("overlay:reset-positions", () => {
+  config.overlayBounds = {};
+  saveConfigToDisk(config);
+  if (plateWin) { plateWin.setBounds({ width: 260, height: 330, x: 40, y: 40 }); }
+  if (fieldWin) { fieldWin.setBounds({ width: 300, height: 420, x: 40, y: 400 }); }
+  return true;
+});
+
+// Re-open overlays on launch if split view was left enabled
+app.whenReady().then(() => {
+  // ...your existing mainWindow creation...
+  if (config.splitViewEnabled) {
+    plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
+    fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
+    mainWindow.hide();
+  }
+});
+
 async function sendDriverAction(action) {
   if (!config.apiUrl || !config.driver) {
     mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" });
