@@ -1514,6 +1514,15 @@ function updateFuelCalibStatus() {
   el.style.color = _fuelCalib ? "var(--green)" : "";
 }
 
+function updatePmFuelVisibility() {
+  const card = document.getElementById("pm-fuel-card");
+  const placeholder = document.getElementById("pm-fuel-uncalibrated");
+  if (!card || !placeholder) return;
+  const ready = _fuelTrackingEnabled && !!_fuelCalib;
+  card.style.display = ready ? "flex" : "none";
+  placeholder.style.display = ready ? "none" : "block";
+}
+
 async function openFuelCalibration() {
   _fc = { step: 2, dragging: false, crop: null };
   document.getElementById("fuel-calib-overlay").classList.add("active");
@@ -3412,6 +3421,7 @@ function loadFuelTrackingPref() {
   } catch { _fuelCalib = null; }
   updateFuelTrackingBtn();
   updateFuelCalibStatus();
+  updatePmFuelVisibility();
 }
 
 function updateFuelTrackingBtn() {
@@ -3429,6 +3439,7 @@ function toggleFuelTrackingPref() {
   _fuelTrackingEnabled = !_fuelTrackingEnabled;
   localStorage.setItem("rc_fuel_tracking_enabled", _fuelTrackingEnabled ? "1" : "0");
   updateFuelTrackingBtn();
+  updatePmFuelVisibility();
   showToast(_fuelTrackingEnabled ? "✓ Fuel tracking ON" : "✓ Fuel tracking OFF", "ok");
 }
 
@@ -3554,6 +3565,7 @@ function _finishFuelCalibration() {
   };
   localStorage.setItem("rc_fuel_calib", JSON.stringify(_fuelCalib));
   updateFuelCalibStatus();
+  updatePmFuelVisibility();
   showToast("✓ Gauge calibrated!", "ok");
   closeFuelCalibration();
 }
@@ -5241,6 +5253,7 @@ function launchPracticePanel() {
   updatePracticeKeyLabels();
   renderPracticeLeaderboard();
   renderPracticeGraph();
+  updatePmFuelVisibility(); 
 }
 
 function updatePracticeKeyLabels() {
