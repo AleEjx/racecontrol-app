@@ -556,6 +556,24 @@ ipcMain.handle("open-oauth", (_, _url) => {
   });
 });
 
+ipcMain.handle("overlay:nudge", (e, dx, dy) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!win) return;
+  const b = win.getBounds();
+  win.setBounds({ ...b, x: b.x + dx, y: b.y + dy });
+});
+
+ipcMain.handle("overlay:resize-by", (e, dw, dh) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!win) return;
+  const b = win.getBounds();
+  win.setBounds({
+    ...b,
+    width: Math.max(150, b.width + dw),
+    height: Math.max(120, b.height + dh),
+  });
+});
+
 ipcMain.handle("get-config",     ()      => config);
 ipcMain.handle("save-config",    (_, cfg) => { config = { ...config, ...cfg }; saveConfig(config); if (cfg.keybinds) registerHotkeys(cfg.keybinds); return true; });
 ipcMain.handle("send-action",    (_, action) => sendDriverAction(action));
