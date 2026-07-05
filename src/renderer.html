@@ -605,7 +605,7 @@
       </div>
     </div>
 
-    <div class="pm-fuel-card" id="pm-fuel-card" style="display:none;">
+    <div class="pm-fuel-uncalibrated" id="pm-fuel-uncalibrated" style="display:none;">⛽ Calibrate your fuel gauge in Settings → Look to enable fuel tracking here.</div>
   <div class="pm-fuel-row">
     <span class="pm-block-title" style="margin:0;">Fuel</span>
     <span class="pm-fuel-pct" id="pm-fuel-pct">--%</span>
@@ -904,8 +904,8 @@
   </div>
   <div class="small-note">Replaces the plate divider with a lap-by-lap chart — marks your best/worst lap and the race's current fastest lap.</div>
 </div>
-  <div class="s-section-title">⛽ Fuel Tracking (Beta)</div>
-<div class="s-card gap-8 mb-4">
+<div class="s-section-title" style="display:none;">⛽ Fuel Tracking (Beta)</div>
+<div class="s-card gap-8 mb-4" style="display:none;">
   <div class="card-row-between">
     <span class="font-11">📷 Screen-read fuel gauge</span>
     <button id="fuel-tracking-toggle-btn" onclick="toggleFuelTrackingPref()" class="toggle-button"></button>
@@ -1480,68 +1480,22 @@ let _fuelLapLog = [];
 let _fc = { step: 1, dragging: false, crop: null };
 
 function loadFuelTrackingPref() {
-  _fuelTrackingEnabled = localStorage.getItem("rc_fuel_tracking_enabled") === "1";
-  try {
-    const saved = localStorage.getItem("rc_fuel_calib");
-    if (saved) _fuelCalib = JSON.parse(saved);
-  } catch { _fuelCalib = null; }
-  updateFuelTrackingBtn();
-  updateFuelCalibStatus();
-}
-
-function updateFuelTrackingBtn() {
-  const btn = document.getElementById("fuel-tracking-toggle-btn");
-  if (!btn) return;
-  const on = _fuelTrackingEnabled;
-  btn.textContent = on ? "ON" : "OFF";
-  btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
-  btn.style.borderColor = on ? "var(--green)" : "var(--red)";
-  btn.style.color = on ? "var(--green)" : "var(--red)";
-}
-
-function toggleFuelTrackingPref() {
-  if (!_fuelCalib) { showToast("❌ Calibrate your gauge first", "err"); return; }
-  _fuelTrackingEnabled = !_fuelTrackingEnabled;
-  localStorage.setItem("rc_fuel_tracking_enabled", _fuelTrackingEnabled ? "1" : "0");
-  updateFuelTrackingBtn();
-  showToast(_fuelTrackingEnabled ? "✓ Fuel tracking ON" : "✓ Fuel tracking OFF", "ok");
-}
-
-function updateFuelCalibStatus() {
-  const el = document.getElementById("fuel-calib-status");
-  if (!el) return;
-  el.textContent = _fuelCalib ? "✓ Gauge calibrated" : "Not calibrated yet.";
-  el.style.color = _fuelCalib ? "var(--green)" : "";
+  _fuelTrackingEnabled = false; // fuel tracking disabled for now
 }
 
 function updatePmFuelVisibility() {
   const card = document.getElementById("pm-fuel-card");
   const placeholder = document.getElementById("pm-fuel-uncalibrated");
-  if (!card || !placeholder) return;
-  const ready = _fuelTrackingEnabled && !!_fuelCalib;
-  card.style.display = ready ? "flex" : "none";
-  placeholder.style.display = ready ? "none" : "block";
+  if (card) card.style.display = "none";
+  if (placeholder) placeholder.style.display = "none";
 }
 
-async function openFuelCalibration() {
-  _fc = { step: 2, dragging: false, crop: null };
-  document.getElementById("fuel-calib-overlay").classList.add("active");
-  updateFcSteps();
-  document.getElementById("fc-confirm-btn").disabled = true;
-  document.getElementById("fc-hint").textContent = "Drag a box tightly around your fuel gauge.";
-  ["fc-crop-box", "fc-handle-empty", "fc-handle-full"].forEach(id => document.getElementById(id).style.display = "none");
+function toggleFuelTrackingPref() {
+  showToast("⛽ Fuel tracking is disabled for now", "");
+}
 
-  try {
-    _fuelStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 } });
-  } catch {
-    showToast("❌ Screen share cancelled", "err");
-    closeFuelCalibration();
-    return;
-  }
-  _fuelVideoEl = document.getElementById("fc-video");
-  _fuelVideoEl.srcObject = _fuelStream;
-  await _fuelVideoEl.play();
-  _initCropDrag();
+function openFuelCalibration() {
+  showToast("⛽ Fuel tracking is disabled for now", "");
 }
 
 function updateFcSteps() {
