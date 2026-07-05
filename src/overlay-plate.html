@@ -219,12 +219,14 @@
 
     window.addEventListener("keydown", (e) => {
       const step = e.shiftKey ? 20 : 4;
-      let dx = 0;
+      let dx = 0, dy = 0;
       if (e.key === "ArrowLeft") dx = -step;
       else if (e.key === "ArrowRight") dx = step;
-      else return; // vertical arrow keys no longer move the overlay
+      else if (e.key === "ArrowUp") dy = -step;
+      else if (e.key === "ArrowDown") dy = step;
+      else return;
       e.preventDefault();
-      window.api.overlayNudge(dx, 0);
+      window.api.overlayNudge(dx, dy);
     });
 
     // --- Diagonal resize grip (anchored to the widget itself now) ---
@@ -267,25 +269,28 @@
     });
     window.addEventListener("mouseup", () => { resizingH = false; });
 
-    // --- Custom horizontal-only window drag ---
+    // --- Custom full-direction window drag ---
     // Attached to the widget panel itself (#ov-panel), which now hugs its
     // real content (width: fit-content) instead of stretching to fill the
     // whole transparent window — so dragging only engages over the visible
     // widget, and buttons/inputs/grips inside it are excluded below.
     const dragSurface = document.getElementById("ov-panel");
-    let dragging = false, dragLastX = 0;
+    let dragging = false, dragLastX = 0, dragLastY = 0;
     dragSurface.addEventListener("mousedown", (e) => {
       if (e.target.closest(".rc-action-block, button, input, select, #ov-resize-grip, #ov-resize-grip-h")) return;
       dragging = true;
       dragLastX = e.screenX;
+      dragLastY = e.screenY;
       document.body.classList.add("dragging");
       e.preventDefault();
     });
     window.addEventListener("mousemove", (e) => {
       if (!dragging) return;
       const dx = e.screenX - dragLastX;
+      const dy = e.screenY - dragLastY;
       dragLastX = e.screenX;
-      if (dx !== 0) window.api.overlayNudge(dx, 0);
+      dragLastY = e.screenY;
+      if (dx !== 0 || dy !== 0) window.api.overlayNudge(dx, dy);
     });
     window.addEventListener("mouseup", () => {
       dragging = false;
