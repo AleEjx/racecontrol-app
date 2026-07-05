@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld("api", {
   openOAuth:        (url)    => ipcRenderer.invoke("open-oauth", url),
   installUpdate:    ()       => ipcRenderer.invoke("install-update"),
   checkVersion:     ()       => ipcRenderer.invoke("check-version"),
+  overlayNudge:      (dx, dy) => ipcRenderer.invoke("overlay:nudge", dx, dy),
+overlayResizeBy:   (dw, dh) => ipcRenderer.invoke("overlay:resize-by", dw, dh),
   registerHotkeys:  (kb)     => ipcRenderer.invoke("register-hotkeys", kb),
   suspendHotkeys:   ()       => ipcRenderer.invoke("suspend-hotkeys"),
   toggleSplitView: (enable) => ipcRenderer.invoke("overlay:toggle-split", enable),
