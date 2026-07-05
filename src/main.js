@@ -389,6 +389,85 @@ if (!stateData.raceStarted) {
   }
 }
 
+// ── FIX: this function was being called by the pitting hotkeys and the
+// toggle-pitting / toggle-pitting2 IPC handlers below, but was never
+// actually defined — that's what caused the
+// "ReferenceError: enterPits is not defined" crash on Pit press.
+async function enterPits(slot) {
+  const isSlot1 = slot === 1;
+  if (isSlot1 && inPits)   return;
+  if (!isSlot1 && inPits2) return;
+
+  const driver       = isSlot1 ? config.driver   : config.driver2;
+  const callsign     = isSlot1 ? config.callsign : config.callsign2;
+  const number       = isSlot1 ? config.number   : config.number2;
+  const isOnCooldown = isSlot1 ? onCooldown      : onCooldown2;
+
+  if (!config.apiUrl || !driver) {
+    mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" });
+    return;
+  }
+  if (isOnCooldown) {
+    mainWindow?.webContents.send("toast", { msg: "⏳ Cooldown active", type: "err" });
+    return;
+  }
+  if (!config.driverToken) {
+    mainWindow?.webContents.send("toast", { msg: "⚠️ Driver session expired — re-login in Settings", type: "err" });
+    return;
+  }
+
+  try {
+    const stateRes  = await fetch(`${config.apiUrl}/driver/state`, {
+      headers: { "x-discord-id": config.discordId || "" }
+    });
+    const stateData = await stateRes.json();
+    if (!stateData.raceStarted) {
+      mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
+      return;
+    }
+  } catch {}
+
+  try {
+    const res = await fetch(`${config.apiUrl}/driver/action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-discord-id": config.discordId, "x-discord-token": config.driverToken },
+      body: JSON.stringify({
+        action: "pitting",
+        driver, callsign, number,
+        username: config.username || driver,
+        engineer: config.engineer || false,
+      }),
+    });
+
+    if (res.ok) {
+      if (isSlot1) {
+        inPits = true;
+        mainWindow?.webContents.send("pit-state-changed", true);
+      } else {
+        inPits2 = true;
+        mainWindow?.webContents.send("pit-state-changed-2", true);
+      }
+      mainWindow?.webContents.send("toast", { msg: `✓ 🔧 Pitting${isSlot1 ? "" : " (D2)"}`, type: "ok" });
+
+      // Mirrors the backend's 15s auto-clear of inPits
+      setTimeout(() => {
+        if (isSlot1) {
+          inPits = false;
+          mainWindow?.webContents.send("pit-state-changed", false);
+        } else {
+          inPits2 = false;
+          mainWindow?.webContents.send("pit-state-changed-2", false);
+        }
+      }, 15_000);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"}`, type: "err" });
+    }
+  } catch {
+    mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" });
+  }
+}
+
 ipcMain.handle("open-oauth", (_, _url) => {
   return new Promise((resolve) => {
     const CLIENT_ID  = "1467595519718195473";
