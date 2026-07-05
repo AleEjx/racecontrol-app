@@ -292,18 +292,22 @@ function createOverlayWindow(key, defaultBounds) {
   win.setAlwaysOnTop(true, "screen-saver");
   win.loadFile(path.join(__dirname, `overlay-${key}.html`));
 
-  let persistTimer = null;
-  const persist = () => {
-    clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => {
+  let lastBounds = win.getBounds();
+  const boundsPoll = setInterval(() => {
+    if (win.isDestroyed()) { clearInterval(boundsPoll); return; }
+    const b = win.getBounds();
+    if (b.x !== lastBounds.x || b.y !== lastBounds.y || b.width !== lastBounds.width || b.height !== lastBounds.height) {
+      lastBounds = b;
       config.overlayBounds = config.overlayBounds || {};
-      config.overlayBounds[key] = win.getBounds();
+      config.overlayBounds[key] = b;
       saveConfig(config);
-    }, 300);
-  };
-  win.on("moved", persist);
-  win.on("resized", persist);
-  win.on("closed", () => { if (key === "plate") plateWin = null; else fieldWin = null; });
+    }
+  }, 500);
+
+  win.on("closed", () => {
+    clearInterval(boundsPoll);
+    if (key === "plate") plateWin = null; else fieldWin = null;
+  });
 
   return win;
 }
