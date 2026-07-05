@@ -7,13 +7,11 @@
   <style>
     html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
     body {
-      /* Custom horizontal-only drag replaces the OS-level drag region,
-         so both axes aren't free-moved by the window manager. */
-      cursor: grab;
       user-select: none;
     }
     body.dragging { cursor: grabbing; }
     .ov-body {
+      cursor: grab;
       padding: 6px;
       height: 100%;
       overflow-y: auto;
@@ -38,6 +36,15 @@
       border-bottom: 2px solid var(--border);
       background: transparent;
     }
+    .ov-resize-grip-h {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      cursor: ew-resize;
+      -webkit-app-region: no-drag;
+    }
   </style>
 </head>
 <body>
@@ -45,6 +52,7 @@
     <div class="placeholder-text">Waiting for race...</div>
   </div>
   <div class="ov-resize-grip" id="ov-resize-grip"></div>
+  <div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
 <script>
     let config = null, apiUrl = "";
     function renderLeaderboard(drivers, me) {
@@ -112,10 +120,34 @@
     });
     window.addEventListener("mouseup", () => { resizing = false; });
 
+    // --- Dedicated horizontal-only resize handle (right edge) ---
+    const gripH = document.getElementById("ov-resize-grip-h");
+    let resizingH = false, lastHX = 0;
+    gripH.addEventListener("mousedown", (e) => {
+      resizingH = true;
+      lastHX = e.screenX;
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!resizingH) return;
+      const dw = e.screenX - lastHX;
+      lastHX = e.screenX;
+      // No clamping here — width grows/shrinks by exactly the mouse delta,
+      // so it can be expanded as far as the person wants.
+      window.api.overlayResizeBy(dw, 0);
+      updateScale();
+    });
+    window.addEventListener("mouseup", () => { resizingH = false; });
+
     // --- Custom horizontal-only window drag ---
+    // Attached to the visible panel itself (not document.body), so dragging
+    // only engages when the mouse is over the widget you can actually see —
+    // not the extra transparent window space around it.
+    const dragSurface = document.getElementById("d-leaderboard");
     let dragging = false, dragLastX = 0;
-    document.body.addEventListener("mousedown", (e) => {
-      if (e.target.closest("#ov-resize-grip")) return;
+    dragSurface.addEventListener("mousedown", (e) => {
+      if (e.target.closest("#ov-resize-grip") || e.target.closest("#ov-resize-grip-h")) return;
       dragging = true;
       dragLastX = e.screenX;
       document.body.classList.add("dragging");
