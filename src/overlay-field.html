@@ -7,28 +7,35 @@
   <style>
     html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
     body {
-      -webkit-app-region: drag;
+      /* Custom horizontal-only drag replaces the OS-level drag region,
+         so both axes aren't free-moved by the window manager. */
       cursor: grab;
+      user-select: none;
     }
-    body:active { cursor: grabbing; }
+    body.dragging { cursor: grabbing; }
     .ov-body { padding: 6px; height: 100%; overflow-y: auto; }
-
     .ov-resize-grip {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 16px;
-  height: 16px;
-  cursor: nwse-resize;
-  -webkit-app-region: no-drag;
-  background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.25) 50%);
-}
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 10px;
+      height: 10px;
+      cursor: nwse-resize;
+      -webkit-app-region: no-drag;
+      /* Matches the widget's own border instead of a generic white gradient.
+         Swap the color below for your widget's exact border color/width
+         once you share style.css. */
+      border-right: 1px solid var(--widget-border-color, rgba(255,255,255,0.25));
+      border-bottom: 1px solid var(--widget-border-color, rgba(255,255,255,0.25));
+      background: transparent;
+    }
   </style>
 </head>
 <body>
   <div class="ov-body" id="d-leaderboard">
     <div class="placeholder-text">Waiting for race...</div>
   </div>
+  <div class="ov-resize-grip" id="ov-resize-grip"></div>
 <script>
     let config = null, apiUrl = "";
     function renderLeaderboard(drivers, me) {
@@ -61,20 +68,17 @@
       document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
     }
     window.addEventListener("resize", updateScale);
-
-
     window.addEventListener("keydown", (e) => {
       const step = e.shiftKey ? 20 : 4;
-      let dx = 0, dy = 0;
+      let dx = 0;
       if (e.key === "ArrowLeft") dx = -step;
       else if (e.key === "ArrowRight") dx = step;
-      else if (e.key === "ArrowUp") dy = -step;
-      else if (e.key === "ArrowDown") dy = step;
-      else return;
+      else return; // vertical arrow keys no longer move the overlay
       e.preventDefault();
-      window.api.overlayNudge(dx, dy);
+      window.api.overlayNudge(dx, 0);
     });
 
+    // --- Resize grip (unchanged behavior, just smaller/border-matched now) ---
     const grip = document.getElementById("ov-resize-grip");
     let resizing = false, lastX = 0, lastY = 0;
     grip.addEventListener("mousedown", (e) => {
@@ -82,6 +86,7 @@
       lastX = e.screenX;
       lastY = e.screenY;
       e.preventDefault();
+      e.stopPropagation(); // don't let this also trigger body drag
     });
     window.addEventListener("mousemove", (e) => {
       if (!resizing) return;
@@ -93,6 +98,26 @@
     });
     window.addEventListener("mouseup", () => { resizing = false; });
 
+    // --- Custom horizontal-only window drag ---
+    let dragging = false, dragLastX = 0;
+    document.body.addEventListener("mousedown", (e) => {
+      if (e.target.closest("#ov-resize-grip")) return;
+      dragging = true;
+      dragLastX = e.screenX;
+      document.body.classList.add("dragging");
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const dx = e.screenX - dragLastX;
+      dragLastX = e.screenX;
+      if (dx !== 0) window.api.overlayNudge(dx, 0);
+    });
+    window.addEventListener("mouseup", () => {
+      dragging = false;
+      document.body.classList.remove("dragging");
+    });
+
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
       apiUrl = config.apiUrl || "";
@@ -101,6 +126,5 @@
       setInterval(poll, 3000);
     });
   </script>
-<div class="ov-resize-grip" id="ov-resize-grip"></div>
 </body>
 </html>
