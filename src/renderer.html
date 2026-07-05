@@ -99,27 +99,7 @@
     <div class="placeholder-text">Waiting for race...</div>
   </div>
 </div>
-<div class="rc-plate" id="rc-plate">
-  <div class="rc-plate-top">
-    <div class="rc-plate-num"><div class="n" id="rc-plate-num">--</div><div class="l">CAR</div></div>
-    <div class="rc-plate-id">
-      <div class="rc-plate-name" id="rc-plate-name">–</div>
-      <div class="rc-plate-call" id="rc-plate-call">–</div>
-    </div>
-  </div>
-  <div class="rc-lap-graph" id="rc-lap-graph"></div>
-  <div class="rc-lap-graph-legend" id="rc-lap-graph-legend">
-    <div class="rc-lgl-item"><span class="rc-lgl-dot fastest"></span>Best lap</div>
-    <div class="rc-lgl-item"><span class="rc-lgl-dot slowest"></span>Worst lap</div>
-    <div class="rc-lgl-item"><span class="rc-lgl-dot race-fastest"></span>Race fastest</div>
-  </div>
-  <div class="rc-plate-stats">
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos">–</div></div>
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap">–</div></div>
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Lap</div><div class="rc-plate-stat-val" id="rc-plate-lap">–</div></div>
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Best</div><div class="rc-plate-stat-val" id="rc-plate-best">–</div></div>
-  </div>
-</div>
+
 
 <div id="d-actions-section" style="display:none;">
   <div class="sec-label">Quick Actions</div>
@@ -137,28 +117,6 @@
     <button id="btn-dnf" onclick="confirmDNF()" class="action-btn text-red border-red">
       <span class="a-key" id="key-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
     </button>
-  </div>
-</div>
-
-<div class="rc-plate" id="rc-plate2">
-  <div class="rc-plate-top">
-    <div class="rc-plate-num"><div class="n" id="rc-plate-num2">--</div><div class="l">CAR</div></div>
-    <div class="rc-plate-id">
-      <div class="rc-plate-name" id="rc-plate-name2">–</div>
-      <div class="rc-plate-call" id="rc-plate-call2">–</div>
-    </div>
-  </div>
-  <div class="rc-lap-graph" id="rc-lap-graph2"></div>
-  <div class="rc-lap-graph-legend" id="rc-lap-graph-legend2">
-    <div class="rc-lgl-item"><span class="rc-lgl-dot fastest"></span>Best lap</div>
-    <div class="rc-lgl-item"><span class="rc-lgl-dot slowest"></span>Worst lap</div>
-    <div class="rc-lgl-item"><span class="rc-lgl-dot race-fastest"></span>Race fastest</div>
-  </div>
-  <div class="rc-plate-stats">
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos2">–</div></div>
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap2">–</div></div>
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Lap</div><div class="rc-plate-stat-val" id="rc-plate-lap2">–</div></div>
-    <div class="rc-plate-stat"><div class="rc-plate-stat-label">Best</div><div class="rc-plate-stat-val" id="rc-plate-best2">–</div></div>
   </div>
 </div>
 
@@ -879,21 +837,6 @@
     <option value="legacy">🗂️ Legacy</option>
   </select>
   <div class="small-note">Switches the Driver and Marshal panel layouts.</div>
-</div>
-
-<div class="s-section-title flex-row-gap-8">
-  <span>Panel Style</span>
-</div>
-<div class="s-card gap-8 mb-4">
-  <div class="grid-2-col">
-    <button id="panel-style-modern-btn" onclick="setPanelStyle('modern')" class="theme-tile">
-      <span class="theme-label">✨ Modern</span>
-    </button>
-    <button id="panel-style-legacy-btn" onclick="setPanelStyle('legacy')" class="theme-tile">
-      <span class="theme-label">🗂️ Legacy</span>
-    </button>
-  </div>
-<div class="small-note">Switches the Driver and Marshal panel layouts.</div>
 </div>
 
 <div class="s-section-title">Driver Plate</div>
