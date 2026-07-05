@@ -2577,6 +2577,17 @@ textarea:focus {
 .d-tab-panel { display:none; }
 .d-tab-panel.active { display:block; }
 
+
+#m-tab-flags.active,
+#m-tab-setup.active,
+#m-tab-team.active,
+#m-tab-control.active {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .rc-block-title { font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin:10px 0 8px; }
 .rc-block-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:7px; }
 .rc-action-block {
