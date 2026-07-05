@@ -12,15 +12,20 @@
     body.dragging { cursor: grabbing; }
     .ov-body {
       cursor: grab;
+      position: relative;
       padding: 6px;
-      height: 100%;
-      overflow-y: auto;
+      width: fit-content;
+      min-width: 200px;
       box-sizing: border-box;
       /* Same notched-corner perimeter as .rc-plate / the CAR widget,
          scaled down (8px cut instead of 14px) for this smaller panel. */
       background: linear-gradient(135deg, var(--surface) 60%, var(--bg) 100%);
       border: 2px solid var(--border);
       clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+    .ov-rows {
+      max-height: calc(100vh - 12px);
+      overflow-y: auto;
     }
     .ov-resize-grip {
       position: absolute;
@@ -48,11 +53,13 @@
   </style>
 </head>
 <body>
-  <div class="ov-body" id="d-leaderboard">
-    <div class="placeholder-text">Waiting for race...</div>
+  <div class="ov-body" id="ov-panel">
+    <div class="ov-rows" id="d-leaderboard">
+      <div class="placeholder-text">Waiting for race...</div>
+    </div>
+    <div class="ov-resize-grip" id="ov-resize-grip"></div>
+    <div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
   </div>
-  <div class="ov-resize-grip" id="ov-resize-grip"></div>
-  <div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
 <script>
     let config = null, apiUrl = "";
     function renderLeaderboard(drivers, me) {
@@ -144,7 +151,7 @@
     // Attached to the visible panel itself (not document.body), so dragging
     // only engages when the mouse is over the widget you can actually see —
     // not the extra transparent window space around it.
-    const dragSurface = document.getElementById("d-leaderboard");
+    const dragSurface = document.getElementById("ov-panel");
     let dragging = false, dragLastX = 0;
     dragSurface.addEventListener("mousedown", (e) => {
       if (e.target.closest("#ov-resize-grip") || e.target.closest("#ov-resize-grip-h")) return;
