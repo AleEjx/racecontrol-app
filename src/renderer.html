@@ -4687,7 +4687,7 @@ function formatLapTime(seconds) {
 
 
 function _rcCleanLaps(lapDurations) {
-  return (lapDurations || []).filter(l => !l.pit && typeof l.time === "number");
+  return (lapDurations || []).filter(l => !l.pit && l.lap !== 1 && typeof l.time === "number");
 }
 
 function _rcRaceFastest(allDrivers) {
