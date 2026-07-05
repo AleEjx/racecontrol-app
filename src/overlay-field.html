@@ -98,12 +98,14 @@
     // grip-driven resize (see below).
     window.addEventListener("keydown", (e) => {
       const step = e.shiftKey ? 20 : 4;
-      let dx = 0;
+      let dx = 0, dy = 0;
       if (e.key === "ArrowLeft") dx = -step;
       else if (e.key === "ArrowRight") dx = step;
-      else return; // vertical arrow keys no longer move the overlay
+      else if (e.key === "ArrowUp") dy = -step;
+      else if (e.key === "ArrowDown") dy = step;
+      else return;
       e.preventDefault();
-      window.api.overlayNudge(dx, 0);
+      window.api.overlayNudge(dx, dy);
     });
 
     // --- Resize grip (unchanged behavior, just smaller/border-matched now) ---
@@ -147,24 +149,27 @@
     });
     window.addEventListener("mouseup", () => { resizingH = false; });
 
-    // --- Custom horizontal-only window drag ---
+    // --- Custom full-direction window drag ---
     // Attached to the visible panel itself (not document.body), so dragging
     // only engages when the mouse is over the widget you can actually see —
     // not the extra transparent window space around it.
     const dragSurface = document.getElementById("ov-panel");
-    let dragging = false, dragLastX = 0;
+    let dragging = false, dragLastX = 0, dragLastY = 0;
     dragSurface.addEventListener("mousedown", (e) => {
       if (e.target.closest("#ov-resize-grip") || e.target.closest("#ov-resize-grip-h")) return;
       dragging = true;
       dragLastX = e.screenX;
+      dragLastY = e.screenY;
       document.body.classList.add("dragging");
       e.preventDefault();
     });
     window.addEventListener("mousemove", (e) => {
       if (!dragging) return;
       const dx = e.screenX - dragLastX;
+      const dy = e.screenY - dragLastY;
       dragLastX = e.screenX;
-      if (dx !== 0) window.api.overlayNudge(dx, 0);
+      dragLastY = e.screenY;
+      if (dx !== 0 || dy !== 0) window.api.overlayNudge(dx, dy);
     });
     window.addEventListener("mouseup", () => {
       dragging = false;
