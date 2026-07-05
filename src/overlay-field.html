@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
+    .ov-drag {
+      -webkit-app-region: drag;
+      height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; letter-spacing: 2px; color: var(--muted);
+      cursor: move; user-select: none;
+    }
+    .ov-body { -webkit-app-region: no-drag; padding: 6px; height: calc(100% - 18px); overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div class="ov-drag">⠿⠿⠿</div>
+  <div class="ov-body" id="d-leaderboard">
+    <div class="placeholder-text">Waiting for race...</div>
+  </div>
+
+  <script>
+    let config = null, apiUrl = "";
+
+    function renderLeaderboard(drivers, me) {
+      const lb = document.getElementById("d-leaderboard");
+      if (!drivers?.length) { lb.innerHTML = '<div class="placeholder-text">Waiting for race...</div>'; return; }
+      lb.innerHTML = drivers.map((d, i) => {
+        const pos = i + 1;
+        const pc = pos === 1 ? "p1" : pos === 2 ? "p2" : pos === 3 ? "p3" : "";
+        const isMe = d.name === me;
+        const lapHtml = d.dnf ? `<div class="f-lap dnf-text">DNF</div>` : d.finished ? `<div class="f-lap finished">Finished</div>` : `<div class="f-lap">Lap ${d.lap || 1}</div>`;
+        return `<div class="f-row ${isMe ? "you" : ""} ${d.dnf ? "dnf" : ""} ${d.inPits ? "pitting" : ""}">
+          <div class="f-pos ${pc}">${pos}</div>
+          <div class="f-num ${d.inPits ? "pitting" : ""}">${d.number}</div>
+          <div class="f-body"><div class="f-name">${d.name}</div><div class="f-call">${d.callsign}</div></div>
+          <div>${lapHtml}</div>
+        </div>`;
+      }).join("");
+    }
+
+    async function poll() {
+      if (!apiUrl) return;
+      try {
+        const res = await fetch(`${apiUrl}/driver/state`);
+        if (!res.ok) return;
+        const data = await res.json();
+        renderLeaderboard(data.drivers, config?.driver);
+      } catch {}
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      config = await window.api.getConfig();
+      apiUrl = config.apiUrl || "";
+      poll();
+      setInterval(poll, 3000);
+    });
+  </script>
+</body>
+</html>
