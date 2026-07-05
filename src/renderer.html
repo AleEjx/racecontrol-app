@@ -1546,6 +1546,7 @@ function closeFuelCalibration() {
 const _fuelCanvas = document.createElement("canvas");
 
 async function startFuelSampling() {
+  return; // fuel tracking disabled for now 
   if (!_fuelTrackingEnabled || !_fuelCalib) return;
   document.getElementById("pm-fuel-card").style.display = "flex";
   document.getElementById("pm-fuel-uncalibrated").style.display = "none";
