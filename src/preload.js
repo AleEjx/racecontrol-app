@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("api", {
   togglePitting:    ()       => ipcRenderer.invoke("toggle-pitting"),
   togglePitting2:   ()       => ipcRenderer.invoke("toggle-pitting2"),
   minimize:         ()       => ipcRenderer.invoke("minimize-app"),
+  overlayFitHeight: (h) => ipcRenderer.invoke("overlay:fit-height", h),
   close:            ()       => ipcRenderer.invoke("close-app"),
   toggleTop:        ()       => ipcRenderer.invoke("toggle-top"),
   openDevTools:     ()       => ipcRenderer.invoke("open-devtools"),
