@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body { background: transparent; margin: 0; overflow: hidden; }
+    .ov-drag {
+      -webkit-app-region: drag;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      cursor: move;
+      user-select: none;
+    }
+    .ov-body { -webkit-app-region: no-drag; padding: 6px; }
+  </style>
+</head>
+<body>
+  <div class="ov-drag">⠿⠿⠿</div>
+  <div class="ov-body">
+    <div class="rc-plate on" id="rc-plate" style="margin:0;">
+      <div class="rc-plate-pit-flag">IN PITS</div>
+      <div class="rc-plate-top">
+        <div class="rc-plate-num"><div class="n" id="rc-plate-num">--</div><div class="l">CAR</div></div>
+        <div class="rc-plate-id">
+          <div class="rc-plate-name" id="rc-plate-name">–</div>
+          <div class="rc-plate-call" id="rc-plate-call">–</div>
+        </div>
+      </div>
+      <div class="rc-plate-stats">
+        <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos">–</div></div>
+        <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap">–</div></div>
+        <div class="rc-plate-stat"><div class="rc-plate-stat-label">Lap</div><div class="rc-plate-stat-val" id="rc-plate-lap">–</div></div>
+        <div class="rc-plate-stat"><div class="rc-plate-stat-label">Best</div><div class="rc-plate-stat-val" id="rc-plate-best">–</div></div>
+      </div>
+    </div>
+
+    <div id="ov-actions" class="rc-block-grid mt-6" style="display:none;">
+      <button class="rc-action-block primary" onclick="window.api.sendAction('next_lap')">
+        <span class="ai">🏁</span><span class="al">Next Lap</span>
+      </button>
+      <button class="rc-action-block" onclick="window.api.sendAction('blue_flag')">
+        <span class="ai">🔵</span><span class="al">Blue Flag</span>
+      </button>
+      <button class="rc-action-block" onclick="window.api.togglePitting()">
+        <span class="ai" id="ov-pit-icon">🔧</span><span class="al" id="ov-pit-label">Pitting</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let config = null, apiUrl = "";
+
+    function formatLapTime(seconds) {
+      if (typeof seconds !== "number" || isNaN(seconds)) return "–";
+      const mins = Math.floor(seconds / 60);
+      const secs = (seconds % 60).toFixed(2);
+      return mins > 0 ? `${mins}:${secs.padStart(5, "0")}` : `${secs}s`;
+    }
+
+    async function poll() {
+      if (!apiUrl || !config?.driver) return;
+      try {
+        const res = await fetch(`${apiUrl}/driver/state`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const d = data.drivers?.find(x => x.name === config.driver);
+        document.getElementById("rc-plate-num").textContent = config.number || "??";
+        document.getElementById("rc-plate-name").textContent = config.driver;
+        document.getElementById("rc-plate-call").textContent = config.callsign || "";
+        if (d) {
+          document.getElementById("rc-plate-pos").textContent = d.position ? `P${d.position}` : "–";
+          document.getElementById("rc-plate-gap").textContent = d.finished ? "FIN" : d.dnf ? "DNF" : (d.gap || "–");
+          document.getElementById("rc-plate-lap").textContent = d.lap || 1;
+          document.getElementById("rc-plate").classList.toggle("pitting", !!d.inPits);
+          document.getElementById("ov-pit-label").textContent = d.inPits ? "In Pits" : "Pitting";
+          const laps = (d.lapDurations || []).filter(l => !l.pit && !l.unstable);
+          document.getElementById("rc-plate-best").textContent = laps.length ? formatLapTime(Math.min(...laps.map(l => l.time))) : "–";
+        }
+      } catch {}
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      config = await window.api.getConfig();
+      apiUrl = config.apiUrl || "";
+      if (config.engineer) document.getElementById("ov-actions").style.display = "grid";
+      poll();
+      setInterval(poll, 3000);
+    });
+  </script>
+</body>
+</html>
