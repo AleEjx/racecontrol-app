@@ -124,14 +124,14 @@
   <div id="d-driver2-label" class="sec-label mt-4">Driver 2 — Quick Actions</div>
   <div id="d-action-notice2" class="action-notice" style="display:none;"></div>
   <div class="action-grid mt-6">
-    <button class="action-btn" id="btn2-blue_flag" onclick="doAction2('blue_flag')">
-      <span class="a-key" id="key2-blue_flag">F4</span><span class="a-icon">🔵</span><span class="a-name">Blue Flag</span>
+<button class="action-btn" id="btn2-blue_flag" onclick="doAction2('blue_flag')">
+      <span class="a-icon">🔵</span><span class="a-name">Blue Flag</span>
     </button>
     <button class="action-btn" id="btn2-next_lap" onclick="doAction2('next_lap')">
-      <span class="a-key" id="key2-next_lap">F5</span><span class="a-icon">🏁</span><span class="a-name">Next Lap</span>
+      <span class="a-icon">🏁</span><span class="a-name">Next Lap</span>
     </button>
     <button class="action-btn" id="btn2-pitting" onclick="doTogglePitting2()">
-      <span class="a-key" id="key2-pitting">F6</span><span class="a-icon" id="pit2-icon">🔧</span><span class="a-name" id="pit2-label">Pitting</span>
+      <span class="a-icon" id="pit2-icon">🔧</span><span class="a-name" id="pit2-label">Pitting</span>
     </button>
     <button id="btn2-dnf" onclick="confirmDNF2()" class="action-btn text-red border-red">
       <span class="a-key" id="key2-dnf">F8</span><span class="a-icon">🚫</span><span class="a-name">DNF</span>
@@ -269,14 +269,14 @@
         <div id="d-driver2-label" class="rc-block-title mt-4">Driver 2 — Quick Actions</div>
         <div id="d-action-notice2" class="action-notice" style="display:none;"></div>
         <div class="rc-block-grid mt-6">
-          <button class="rc-action-block primary" id="btn2-next_lap" onclick="doAction2('next_lap')">
-            <span class="ai">🏁</span><span class="al">Next Lap</span><span class="a-key" id="key2-next_lap">F5</span>
+<button class="rc-action-block primary" id="btn2-next_lap" onclick="doAction2('next_lap')">
+            <span class="ai">🏁</span><span class="al">Next Lap</span>
           </button>
           <button class="rc-action-block" id="btn2-blue_flag" onclick="doAction2('blue_flag')">
-            <span class="ai">🔵</span><span class="al">Blue Flag</span><span class="a-key" id="key2-blue_flag">F4</span>
+            <span class="ai">🔵</span><span class="al">Blue Flag</span>
           </button>
           <button class="rc-action-block" id="btn2-pitting" onclick="doTogglePitting2()">
-            <span class="ai" id="pit2-icon">🔧</span><span class="al" id="pit2-label">Pitting</span><span class="a-key" id="key2-pitting">F6</span>
+            <span class="ai" id="pit2-icon">🔧</span><span class="al" id="pit2-label">Pitting</span>
           </button>
         </div>
         <button id="btn2-dnf" onclick="confirmDNF2()" class="rc-dnf-block">
@@ -962,19 +962,6 @@
               type="text" class="kb-input" id="kb-dnf" readonly onclick="listenKey('dnf')" /></div>
         </div>
 
-<div id="kb-driver2-section" class="flex-col-gap-0">
-          <div class="s-section-title">Driver 2</div>
-          <div class="s-card gap-0">
-            <div class="s-kb-row"><span class="settings-label">🔵 Blue Flag</span><input type="text" class="kb-input"
-                id="kb-blue_flag2" readonly onclick="listenKey('blue_flag2')" /></div>
-            <div class="s-kb-row"><span class="settings-label">🏁 Next Lap</span><input type="text" class="kb-input"
-                id="kb-next_lap2" readonly onclick="listenKey('next_lap2')" /></div>
-            <div class="s-kb-row no-border-bottom"><span class="settings-label">🔧
-                Pitting</span><input type="text" class="kb-input" id="kb-pitting2" readonly
-                onclick="listenKey('pitting2')" /></div>
-          </div>
-        </div>
-
         <div class="s-section-title mt-4">Practice Stopwatch</div>
         <div class="s-card gap-0">
           <div class="s-kb-row"><span class="settings-label">▶ Start</span><input type="text" class="kb-input" id="kb-practice_start" readonly onclick="listenKey('practice_start')" /></div>
@@ -1407,7 +1394,6 @@
 
 const KEYBIND_DEFAULTS = {
   blue_flag: "F1", next_lap: "F2", pitting: "F3", dnf: "F8",
-  blue_flag2: "F4", next_lap2: "F5", pitting2: "F6",
   practice_start: "F9", practice_lap: "F10", practice_reset: "F11",
 };
 
@@ -3221,7 +3207,7 @@ window.api.onVersionInstallError?.(msg => {
 });
       window.api.onPitStateChanged2(v => updatePitBtn2(v));
       window.api.onFlagEvent(d => onFlagEvent(d.flag, d));
-      window.api.onKeybindFired(action => {
+window.api.onKeybindFired(action => {
         if (action === 'dnf') {
           if (document.getElementById("dnf-modal").style.display === "flex") {
             closeDNFModal();
@@ -3232,10 +3218,7 @@ window.api.onVersionInstallError?.(msg => {
         }
         if (!_canFire(action)) return;
         playKeybindSound(action);
-        if (action === 'blue_flag2') doAction2('blue_flag');
-        else if (action === 'next_lap2') doAction2('next_lap');
-        else if (action === 'pitting2') doTogglePitting2();
-        else if (action === 'practice_start') practiceStart();
+        if (action === 'practice_start') practiceStart();
         else if (action === 'practice_lap') practiceLap();
         else if (action === 'practice_reset') practiceReset();
       });
@@ -4206,8 +4189,6 @@ function switchPanel(panel) {
       document.getElementById("kb-practice_lap").value = config.keybinds?.practice_lap || "F10";
       document.getElementById("kb-practice_reset").value = config.keybinds?.practice_reset || "F11";
         if (document.getElementById("kb-dnf")) document.getElementById("kb-dnf").value = config.keybinds?.dnf || "F8";
-        const kb2 = document.getElementById("kb-driver2-section");
-        if (kb2) kb2.style.display = config.driver2 ? "flex" : "none";
         const volPct = Math.round(_flagVolume * 100);
         const slider = document.getElementById("vol-slider");
         const label = document.getElementById("vol-label");
@@ -6187,13 +6168,10 @@ async function submitDNF() {
       async function saveSettings() {
         const newApi = hasDev ? document.getElementById("s-api").value.trim() : (config.apiUrl || apiUrl);
         apiUrl = newApi;
-        const keybinds = {
+const keybinds = {
           blue_flag: document.getElementById("kb-blue_flag").value || "F1",
           next_lap: document.getElementById("kb-next_lap").value || "F2",
           pitting: document.getElementById("kb-pitting").value || "F3",
-          blue_flag2: document.getElementById("kb-blue_flag2")?.value || "F4",
-          next_lap2: document.getElementById("kb-next_lap2")?.value || "F5",
-          pitting2: document.getElementById("kb-pitting2")?.value || "F6",
           dnf: document.getElementById("kb-dnf")?.value || "F8",
           practice_start: document.getElementById("kb-practice_start")?.value || "F9",
           practice_lap: document.getElementById("kb-practice_lap")?.value || "F10",
@@ -6207,7 +6185,7 @@ async function submitDNF() {
         config = newConfig; updateKeybindLabels(); showToast("✓ Settings saved", "ok"); goBack();
       }
 
-      function updateKeybindLabels() {
+function updateKeybindLabels() {
         const kb = config.keybinds || {};
         const bf = document.getElementById("key-blue_flag"), nl = document.getElementById("key-next_lap"), pt = document.getElementById("key-pitting");
         if (bf) bf.textContent = kb.blue_flag || "F1"; if (nl) nl.textContent = kb.next_lap || "F2"; if (pt) pt.textContent = kb.pitting || "F3";
@@ -6215,8 +6193,6 @@ async function submitDNF() {
         const df2 = document.getElementById("key2-dnf"); if (df2) df2.textContent = kb.dnf || "F8";
         const d1 = document.getElementById("kb-display-blue_flag"), d2 = document.getElementById("kb-display-next_lap"), d3 = document.getElementById("kb-display-pitting");
         if (d1) d1.textContent = kb.blue_flag || "F1"; if (d2) d2.textContent = kb.next_lap || "F2"; if (d3) d3.textContent = kb.pitting || "F3";
-        const b2 = document.getElementById("key2-blue_flag"), n2 = document.getElementById("key2-next_lap"), p2 = document.getElementById("key2-pitting");
-        if (b2) b2.textContent = kb.blue_flag2 || "F4"; if (n2) n2.textContent = kb.next_lap2 || "F5"; if (p2) p2.textContent = kb.pitting2 || "F6";
         const dnfD = document.getElementById("kb-display-dnf");
         if (dnfD) dnfD.textContent = kb.dnf || "F8";
         const dnfI = document.getElementById("kb-dnf");
