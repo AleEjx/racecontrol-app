@@ -13,7 +13,17 @@
       user-select: none;
     }
     body.dragging { cursor: grabbing; }
-    .ov-body { padding: 6px; height: 100%; overflow-y: auto; }
+    .ov-body {
+      padding: 6px;
+      height: 100%;
+      overflow-y: auto;
+      box-sizing: border-box;
+      /* Same notched-corner perimeter as .rc-plate / the CAR widget,
+         scaled down (8px cut instead of 14px) for this smaller panel. */
+      background: linear-gradient(135deg, var(--surface) 60%, var(--bg) 100%);
+      border: 2px solid var(--border);
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
     .ov-resize-grip {
       position: absolute;
       bottom: 0;
@@ -22,11 +32,10 @@
       height: 10px;
       cursor: nwse-resize;
       -webkit-app-region: no-drag;
-      /* Matches the widget's own border instead of a generic white gradient.
-         Swap the color below for your widget's exact border color/width
-         once you share style.css. */
-      border-right: 1px solid var(--widget-border-color, rgba(255,255,255,0.25));
-      border-bottom: 1px solid var(--widget-border-color, rgba(255,255,255,0.25));
+      /* Matches the widget's real border color/width (var(--border)),
+         same source of truth as .rc-plate, instead of a generic white line. */
+      border-right: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
       background: transparent;
     }
   </style>
@@ -67,7 +76,11 @@
     function updateScale() {
       document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
     }
-    window.addEventListener("resize", updateScale);
+    // NOTE: intentionally NOT listening to window "resize" globally anymore.
+    // That event also fires from window *moves* (multi-monitor/DPI changes),
+    // which was causing the overlay to visibly grow/shrink while dragging.
+    // Scale is now only recalculated on load and right after a real
+    // grip-driven resize (see below).
     window.addEventListener("keydown", (e) => {
       const step = e.shiftKey ? 20 : 4;
       let dx = 0;
@@ -95,6 +108,7 @@
       lastX = e.screenX;
       lastY = e.screenY;
       window.api.overlayResizeBy(dw, dh);
+      updateScale();
     });
     window.addEventListener("mouseup", () => { resizing = false; });
 
