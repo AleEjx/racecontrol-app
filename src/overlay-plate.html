@@ -22,6 +22,18 @@
       outline: none;
       box-shadow: none;
     }
+
+    .ov-resize-grip {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  -webkit-app-region: no-drag;
+  background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.25) 50%);
+}
+    
   </style>
 </head>
 <body>
@@ -156,11 +168,49 @@
       } catch {}
     }
 
-    const BASE_WIDTH = 260;
+const BASE_WIDTH = 260; // (or 300 for overlay-field.html)
     function updateScale() {
       document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
     }
     window.addEventListener("resize", updateScale);
+
+    // ↓ paste the nudge/resize block here ↓
+    window.addEventListener("keydown", (e) => {
+      const step = e.shiftKey ? 20 : 4;
+      let dx = 0, dy = 0;
+      if (e.key === "ArrowLeft") dx = -step;
+      else if (e.key === "ArrowRight") dx = step;
+      else if (e.key === "ArrowUp") dy = -step;
+      else if (e.key === "ArrowDown") dy = step;
+      else return;
+      e.preventDefault();
+      window.api.overlayNudge(dx, dy);
+    });
+
+    const grip = document.getElementById("ov-resize-grip");
+    let resizing = false, lastX = 0, lastY = 0;
+    grip.addEventListener("mousedown", (e) => {
+      resizing = true;
+      lastX = e.screenX;
+      lastY = e.screenY;
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!resizing) return;
+      const dw = e.screenX - lastX;
+      const dh = e.screenY - lastY;
+      lastX = e.screenX;
+      lastY = e.screenY;
+      window.api.overlayResizeBy(dw, dh);
+    });
+    window.addEventListener("mouseup", () => { resizing = false; });
+    // ↑ end paste ↑
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      config = await window.api.getConfig();
+      apiUrl = config.apiUrl || "";
+      // ...rest unchanged...
+    });
 
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
@@ -175,5 +225,6 @@
       setInterval(poll, 3000);
     });
   </script>
+<div class="ov-resize-grip" id="ov-resize-grip"></div>
 </body>
 </html>
