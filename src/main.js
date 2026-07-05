@@ -75,7 +75,6 @@ app.whenReady().then(() => {
   if (config.splitViewEnabled) {
     plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
     fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
-    mainWindow.hide();
   }
 });
 
@@ -312,11 +311,9 @@ ipcMain.handle("overlay:toggle-split", (e, enable) => {
   if (enable) {
     if (!plateWin) plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
     if (!fieldWin) fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
-    mainWindow.hide();
   } else {
     plateWin?.close(); plateWin = null;
     fieldWin?.close(); fieldWin = null;
-    mainWindow.show();
   }
   return true;
 });
