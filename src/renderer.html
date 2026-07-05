@@ -4468,7 +4468,7 @@ const panelOn = data.webPanelEnabled !== false, raceOn = data.raceStarted;
 
     function showRaceSummaryScreen(item) {
       const { name, snapshot, totalDrivers } = item;
-      const laps = (snapshot.lapDurations || []).filter(l => !l.pit);
+      const laps = (snapshot.lapDurations || []).filter(l => !l.pit && !l.unstable);
       const team = getTeamFromCallsign(snapshot.callsign);
       const tc = (team && TEAM_COLORS[team]) ? TEAM_COLORS[team] : "var(--blue)";
       const pos = snapshot.position || null;
@@ -4687,7 +4687,7 @@ function formatLapTime(seconds) {
 
 
 function _rcCleanLaps(lapDurations) {
-  return (lapDurations || []).filter(l => !l.pit && l.lap !== 1 && typeof l.time === "number");
+  return (lapDurations || []).filter(l => !l.pit && !l.unstable && typeof l.time === "number");
 }
 
 function _rcRaceFastest(allDrivers) {
