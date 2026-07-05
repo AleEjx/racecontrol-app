@@ -168,13 +168,12 @@
       } catch {}
     }
 
-const BASE_WIDTH = 260; // (or 300 for overlay-field.html)
+const BASE_WIDTH = 260; 
     function updateScale() {
       document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
     }
     window.addEventListener("resize", updateScale);
 
-    // ↓ paste the nudge/resize block here ↓
     window.addEventListener("keydown", (e) => {
       const step = e.shiftKey ? 20 : 4;
       let dx = 0, dy = 0;
@@ -204,12 +203,10 @@ const BASE_WIDTH = 260; // (or 300 for overlay-field.html)
       window.api.overlayResizeBy(dw, dh);
     });
     window.addEventListener("mouseup", () => { resizing = false; });
-    // ↑ end paste ↑
 
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
-      apiUrl = config.apiUrl || "";
-      // ...rest unchanged...
+      apiUrl = config.apiUrl || "";.
     });
 
     window.addEventListener("DOMContentLoaded", async () => {
