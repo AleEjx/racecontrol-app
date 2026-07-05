@@ -326,6 +326,13 @@ ipcMain.handle("overlay:toggle-split", (e, enable) => {
   return true;
 });
 
+ipcMain.handle("overlay:fit-height", (e, height) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!win) return;
+  const b = win.getBounds();
+  win.setBounds({ ...b, height: Math.max(120, Math.round(height)) });
+});
+
 ipcMain.handle("overlay:reset-positions", () => {
   config.overlayBounds = {};
   saveConfig(config);
