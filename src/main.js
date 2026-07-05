@@ -71,6 +71,12 @@ app.whenReady().then(() => {
   createTray();
   setupAutoUpdater();
   setupFuelDisplayMediaHandler();
+
+  if (config.splitViewEnabled) {
+    plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
+    fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
+    mainWindow.hide();
+  }
 });
 
 
@@ -284,13 +290,13 @@ function createOverlayWindow(key, defaultBounds) {
       contextIsolation: true,
     },
   });
-  win.setAlwaysOnTop(true, "screen-saver"); // stays above fullscreen sims on most setups
+  win.setAlwaysOnTop(true, "screen-saver");
   win.loadFile(path.join(__dirname, `overlay-${key}.html`));
 
   const persist = () => {
     config.overlayBounds = config.overlayBounds || {};
     config.overlayBounds[key] = win.getBounds();
-    saveConfigToDisk(config); // ← replace with your existing config-save function
+    saveConfig(config);
   };
   win.on("moved", persist);
   win.on("resized", persist);
@@ -301,7 +307,7 @@ function createOverlayWindow(key, defaultBounds) {
 
 ipcMain.handle("overlay:toggle-split", (e, enable) => {
   config.splitViewEnabled = enable;
-  saveConfigToDisk(config);
+  saveConfig(config);
 
   if (enable) {
     if (!plateWin) plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
@@ -317,20 +323,10 @@ ipcMain.handle("overlay:toggle-split", (e, enable) => {
 
 ipcMain.handle("overlay:reset-positions", () => {
   config.overlayBounds = {};
-  saveConfigToDisk(config);
-  if (plateWin) { plateWin.setBounds({ width: 260, height: 330, x: 40, y: 40 }); }
-  if (fieldWin) { fieldWin.setBounds({ width: 300, height: 420, x: 40, y: 400 }); }
+  saveConfig(config);
+  if (plateWin) plateWin.setBounds({ width: 260, height: 330, x: 40, y: 40 });
+  if (fieldWin) fieldWin.setBounds({ width: 300, height: 420, x: 40, y: 400 });
   return true;
-});
-
-// Re-open overlays on launch if split view was left enabled
-app.whenReady().then(() => {
-  // ...your existing mainWindow creation...
-  if (config.splitViewEnabled) {
-    plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
-    fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
-    mainWindow.hide();
-  }
 });
 
 async function sendDriverAction(action) {
