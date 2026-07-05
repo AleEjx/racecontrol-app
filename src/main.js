@@ -292,10 +292,14 @@ function createOverlayWindow(key, defaultBounds) {
   win.setAlwaysOnTop(true, "screen-saver");
   win.loadFile(path.join(__dirname, `overlay-${key}.html`));
 
+  let persistTimer = null;
   const persist = () => {
-    config.overlayBounds = config.overlayBounds || {};
-    config.overlayBounds[key] = win.getBounds();
-    saveConfig(config);
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      config.overlayBounds = config.overlayBounds || {};
+      config.overlayBounds[key] = win.getBounds();
+      saveConfig(config);
+    }, 300);
   };
   win.on("moved", persist);
   win.on("resized", persist);
