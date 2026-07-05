@@ -6,25 +6,20 @@
   <link rel="stylesheet" href="style.css" />
   <style>
     html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
-    .ov-drag {
+    body {
       -webkit-app-region: drag;
-      height: 18px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9px; letter-spacing: 2px; color: var(--muted);
-      cursor: move; user-select: none;
+      cursor: grab;
     }
-    .ov-body { -webkit-app-region: no-drag; padding: 6px; height: calc(100% - 18px); overflow-y: auto; }
+    body:active { cursor: grabbing; }
+    .ov-body { padding: 6px; height: 100%; overflow-y: auto; }
   </style>
 </head>
 <body>
-  <div class="ov-drag">⠿⠿⠿</div>
   <div class="ov-body" id="d-leaderboard">
     <div class="placeholder-text">Waiting for race...</div>
   </div>
-
   <script>
     let config = null, apiUrl = "";
-
     function renderLeaderboard(drivers, me) {
       const lb = document.getElementById("d-leaderboard");
       if (!drivers?.length) { lb.innerHTML = '<div class="placeholder-text">Waiting for race...</div>'; return; }
@@ -41,7 +36,6 @@
         </div>`;
       }).join("");
     }
-
     async function poll() {
       if (!apiUrl) return;
       try {
@@ -52,9 +46,16 @@
       } catch {}
     }
 
+    const BASE_WIDTH = 300;
+    function updateScale() {
+      document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
+    }
+    window.addEventListener("resize", updateScale);
+
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
       apiUrl = config.apiUrl || "";
+      updateScale();
       poll();
       setInterval(poll, 3000);
     });
