@@ -1007,6 +1007,16 @@
           <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
+        <div class="s-section-title">Overlay Windows</div>
+<div class="s-card gap-8 mb-4">
+  <div class="card-row-between">
+    <span class="font-11">🪟 Split into overlay windows</span>
+    <button id="split-view-toggle-btn" onclick="toggleSplitView()" class="toggle-button"></button>
+  </div>
+  <div class="small-note">Pops your plate and field out into two small draggable windows you can position anywhere on screen — handy for overlaying on top of your sim.</div>
+  <button class="btn-outline-blue" onclick="window.api.resetOverlayPositions()">↺ Reset Positions</button>
+</div>
+
 <div class="s-section-title" id="beta-section-title">Beta</div>
 <div class="s-card gap-8 mb-4" id="beta-section-card">
   <div class="tester-toggle-row" id="tester-toggle-row">
@@ -1774,6 +1784,7 @@ function sanitizeKeybinds(keybinds) {
 let PREFERRED_ENGINEERS = {};
     let _engineerActiveSlot = 1;
 
+
 function setEngineerActiveCar(slot, silent) {
   if (slot === 2 && !config.driver2) return;
   _engineerActiveSlot = slot;
@@ -2120,6 +2131,24 @@ setTimeout(() => {
   }, 600);
 }
 
+function updateSplitViewBtn() {
+  const btn = document.getElementById("split-view-toggle-btn");
+  if (!btn) return;
+  const on = !!config.splitViewEnabled;
+  btn.textContent = on ? "ON" : "OFF";
+  btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+  btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+  btn.style.color = on ? "var(--green)" : "var(--red)";
+}
+
+async function toggleSplitView() {
+  config.splitViewEnabled = !config.splitViewEnabled;
+  await window.api.saveConfig(config);
+  await window.api.toggleSplitView(config.splitViewEnabled);
+  updateSplitViewBtn();
+  showToast(config.splitViewEnabled ? "✓ Split into overlay windows" : "✓ Back to single window", "ok");
+}
+    
 function playTesterApprovedAnimation() {
   const flash = document.createElement("div");
   flash.style.cssText = `position:fixed;inset:0;z-index:100000;pointer-events:none;
