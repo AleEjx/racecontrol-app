@@ -1007,8 +1007,8 @@
           <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
-<div class="s-section-title">Beta</div>
-<div class="s-card gap-8 mb-4">
+<div class="s-section-title" id="beta-section-title">Beta</div>
+<div class="s-card gap-8 mb-4" id="beta-section-card">
   <div class="tester-toggle-row" id="tester-toggle-row">
     <div class="tester-label">
       <div class="tester-label-title" id="tester-label-title">🧪 Tester Mode</div>
@@ -1470,6 +1470,14 @@ function _initCropDrag() {
   window.addEventListener("mouseup", up);
 }
 
+function updateBetaVisibility() {
+  const hasRole = !!(user?.roles?.includes(TESTER_ROLE) || user?.id === DEV_USER_ID);
+  const title = document.getElementById("beta-section-title");
+  const card = document.getElementById("beta-section-card");
+  if (title) title.style.display = hasRole ? "" : "none";
+  if (card) card.style.display = hasRole ? "" : "none";
+}
+    
 function fuelCalibNext() {
   if (_fc.step === 2) {
     if (!_fc.crop) return;
@@ -2051,6 +2059,7 @@ function updateTesterBtn() {
     if (accessGrid) accessGrid.style.display = "none";
     if (versionSection) versionSection.style.display = "none";
   }
+  updateBetaVisibility(); 
 }
 
 function playTesterActivateAnimation() {
@@ -4143,6 +4152,7 @@ function practiceReset() {
           return;
         }
         user.isAdmin = data.isAdmin; user.roles = data.roles || []; user.token = user.marshalToken;
+        updateBetaVisibility();
         hasMarshal = true;
         hasDev = user.id === DEV_USER_ID;
         engineerPending = false;
@@ -4199,6 +4209,7 @@ function switchPanel(panel) {
         updateRaceSummaryToggleBtn();
         updateLapGraphToggleBtn();
         updatePracticeModeToggleBtn();
+        updateBetaVisibility();
         openSettingsTab('appearance');
         showScreen("screen-settings");
         currentPanel = "settings";
