@@ -29,7 +29,7 @@
   <div class="ov-body" id="d-leaderboard">
     <div class="placeholder-text">Waiting for race...</div>
   </div>
-  <script>
+<script>
     let config = null, apiUrl = "";
     function renderLeaderboard(drivers, me) {
       const lb = document.getElementById("d-leaderboard");
@@ -56,12 +56,43 @@
         renderLeaderboard(data.drivers, config?.driver);
       } catch {}
     }
-
     const BASE_WIDTH = 300;
     function updateScale() {
       document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
     }
     window.addEventListener("resize", updateScale);
+
+    // ↓ this is the part that was missing ↓
+    window.addEventListener("keydown", (e) => {
+      const step = e.shiftKey ? 20 : 4;
+      let dx = 0, dy = 0;
+      if (e.key === "ArrowLeft") dx = -step;
+      else if (e.key === "ArrowRight") dx = step;
+      else if (e.key === "ArrowUp") dy = -step;
+      else if (e.key === "ArrowDown") dy = step;
+      else return;
+      e.preventDefault();
+      window.api.overlayNudge(dx, dy);
+    });
+
+    const grip = document.getElementById("ov-resize-grip");
+    let resizing = false, lastX = 0, lastY = 0;
+    grip.addEventListener("mousedown", (e) => {
+      resizing = true;
+      lastX = e.screenX;
+      lastY = e.screenY;
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!resizing) return;
+      const dw = e.screenX - lastX;
+      const dh = e.screenY - lastY;
+      lastX = e.screenX;
+      lastY = e.screenY;
+      window.api.overlayResizeBy(dw, dh);
+    });
+    window.addEventListener("mouseup", () => { resizing = false; });
+    // ↑ end of the missing part ↑
 
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
