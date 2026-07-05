@@ -201,7 +201,7 @@ function setupFuelDisplayMediaHandler() {
 
 function registerHotkeys(keybinds) {
   globalShortcut.unregisterAll();
-  const { blue_flag, next_lap, pitting, blue_flag2, next_lap2, pitting2 } = keybinds || {};
+  const { blue_flag, next_lap, pitting } = keybinds || {};
 
   if (blue_flag) globalShortcut.register(toElectronAccelerator(blue_flag), () => {
     if (onCooldown) return;
@@ -217,21 +217,6 @@ if (pitting) globalShortcut.register(toElectronAccelerator(pitting), () => {
     if (onCooldown || inPits) return;
     mainWindow?.webContents.send("keybind-fired", "pitting");
     enterPits(1);
-  });
-  if (blue_flag2) globalShortcut.register(toElectronAccelerator(blue_flag2), () => {
-    if (onCooldown2) return;
-    mainWindow?.webContents.send("keybind-fired", "blue_flag2");
-    sendDriverAction2("blue_flag");
-  });
-  if (next_lap2) globalShortcut.register(toElectronAccelerator(next_lap2), () => {
-    if (onCooldown2) return;
-    mainWindow?.webContents.send("keybind-fired", "next_lap2");
-    sendDriverAction2("next_lap");
-  });
-if (pitting2) globalShortcut.register(toElectronAccelerator(pitting2), () => {
-    if (onCooldown2 || inPits2) return;
-    mainWindow?.webContents.send("keybind-fired", "pitting2");
-    enterPits(2);
   });
 
 const { dnf, practice_start, practice_lap, practice_reset } = keybinds || {};
