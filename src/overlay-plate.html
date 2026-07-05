@@ -22,18 +22,16 @@
       outline: none;
       box-shadow: none;
     }
-
     .ov-resize-grip {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 16px;
-  height: 16px;
-  cursor: nwse-resize;
-  -webkit-app-region: no-drag;
-  background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.25) 50%);
-}
-    
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      cursor: nwse-resize;
+      -webkit-app-region: no-drag;
+      background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.25) 50%);
+    }
   </style>
 </head>
 <body>
@@ -103,6 +101,13 @@
       return seconds.toFixed(1);
     }
 
+    function fitWindowHeight() {
+      const body = document.querySelector(".ov-body");
+      if (!body) return;
+      const h = Math.ceil(body.getBoundingClientRect().height) + 4;
+      window.api.overlayFitHeight(h);
+    }
+
     function renderLapGraph(laps, raceFastest) {
       const el = document.getElementById("rc-lap-graph");
       if (!el) return;
@@ -145,10 +150,12 @@
     }
 
     async function poll() {
-      if (!apiUrl || !config?.driver) return;
+      config = await window.api.getConfig();
+      apiUrl = config.apiUrl || "";
+      if (!apiUrl || !config?.driver) { console.warn("[Overlay] missing apiUrl or driver", apiUrl, config?.driver); return; }
       try {
         const res = await fetch(`${apiUrl}/driver/state`);
-        if (!res.ok) return;
+        if (!res.ok) { console.error("[Overlay] state fetch not ok:", res.status); return; }
         const data = await res.json();
         const d = data.drivers?.find(x => x.name === config.driver);
         document.getElementById("rc-plate-num").textContent = config.number || "??";
@@ -164,11 +171,15 @@
           document.getElementById("rc-plate-best").textContent = laps.length ? formatLapTime(Math.min(...laps.map(l => l.time))) : "–";
           const prefs = config.overlayPrefs || {};
           if (prefs.showLapGraph !== false) renderLapGraph(laps, _rcRaceFastest(data.drivers));
+        } else {
+          console.warn("[Overlay] no driver match for", config.driver, "in", data.drivers?.map(x => x.name));
         }
-      } catch {}
+      } catch (e) {
+        console.error("[Overlay] poll failed:", e.message);
+      }
     }
 
-const BASE_WIDTH = 260; 
+    const BASE_WIDTH = 260;
     function updateScale() {
       document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
     }
@@ -206,11 +217,6 @@ const BASE_WIDTH = 260;
 
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
-      apiUrl = config.apiUrl || "";.
-    });
-
-    window.addEventListener("DOMContentLoaded", async () => {
-      config = await window.api.getConfig();
       apiUrl = config.apiUrl || "";
       const prefs = config.overlayPrefs || {};
       if (config.engineer && prefs.showActions !== false) document.getElementById("ov-actions").style.display = "grid";
@@ -218,10 +224,11 @@ const BASE_WIDTH = 260;
       if (prefs.showPitBanner === false) document.querySelector(".rc-plate-pit-flag").style.display = "none";
       if (prefs.showLapGraph === false) document.getElementById("rc-lap-graph").style.display = "none";
       updateScale();
+      requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
       poll();
       setInterval(poll, 3000);
     });
   </script>
-<div class="ov-resize-grip" id="ov-resize-grip"></div>
+  <div class="ov-resize-grip" id="ov-resize-grip"></div>
 </body>
 </html>
