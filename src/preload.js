@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld("api", {
   checkVersion:     ()       => ipcRenderer.invoke("check-version"),
   registerHotkeys:  (kb)     => ipcRenderer.invoke("register-hotkeys", kb),
   suspendHotkeys:   ()       => ipcRenderer.invoke("suspend-hotkeys"),
+  toggleSplitView: (enable) => ipcRenderer.invoke("overlay:toggle-split", enable),
+  resetOverlayPositions: () => ipcRenderer.invoke("overlay:reset-positions"),
   resumeHotkeys:    ()       => ipcRenderer.invoke("resume-hotkeys"),
   uninstall:        ()       => ipcRenderer.invoke("uninstall"),
   onFuelSourcePickerOpen: (cb) => ipcRenderer.on('fuel-source-picker-open', (_e, sources) => cb(sources)),
