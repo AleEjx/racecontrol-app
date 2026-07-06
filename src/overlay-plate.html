@@ -110,6 +110,13 @@ button:focus-visible,
       } catch {}
     }
 
+    function fitWindowHeight() {
+      const body = document.querySelector(".ov-body");
+      if (!body) return;
+      const h = Math.ceil(body.getBoundingClientRect().height) + 4;
+      window.api.overlayFitHeight(h);
+    }
+
 window.addEventListener("DOMContentLoaded", async () => {
   config = await window.api.getConfig();
   apiUrl = config.apiUrl || "";
@@ -125,7 +132,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     document.querySelector(".rc-plate-pit-flag").style.display = "none";
   }
 
-  updateScale();
+  requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
   poll();
   setInterval(poll, 3000);
 });
