@@ -23,6 +23,15 @@
   -webkit-app-region: no-drag;
   background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.25) 50%);
 }
+    .ov-resize-grip-h {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      cursor: ew-resize;
+      -webkit-app-region: no-drag;
+    }
   </style>
 </head>
 <body>
@@ -72,5 +81,6 @@
     });
   </script>
 <div class="ov-resize-grip" id="ov-resize-grip"></div>
+<div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
 </body>
 </html>
