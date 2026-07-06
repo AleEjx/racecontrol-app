@@ -6,19 +6,15 @@
   <link rel="stylesheet" href="style.css" />
   <style>
     html, body { background: transparent; margin: 0; overflow: hidden; }
-    .ov-drag {
+    .ov-body {
       -webkit-app-region: drag;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: var(--muted);
-      cursor: move;
-      user-select: none;
+      cursor: grab;
+      padding: 6px;
     }
-    .ov-body { -webkit-app-region: no-drag; padding: 6px; }
+    .ov-body:active { cursor: grabbing; }
+    .rc-action-block, button, input, select {
+      -webkit-app-region: no-drag;
+    }
 
     button:focus,
 button:focus-visible,
@@ -31,7 +27,6 @@ button:focus-visible,
   </style>
 </head>
 <body>
-  <div class="ov-drag">⠿⠿⠿</div>
   <div class="ov-body">
     <div class="rc-plate on" id="rc-plate" style="margin:0;">
       <div class="rc-plate-pit-flag">IN PITS</div>
