@@ -5,10 +5,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <style>
-    html, body { background: transparent; margin: 0; overflow: hidden; }
+    html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
     .ov-body {
       cursor: grab;
       padding: 6px;
+      box-sizing: border-box;
+      min-height: 100%;
+      background: linear-gradient(135deg, var(--surface, #14151c) 60%, var(--bg, #0a0a0f) 100%);
+      border: 2px solid var(--border, #333);
     }
     .ov-body.dragging { cursor: grabbing; }
     .rc-action-block, button, input, select {
@@ -47,6 +51,7 @@ button:focus-visible,
 </head>
 <body>
   <div class="ov-body">
+    <div id="ov-content">
     <div class="rc-plate on" id="rc-plate" style="margin:0;">
       <div class="rc-plate-pit-flag">IN PITS</div>
       <div class="rc-plate-top">
@@ -74,6 +79,7 @@ button:focus-visible,
       <button class="rc-action-block" onclick="window.api.togglePitting()">
         <span class="ai" id="ov-pit-icon">🔧</span><span class="al" id="ov-pit-label">Pitting</span>
       </button>
+    </div>
     </div>
   </div>
 
