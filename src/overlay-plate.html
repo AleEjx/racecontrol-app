@@ -97,6 +97,12 @@ button:focus-visible,
           <div class="rc-plate-call" id="rc-plate-call">–</div>
         </div>
       </div>
+      <div class="rc-lap-graph" id="rc-lap-graph"></div>
+      <div class="rc-lap-graph-legend" id="rc-lap-graph-legend">
+        <div class="rc-lgl-item"><span class="rc-lgl-dot fastest"></span>Best lap</div>
+        <div class="rc-lgl-item"><span class="rc-lgl-dot slowest"></span>Worst lap</div>
+        <div class="rc-lgl-item"><span class="rc-lgl-dot race-fastest"></span>Race fastest</div>
+      </div>
       <div class="rc-plate-stats">
         <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos">–</div></div>
         <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap">–</div></div>
@@ -129,6 +135,85 @@ button:focus-visible,
       const mins = Math.floor(seconds / 60);
       const secs = (seconds % 60).toFixed(2);
       return mins > 0 ? `${mins}:${secs.padStart(5, "0")}` : `${secs}s`;
+    }
+
+    function _rcCleanLaps(lapDurations) {
+      return (lapDurations || []).filter(l => !l.pit && !l.unstable && typeof l.time === "number");
+    }
+
+    function _rcRaceFastest(allDrivers) {
+      let best = null;
+      (allDrivers || []).forEach(d => {
+        _rcCleanLaps(d.lapDurations).forEach(l => {
+          if (!best || l.time < best.time) best = { driver: d.name, lap: l.lap, time: l.time };
+        });
+      });
+      return best;
+    }
+
+    function _rcFormatGraphTime(seconds) {
+      if (typeof seconds !== "number" || isNaN(seconds)) return "–";
+      if (seconds >= 60) {
+        const mins = Math.floor(seconds / 60);
+        const secs = (seconds % 60).toFixed(1).padStart(4, "0");
+        return `${mins}:${secs}`;
+      }
+      return seconds.toFixed(1);
+    }
+
+    function renderOverlayLapGraph(laps, raceFastest) {
+      const el = document.getElementById("rc-lap-graph");
+      if (!el) return;
+      if (!laps.length) { el.innerHTML = ""; return; }
+
+      const times = laps.map(l => l.time);
+      const ownFastest = Math.min(...times);
+      const ownSlowest = Math.max(...times);
+      const youHoldRaceFastest = !raceFastest || ownFastest <= raceFastest.time;
+
+      const minT = Math.min(ownFastest, raceFastest ? raceFastest.time : ownFastest);
+      const range = Math.max(ownSlowest - minT, 0.1);
+
+      const W = 300, H = 46, PADX = 5, plotTop = 14, plotBottom = H - 10;
+      const n = laps.length;
+      const x = i => n === 1 ? W / 2 : PADX + (i / (n - 1)) * (W - PADX * 2);
+      const y = t => plotTop + ((t - minT) / range) * (plotBottom - plotTop);
+
+      const points = laps.map((l, i) => ({ x: x(i), y: y(l.time), l }));
+      const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+
+      const parts = points.map(p => {
+        let cls = "rc-lap-dot", labelCls = "";
+        if (youHoldRaceFastest && p.l.time === ownFastest) { cls += " race-fastest"; labelCls = "race-fastest"; }
+        else if (p.l.time === ownFastest) { cls += " fastest"; labelCls = "fastest"; }
+        else if (p.l.time === ownSlowest) { cls += " slowest"; labelCls = "slowest"; }
+        return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4"></circle>` +
+          `<text class="rc-lap-dot-label ${labelCls}" x="${p.x.toFixed(1)}" y="${(p.y - 5).toFixed(1)}" text-anchor="middle">${_rcFormatGraphTime(p.l.time)}</text>` +
+          `<text class="rc-lap-num-label" x="${p.x.toFixed(1)}" y="${(H - 1).toFixed(1)}" text-anchor="middle">L${p.l.lap}</text>`;
+      }).join("");
+
+      let refLine = "";
+      if (raceFastest && !youHoldRaceFastest) {
+        const ry = y(raceFastest.time);
+        refLine = `<line class="rc-race-fastest-ref" x1="${PADX}" y1="${ry.toFixed(1)}" x2="${(W - PADX).toFixed(1)}" y2="${ry.toFixed(1)}"></line>
+          <text class="rc-race-fastest-ref-label" x="${(W - PADX).toFixed(1)}" y="${(ry - 3).toFixed(1)}" text-anchor="end">${raceFastest.driver} · ${_rcFormatGraphTime(raceFastest.time)}</text>`;
+      }
+
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${refLine}<path class="rc-lap-line" d="${pathD}"></path>${parts}</svg>`;
+    }
+
+    function applyStatsRowVisibility() {
+      const prefs = config?.overlayPrefs || {};
+      const statsRowOn = prefs.showStats !== false;
+      const graphOn = localStorage.getItem("rc_lap_graph_enabled") === "1";
+
+      const statsEl = document.querySelector(".rc-plate-stats");
+      const graphEl = document.getElementById("rc-lap-graph");
+      const legendEl = document.getElementById("rc-lap-graph-legend");
+
+      if (statsEl) statsEl.style.display = (statsRowOn && !graphOn) ? "flex" : "none";
+      if (graphEl) graphEl.classList.toggle("on", statsRowOn && graphOn);
+      if (legendEl) legendEl.classList.toggle("on", statsRowOn && graphOn);
     }
 
     function applyOverlayScale(scale) {
@@ -168,9 +253,12 @@ button:focus-visible,
           document.getElementById("rc-plate-lap").textContent = d.lap || 1;
           document.getElementById("rc-plate").classList.toggle("pitting", !!d.inPits);
           document.getElementById("ov-pit-label").textContent = d.inPits ? "In Pits" : "Pitting";
-          const laps = (d.lapDurations || []).filter(l => !l.pit && !l.unstable);
+          const laps = _rcCleanLaps(d.lapDurations);
           document.getElementById("rc-plate-best").textContent = laps.length ? formatLapTime(Math.min(...laps.map(l => l.time))) : "–";
+          renderOverlayLapGraph(laps, _rcRaceFastest(data.drivers));
         }
+        applyStatsRowVisibility();
+        requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
       } catch {}
     }
 
@@ -188,15 +276,13 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   applyOverlayScale(config.overlayScale || 1);
 
-  if (config.engineer && prefs.showActions !== false) {
+  if (config.engineer) {
     document.getElementById("ov-actions").style.display = "grid";
-  }
-  if (prefs.showStats === false) {
-    document.querySelector(".rc-plate-stats").style.display = "none";
   }
   if (prefs.showPitBanner === false) {
     document.querySelector(".rc-plate-pit-flag").style.display = "none";
   }
+  applyStatsRowVisibility();
 
   requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
   poll();
