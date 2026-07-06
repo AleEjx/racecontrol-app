@@ -828,6 +828,18 @@
           </button>
         </div>
 
+<div class="s-section-title" id="glass-opacity-title" style="display:none;">Glass Opacity</div>
+<div class="s-card gap-10 mb-4" id="glass-opacity-card" style="display:none;">
+  <div class="flex-row-gap-10">
+    <span class="font-16 flex-shrink-0">🌫️</span>
+    <input type="range" id="glass-opacity-slider" class="vol-slider" min="10" max="90" value="45"
+      oninput="onGlassOpacitySlider(this.value)" />
+    <span class="font-16 flex-shrink-0">⬛</span>
+    <span id="glass-opacity-label" class="font-11 fw-700 text-blue text-right flex-shrink-0 width-34">45%</span>
+  </div>
+  <div class="small-note">Controls how see-through the Glass theme's panels are.</div>
+</div>
+
 <div class="s-section-title flex-row-gap-8">
   <span>Panel Style</span>
 </div>
@@ -1969,6 +1981,27 @@ function setMarshalTab(tab) {
       document.getElementById('theme-dark-btn')?.classList.toggle('active', !isLight && !isTransparent);
       document.getElementById('theme-light-btn')?.classList.toggle('active', isLight);
       document.getElementById('theme-transparent-btn')?.classList.toggle('active', isTransparent);
+      const title = document.getElementById('glass-opacity-title');
+      const card = document.getElementById('glass-opacity-card');
+      if (title) title.style.display = isTransparent ? 'block' : 'none';
+      if (card) card.style.display = isTransparent ? 'flex' : 'none';
+    }
+
+    function onGlassOpacitySlider(val) {
+      const pct = parseInt(val, 10);
+      document.documentElement.style.setProperty('--glass-opacity', (pct / 100).toString());
+      document.getElementById('glass-opacity-label').textContent = pct + '%';
+      localStorage.setItem('rc_glass_opacity', pct);
+    }
+
+    function loadGlassOpacityPref() {
+      const saved = localStorage.getItem('rc_glass_opacity');
+      const pct = saved !== null ? parseInt(saved, 10) : 45;
+      document.documentElement.style.setProperty('--glass-opacity', (pct / 100).toString());
+      const slider = document.getElementById('glass-opacity-slider');
+      const label = document.getElementById('glass-opacity-label');
+      if (slider) slider.value = pct;
+      if (label) label.textContent = pct + '%';
     }
 
 const TESTER_ROLE = "1503570737015951370";
@@ -3648,6 +3681,7 @@ function _renderFuelStats() {
       loadFontSizePrefs();
       loadTesterMode();
       loadThemePrefs();
+      loadGlassOpacityPref();
       loadPanelStylePref();
       loadVolumePrefs();
       loadRaceSummaryPref();
