@@ -5,54 +5,34 @@
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <style>
-    html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
-    body {
+    html, body { background: transparent; margin: 0; overflow: hidden; }
+    .ov-drag {
+      -webkit-app-region: drag;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      cursor: move;
       user-select: none;
     }
-    body.dragging { cursor: grabbing; }
-    .ov-body {
-      cursor: grab;
-      position: relative;
-      padding: 8px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .rc-action-block, button, input, select {
-      cursor: pointer;
-    }
+    .ov-body { -webkit-app-region: no-drag; padding: 6px; }
+
     button:focus,
-    button:focus-visible,
-    .rc-action-block:focus,
-    .rc-action-block:focus-visible {
-      outline: none;
-      box-shadow: none;
-    }
-    .ov-resize-grip {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 10px;
-      height: 10px;
-      cursor: nwse-resize;
-      /* Matches the widget's real border (var(--border)) instead of a
-         generic white gradient, and is now anchored to the widget itself
-         (see HTML below) instead of the window's corner. */
-      border-right: 2px solid var(--border);
-      border-bottom: 2px solid var(--border);
-      background: transparent;
-    }
-    .ov-resize-grip-h {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 6px;
-      height: 100%;
-      cursor: ew-resize;
-    }
+button:focus-visible,
+.rc-action-block:focus,
+.rc-action-block:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+    
   </style>
 </head>
 <body>
-  <div class="ov-body" id="ov-panel">
+  <div class="ov-drag">⠿⠿⠿</div>
+  <div class="ov-body">
     <div class="rc-plate on" id="rc-plate" style="margin:0;">
       <div class="rc-plate-pit-flag">IN PITS</div>
       <div class="rc-plate-top">
@@ -62,7 +42,6 @@
           <div class="rc-plate-call" id="rc-plate-call">–</div>
         </div>
       </div>
-      <div class="rc-lap-graph on" id="rc-lap-graph"></div>
       <div class="rc-plate-stats">
         <div class="rc-plate-stat"><div class="rc-plate-stat-label">Pos</div><div class="rc-plate-stat-val pos" id="rc-plate-pos">–</div></div>
         <div class="rc-plate-stat"><div class="rc-plate-stat-label">Gap</div><div class="rc-plate-stat-val" id="rc-plate-gap">–</div></div>
@@ -82,9 +61,6 @@
         <span class="ai" id="ov-pit-icon">🔧</span><span class="al" id="ov-pit-label">Pitting</span>
       </button>
     </div>
-
-    <div class="ov-resize-grip" id="ov-resize-grip"></div>
-    <div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
   </div>
 
   <script>
@@ -97,93 +73,11 @@
       return mins > 0 ? `${mins}:${secs.padStart(5, "0")}` : `${secs}s`;
     }
 
-    function _rcCleanLaps(lapDurations) {
-      return (lapDurations || []).filter(l => !l.pit && !l.unstable && typeof l.time === "number");
-    }
-
-    function _rcRaceFastest(allDrivers) {
-      let best = null;
-      (allDrivers || []).forEach(d => {
-        _rcCleanLaps(d.lapDurations).forEach(l => {
-          if (!best || l.time < best.time) best = { driver: d.name, lap: l.lap, time: l.time };
-        });
-      });
-      return best;
-    }
-
-    function _rcFormatGraphTime(seconds) {
-      if (typeof seconds !== "number" || isNaN(seconds)) return "–";
-      if (seconds >= 60) {
-        const mins = Math.floor(seconds / 60);
-        const secs = (seconds % 60).toFixed(1).padStart(4, "0");
-        return `${mins}:${secs}`;
-      }
-      return seconds.toFixed(1);
-    }
-
-    function fitWindowHeight() {
-      const body = document.querySelector(".ov-body");
-      if (!body) return;
-      const h = Math.ceil(body.getBoundingClientRect().height) + 4;
-      window.api.overlayFitHeight(h);
-    }
-
-    // Recalculates zoom scale and re-fits the window height to match —
-    // call this after any resize action so the window never drifts out
-    // of sync with the actual content size.
-    function refitAfterResize() {
-      updateScale();
-      requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
-    }
-
-    function renderLapGraph(laps, raceFastest) {
-      const el = document.getElementById("rc-lap-graph");
-      if (!el) return;
-      if (!laps.length) { el.innerHTML = ""; return; }
-
-      const times = laps.map(l => l.time);
-      const ownFastest = Math.min(...times);
-      const ownSlowest = Math.max(...times);
-      const youHoldRaceFastest = !raceFastest || ownFastest <= raceFastest.time;
-
-      const minT = Math.min(ownFastest, raceFastest ? raceFastest.time : ownFastest);
-      const range = Math.max(ownSlowest - minT, 0.1);
-
-      const W = 300, H = 46, PADX = 5, plotTop = 14, plotBottom = H - 10;
-      const n = laps.length;
-      const x = i => n === 1 ? W / 2 : PADX + (i / (n - 1)) * (W - PADX * 2);
-      const y = t => plotTop + ((t - minT) / range) * (plotBottom - plotTop);
-
-      const points = laps.map((l, i) => ({ x: x(i), y: y(l.time), l }));
-      const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
-
-      const parts = points.map(p => {
-        let cls = "rc-lap-dot", labelCls = "";
-        if (youHoldRaceFastest && p.l.time === ownFastest) { cls += " race-fastest"; labelCls = "race-fastest"; }
-        else if (p.l.time === ownFastest) { cls += " fastest"; labelCls = "fastest"; }
-        else if (p.l.time === ownSlowest) { cls += " slowest"; labelCls = "slowest"; }
-        return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4"></circle>` +
-          `<text class="rc-lap-dot-label ${labelCls}" x="${p.x.toFixed(1)}" y="${(p.y - 5).toFixed(1)}" text-anchor="middle">${_rcFormatGraphTime(p.l.time)}</text>` +
-          `<text class="rc-lap-num-label" x="${p.x.toFixed(1)}" y="${(H - 1).toFixed(1)}" text-anchor="middle">L${p.l.lap}</text>`;
-      }).join("");
-
-      let refLine = "";
-      if (raceFastest && !youHoldRaceFastest) {
-        const ry = y(raceFastest.time);
-        refLine = `<line class="rc-race-fastest-ref" x1="${PADX}" y1="${ry.toFixed(1)}" x2="${(W - PADX).toFixed(1)}" y2="${ry.toFixed(1)}"></line>
-          <text class="rc-race-fastest-ref-label" x="${(W - PADX).toFixed(1)}" y="${(ry - 3).toFixed(1)}" text-anchor="end">${raceFastest.driver} · ${_rcFormatGraphTime(raceFastest.time)}</text>`;
-      }
-
-      el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${refLine}<path class="rc-lap-line" d="${pathD}"></path>${parts}</svg>`;
-    }
-
     async function poll() {
-      config = await window.api.getConfig();
-      apiUrl = config.apiUrl || "";
-      if (!apiUrl || !config?.driver) { console.warn("[Overlay] missing apiUrl or driver", apiUrl, config?.driver); return; }
+      if (!apiUrl || !config?.driver) return;
       try {
         const res = await fetch(`${apiUrl}/driver/state`);
-        if (!res.ok) { console.error("[Overlay] state fetch not ok:", res.status); return; }
+        if (!res.ok) return;
         const data = await res.json();
         const d = data.drivers?.find(x => x.name === config.driver);
         document.getElementById("rc-plate-num").textContent = config.number || "??";
@@ -195,121 +89,31 @@
           document.getElementById("rc-plate-lap").textContent = d.lap || 1;
           document.getElementById("rc-plate").classList.toggle("pitting", !!d.inPits);
           document.getElementById("ov-pit-label").textContent = d.inPits ? "In Pits" : "Pitting";
-          const laps = _rcCleanLaps(d.lapDurations);
+          const laps = (d.lapDurations || []).filter(l => !l.pit && !l.unstable);
           document.getElementById("rc-plate-best").textContent = laps.length ? formatLapTime(Math.min(...laps.map(l => l.time))) : "–";
-          const prefs = config.overlayPrefs || {};
-          if (prefs.showLapGraph !== false) renderLapGraph(laps, _rcRaceFastest(data.drivers));
-        } else {
-          console.warn("[Overlay] no driver match for", config.driver, "in", data.drivers?.map(x => x.name));
         }
-      } catch (e) {
-        console.error("[Overlay] poll failed:", e.message);
-      }
+      } catch {}
     }
 
-    const BASE_WIDTH = 260;
-    function updateScale() {
-      document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
-    }
-    // NOTE: intentionally NOT listening to window "resize" globally.
-    // That event also fires from window *moves* (multi-monitor/DPI changes),
-    // which caused the overlay to visibly grow/shrink while dragging.
-    // Scale is now only recalculated on load and right after a real
-    // grip-driven resize (see refitAfterResize above).
+window.addEventListener("DOMContentLoaded", async () => {
+  config = await window.api.getConfig();
+  apiUrl = config.apiUrl || "";
+  const prefs = config.overlayPrefs || {};
 
-    window.addEventListener("keydown", (e) => {
-      const step = e.shiftKey ? 20 : 4;
-      let dx = 0, dy = 0;
-      if (e.key === "ArrowLeft") dx = -step;
-      else if (e.key === "ArrowRight") dx = step;
-      else if (e.key === "ArrowUp") dy = -step;
-      else if (e.key === "ArrowDown") dy = step;
-      else return;
-      e.preventDefault();
-      window.api.overlayNudge(dx, dy);
-    });
+  if (config.engineer && prefs.showActions !== false) {
+    document.getElementById("ov-actions").style.display = "grid";
+  }
+  if (prefs.showStats === false) {
+    document.querySelector(".rc-plate-stats").style.display = "none";
+  }
+  if (prefs.showPitBanner === false) {
+    document.querySelector(".rc-plate-pit-flag").style.display = "none";
+  }
 
-    // --- Diagonal resize grip (anchored to the widget itself now) ---
-    const grip = document.getElementById("ov-resize-grip");
-    let resizing = false, lastX = 0, lastY = 0;
-    grip.addEventListener("mousedown", (e) => {
-      resizing = true;
-      lastX = e.screenX;
-      lastY = e.screenY;
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!resizing) return;
-      const dw = e.screenX - lastX;
-      const dh = e.screenY - lastY;
-      lastX = e.screenX;
-      lastY = e.screenY;
-      window.api.overlayResizeBy(dw, dh);
-      refitAfterResize();
-    });
-    window.addEventListener("mouseup", () => { resizing = false; });
-
-    // --- Dedicated horizontal-only resize handle (right edge) ---
-    const gripH = document.getElementById("ov-resize-grip-h");
-    let resizingH = false, lastHX = 0;
-    gripH.addEventListener("mousedown", (e) => {
-      resizingH = true;
-      lastHX = e.screenX;
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!resizingH) return;
-      const dw = e.screenX - lastHX;
-      lastHX = e.screenX;
-      // No clamping — width grows/shrinks by exactly the mouse delta.
-      window.api.overlayResizeBy(dw, 0);
-      refitAfterResize();
-    });
-    window.addEventListener("mouseup", () => { resizingH = false; });
-
-    // --- Custom full-direction window drag ---
-    // Attached to the widget panel itself (#ov-panel), which now hugs its
-    // real content (width: fit-content) instead of stretching to fill the
-    // whole transparent window — so dragging only engages over the visible
-    // widget, and buttons/inputs/grips inside it are excluded below.
-    const dragSurface = document.getElementById("ov-panel");
-    let dragging = false, dragLastX = 0, dragLastY = 0;
-    dragSurface.addEventListener("mousedown", (e) => {
-      if (e.target.closest(".rc-action-block, button, input, select, #ov-resize-grip, #ov-resize-grip-h")) return;
-      dragging = true;
-      dragLastX = e.screenX;
-      dragLastY = e.screenY;
-      document.body.classList.add("dragging");
-      e.preventDefault();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!dragging) return;
-      const dx = e.screenX - dragLastX;
-      const dy = e.screenY - dragLastY;
-      dragLastX = e.screenX;
-      dragLastY = e.screenY;
-      if (dx !== 0 || dy !== 0) window.api.overlayNudge(dx, dy);
-    });
-    window.addEventListener("mouseup", () => {
-      dragging = false;
-      document.body.classList.remove("dragging");
-    });
-
-    window.addEventListener("DOMContentLoaded", async () => {
-      config = await window.api.getConfig();
-      apiUrl = config.apiUrl || "";
-      const prefs = config.overlayPrefs || {};
-      if (config.engineer && prefs.showActions !== false) document.getElementById("ov-actions").style.display = "grid";
-      if (prefs.showStats === false) document.querySelector(".rc-plate-stats").style.display = "none";
-      if (prefs.showPitBanner === false) document.querySelector(".rc-plate-pit-flag").style.display = "none";
-      if (prefs.showLapGraph === false) document.getElementById("rc-lap-graph").style.display = "none";
-      updateScale();
-      requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
-      poll();
-      setInterval(poll, 3000);
-    });
+  updateScale();
+  poll();
+  setInterval(poll, 3000);
+});
   </script>
 </body>
 </html>
