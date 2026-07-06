@@ -1039,8 +1039,8 @@
   <div class="divider" style="margin:4px 0;"></div>
 
   <div class="card-row-between">
-    <span class="font-11">🏎️ Show Quick Actions</span>
-    <button id="ov-show-actions-btn" onclick="toggleOverlayPref('showActions')" class="toggle-button"></button>
+    <span class="font-11">🏆 Show Leaderboard</span>
+    <button id="ov-show-leaderboard-btn" onclick="toggleOverlayPref('showLeaderboard')" class="toggle-button"></button>
   </div>
   <div class="card-row-between">
     <span class="font-11">📊 Show Stats Row</span>
@@ -1050,7 +1050,7 @@
     <span class="font-11">🔧 Show Pit Banner</span>
     <button id="ov-show-pitbanner-btn" onclick="toggleOverlayPref('showPitBanner')" class="toggle-button"></button>
   </div>
-  <div class="small-note">Choose what appears on your Driver Panel overlay window.</div>
+  <div class="small-note">Choose what appears on your Driver Panel overlay windows. Show Leaderboard controls the field overlay; Stats Row and Pit Banner control the plate overlay.</div>
 </div>
 
 <div class="s-section-title" id="beta-section-title">Beta</div>
@@ -1523,7 +1523,7 @@ function loadOverlayPrefs() {
 
 function updateOverlayPrefBtns() {
   const p = config.overlayPrefs || {};
-  [["showActions", "ov-show-actions-btn"], ["showStats", "ov-show-stats-btn"], ["showPitBanner", "ov-show-pitbanner-btn"]]
+  [["showLeaderboard", "ov-show-leaderboard-btn"], ["showStats", "ov-show-stats-btn"], ["showPitBanner", "ov-show-pitbanner-btn"]]
     .forEach(([key, id]) => {
       const btn = document.getElementById(id);
       if (!btn) return;
