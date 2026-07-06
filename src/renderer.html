@@ -1019,6 +1019,14 @@
           <button onclick="uninstallApp()" class="s-danger-btn opacity-50">🗑️ Uninstall App</button>
         </div>
 
+<div class="s-section-title" id="pref-eng-title" style="display:none;">🔒 Preferred Engineer</div>
+<div class="s-card gap-8 mb-4" id="pref-eng-card" style="display:none;">
+  <div class="small-note">Paste your engineer's Discord ID to lock your car to them — no one else will be able to select you as their driver on the Engineer setup screen. Leave blank and save to open your car back up to any engineer.</div>
+  <input type="text" id="pref-eng-input" placeholder="Engineer's Discord ID e.g. 884223249939050507" class="font-11" />
+  <button onclick="savePreferredEngineer()" class="btn-outline-blue no-grow">🔒 Save Preferred Engineer</button>
+  <div id="pref-eng-status" class="font-9 text-muted min-h-12"></div>
+</div>
+
 <div class="s-section-title">Overlay Windows</div>
 <div class="s-card gap-8 mb-4">
   <div class="card-row-between">
@@ -4319,6 +4327,7 @@ function switchPanel(panel) {
         updateBetaVisibility();
         updateSplitViewBtn();       
         updateOverlayPrefBtns();     
+        setupPreferredEngineerUI();
         openSettingsTab('appearance');
         showScreen("screen-settings");
         currentPanel = "settings";
