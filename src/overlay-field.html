@@ -7,59 +7,29 @@
   <style>
     html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
     body {
-      user-select: none;
-    }
-    body.dragging { cursor: grabbing; }
-    .ov-body {
+      -webkit-app-region: drag;
       cursor: grab;
-      position: relative;
-      padding: 6px;
-      width: 100%;
-      box-sizing: border-box;
-      /* Same notched-corner perimeter as .rc-plate / the CAR widget,
-         scaled down (8px cut instead of 14px) for this smaller panel. */
-      background: linear-gradient(135deg, var(--surface) 60%, var(--bg) 100%);
-      border: 2px solid var(--border);
-      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
     }
-    .ov-rows {
-      max-height: calc(100vh - 12px);
-      overflow-y: auto;
-    }
+    body:active { cursor: grabbing; }
+    .ov-body { padding: 6px; height: 100%; overflow-y: auto; }
+
     .ov-resize-grip {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 10px;
-      height: 10px;
-      cursor: nwse-resize;
-      -webkit-app-region: no-drag;
-      /* Matches the widget's real border color/width (var(--border)),
-         same source of truth as .rc-plate, instead of a generic white line. */
-      border-right: 2px solid var(--border);
-      border-bottom: 2px solid var(--border);
-      background: transparent;
-    }
-    .ov-resize-grip-h {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 6px;
-      height: 100%;
-      cursor: ew-resize;
-      -webkit-app-region: no-drag;
-    }
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  -webkit-app-region: no-drag;
+  background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.25) 50%);
+}
   </style>
 </head>
 <body>
-  <div class="ov-body" id="ov-panel">
-    <div class="ov-rows" id="d-leaderboard">
-      <div class="placeholder-text">Waiting for race...</div>
-    </div>
-    <div class="ov-resize-grip" id="ov-resize-grip"></div>
-    <div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
+  <div class="ov-body" id="d-leaderboard">
+    <div class="placeholder-text">Waiting for race...</div>
   </div>
-<script>
+  <script>
     let config = null, apiUrl = "";
     function renderLeaderboard(drivers, me) {
       const lb = document.getElementById("d-leaderboard");
@@ -86,94 +56,12 @@
         renderLeaderboard(data.drivers, config?.driver);
       } catch {}
     }
+
     const BASE_WIDTH = 300;
     function updateScale() {
       document.documentElement.style.zoom = window.innerWidth / BASE_WIDTH;
     }
-    // NOTE: intentionally NOT listening to window "resize" globally anymore.
-    // That event also fires from window *moves* (multi-monitor/DPI changes),
-    // which was causing the overlay to visibly grow/shrink while dragging.
-    // Scale is now only recalculated on load and right after a real
-    // grip-driven resize (see below).
-    window.addEventListener("keydown", (e) => {
-      const step = e.shiftKey ? 20 : 4;
-      let dx = 0, dy = 0;
-      if (e.key === "ArrowLeft") dx = -step;
-      else if (e.key === "ArrowRight") dx = step;
-      else if (e.key === "ArrowUp") dy = -step;
-      else if (e.key === "ArrowDown") dy = step;
-      else return;
-      e.preventDefault();
-      window.api.overlayNudge(dx, dy);
-    });
-
-    // --- Resize grip (unchanged behavior, just smaller/border-matched now) ---
-    const grip = document.getElementById("ov-resize-grip");
-    let resizing = false, lastX = 0, lastY = 0;
-    grip.addEventListener("mousedown", (e) => {
-      resizing = true;
-      lastX = e.screenX;
-      lastY = e.screenY;
-      e.preventDefault();
-      e.stopPropagation(); // don't let this also trigger body drag
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!resizing) return;
-      const dw = e.screenX - lastX;
-      const dh = e.screenY - lastY;
-      lastX = e.screenX;
-      lastY = e.screenY;
-      window.api.overlayResizeBy(dw, dh);
-      updateScale();
-    });
-    window.addEventListener("mouseup", () => { resizing = false; });
-
-    // --- Dedicated horizontal-only resize handle (right edge) ---
-    const gripH = document.getElementById("ov-resize-grip-h");
-    let resizingH = false, lastHX = 0;
-    gripH.addEventListener("mousedown", (e) => {
-      resizingH = true;
-      lastHX = e.screenX;
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!resizingH) return;
-      const dw = e.screenX - lastHX;
-      lastHX = e.screenX;
-      // No clamping here — width grows/shrinks by exactly the mouse delta,
-      // so it can be expanded as far as the person wants.
-      window.api.overlayResizeBy(dw, 0);
-      updateScale();
-    });
-    window.addEventListener("mouseup", () => { resizingH = false; });
-
-    // --- Custom full-direction window drag ---
-    // Attached to the visible panel itself (not document.body), so dragging
-    // only engages when the mouse is over the widget you can actually see —
-    // not the extra transparent window space around it.
-    const dragSurface = document.getElementById("ov-panel");
-    let dragging = false, dragLastX = 0, dragLastY = 0;
-    dragSurface.addEventListener("mousedown", (e) => {
-      if (e.target.closest("#ov-resize-grip") || e.target.closest("#ov-resize-grip-h")) return;
-      dragging = true;
-      dragLastX = e.screenX;
-      dragLastY = e.screenY;
-      document.body.classList.add("dragging");
-      e.preventDefault();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!dragging) return;
-      const dx = e.screenX - dragLastX;
-      const dy = e.screenY - dragLastY;
-      dragLastX = e.screenX;
-      dragLastY = e.screenY;
-      if (dx !== 0 || dy !== 0) window.api.overlayNudge(dx, dy);
-    });
-    window.addEventListener("mouseup", () => {
-      dragging = false;
-      document.body.classList.remove("dragging");
-    });
+    window.addEventListener("resize", updateScale);
 
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
@@ -183,5 +71,6 @@
       setInterval(poll, 3000);
     });
   </script>
+<div class="ov-resize-grip" id="ov-resize-grip"></div>
 </body>
 </html>
