@@ -5,18 +5,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <style>
-    html, body { background: transparent; margin: 0; overflow: hidden; height: 100%; }
+    html, body { background: transparent; margin: 0; overflow: hidden; }
     .ov-body {
+      -webkit-app-region: drag;
       cursor: grab;
       padding: 6px;
-      box-sizing: border-box;
-      min-height: 100%;
-      background: linear-gradient(135deg, var(--surface, #14151c) 60%, var(--bg, #0a0a0f) 100%);
-      border: 2px solid var(--border, #333);
     }
-    .ov-body.dragging { cursor: grabbing; }
+    .ov-body:active { cursor: grabbing; }
     .rc-action-block, button, input, select {
-      cursor: pointer;
+      -webkit-app-region: no-drag;
     }
 
     button:focus,
@@ -51,7 +48,6 @@ button:focus-visible,
 </head>
 <body>
   <div class="ov-body">
-    <div id="ov-content">
     <div class="rc-plate on" id="rc-plate" style="margin:0;">
       <div class="rc-plate-pit-flag">IN PITS</div>
       <div class="rc-plate-top">
@@ -79,7 +75,6 @@ button:focus-visible,
       <button class="rc-action-block" onclick="window.api.togglePitting()">
         <span class="ai" id="ov-pit-icon">🔧</span><span class="al" id="ov-pit-label">Pitting</span>
       </button>
-    </div>
     </div>
   </div>
 
@@ -121,79 +116,6 @@ button:focus-visible,
       const h = Math.ceil(body.getBoundingClientRect().height) + 4;
       window.api.overlayFitHeight(h);
     }
-
-    // --- Custom drag: sideways/up moves the window as normal, but dragging
-    // down grows the window's height instead (top edge stays put) ---
-// --- Normal window drag: moves in both directions ---
-const dragSurface = document.querySelector(".ov-body");
-let dragging = false, dragLastX = 0, dragLastY = 0;
-
-dragSurface.addEventListener("mousedown", (e) => {
-  if (e.target.closest(".rc-action-block, button, input, select, #ov-resize-grip, #ov-resize-grip-h")) return;
-  dragging = true;
-  dragLastX = e.screenX;
-  dragLastY = e.screenY;
-  dragSurface.classList.add("dragging");
-  e.preventDefault();
-});
-
-window.addEventListener("mousemove", (e) => {
-  if (dragging) {
-    const dx = e.screenX - dragLastX;
-    const dy = e.screenY - dragLastY;
-    dragLastX = e.screenX;
-    dragLastY = e.screenY;
-    if (dx !== 0 || dy !== 0) window.api.overlayNudge(dx, dy);
-  }
-});
-
-window.addEventListener("mouseup", () => {
-  dragging = false;
-  dragSurface.classList.remove("dragging");
-});
-
-// --- Corner grip: resize width + height ---
-const grip = document.getElementById("ov-resize-grip");
-let resizing = false, rLastX = 0, rLastY = 0;
-
-grip.addEventListener("mousedown", (e) => {
-  resizing = true;
-  rLastX = e.screenX;
-  rLastY = e.screenY;
-  e.preventDefault();
-  e.stopPropagation();
-});
-
-// --- Edge grip: resize width only ---
-const gripH = document.getElementById("ov-resize-grip-h");
-let resizingH = false, rhLastX = 0;
-
-gripH.addEventListener("mousedown", (e) => {
-  resizingH = true;
-  rhLastX = e.screenX;
-  e.preventDefault();
-  e.stopPropagation();
-});
-
-window.addEventListener("mousemove", (e) => {
-  if (resizing) {
-    const dw = e.screenX - rLastX;
-    const dh = e.screenY - rLastY;
-    rLastX = e.screenX;
-    rLastY = e.screenY;
-    if (dw !== 0 || dh !== 0) window.api.overlayResizeBy(dw, dh);
-  }
-  if (resizingH) {
-    const dw = e.screenX - rhLastX;
-    rhLastX = e.screenX;
-    if (dw !== 0) window.api.overlayResizeBy(dw, 0);
-  }
-});
-
-window.addEventListener("mouseup", () => {
-  resizing = false;
-  resizingH = false;
-});
 
 window.addEventListener("DOMContentLoaded", async () => {
   config = await window.api.getConfig();
