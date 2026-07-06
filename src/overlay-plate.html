@@ -124,35 +124,76 @@ button:focus-visible,
 
     // --- Custom drag: sideways/up moves the window as normal, but dragging
     // down grows the window's height instead (top edge stays put) ---
-    const dragSurface = document.querySelector(".ov-body");
-    let dragging = false, dragLastX = 0, dragLastY = 0;
-    dragSurface.addEventListener("mousedown", (e) => {
-      if (e.target.closest(".rc-action-block, button, input, select, #ov-resize-grip, #ov-resize-grip-h")) return;
-      dragging = true;
-      dragLastX = e.screenX;
-      dragLastY = e.screenY;
-      dragSurface.classList.add("dragging");
-      e.preventDefault();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!dragging) return;
-      const dx = e.screenX - dragLastX;
-      const dy = e.screenY - dragLastY;
-      dragLastX = e.screenX;
-      dragLastY = e.screenY;
-      if (dx !== 0) window.api.overlayNudge(dx, 0);
-      if (dy > 0) {
-        // Dragging down: grow the window taller instead of moving it down.
-        window.api.overlayResizeBy(0, dy);
-      } else if (dy < 0) {
-        // Dragging up: normal move.
-        window.api.overlayNudge(0, dy);
-      }
-    });
-    window.addEventListener("mouseup", () => {
-      dragging = false;
-      dragSurface.classList.remove("dragging");
-    });
+// --- Normal window drag: moves in both directions ---
+const dragSurface = document.querySelector(".ov-body");
+let dragging = false, dragLastX = 0, dragLastY = 0;
+
+dragSurface.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".rc-action-block, button, input, select, #ov-resize-grip, #ov-resize-grip-h")) return;
+  dragging = true;
+  dragLastX = e.screenX;
+  dragLastY = e.screenY;
+  dragSurface.classList.add("dragging");
+  e.preventDefault();
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (dragging) {
+    const dx = e.screenX - dragLastX;
+    const dy = e.screenY - dragLastY;
+    dragLastX = e.screenX;
+    dragLastY = e.screenY;
+    if (dx !== 0 || dy !== 0) window.api.overlayNudge(dx, dy);
+  }
+});
+
+window.addEventListener("mouseup", () => {
+  dragging = false;
+  dragSurface.classList.remove("dragging");
+});
+
+// --- Corner grip: resize width + height ---
+const grip = document.getElementById("ov-resize-grip");
+let resizing = false, rLastX = 0, rLastY = 0;
+
+grip.addEventListener("mousedown", (e) => {
+  resizing = true;
+  rLastX = e.screenX;
+  rLastY = e.screenY;
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+// --- Edge grip: resize width only ---
+const gripH = document.getElementById("ov-resize-grip-h");
+let resizingH = false, rhLastX = 0;
+
+gripH.addEventListener("mousedown", (e) => {
+  resizingH = true;
+  rhLastX = e.screenX;
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (resizing) {
+    const dw = e.screenX - rLastX;
+    const dh = e.screenY - rLastY;
+    rLastX = e.screenX;
+    rLastY = e.screenY;
+    if (dw !== 0 || dh !== 0) window.api.overlayResizeBy(dw, dh);
+  }
+  if (resizingH) {
+    const dw = e.screenX - rhLastX;
+    rhLastX = e.screenX;
+    if (dw !== 0) window.api.overlayResizeBy(dw, 0);
+  }
+});
+
+window.addEventListener("mouseup", () => {
+  resizing = false;
+  resizingH = false;
+});
 
 window.addEventListener("DOMContentLoaded", async () => {
   config = await window.api.getConfig();
