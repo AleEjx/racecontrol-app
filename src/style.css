@@ -92,6 +92,7 @@ body {
   /* Shared */
   --radius: 6px;
   --font-scale: 1;
+  --glass-opacity: 0.45;
 }
 
 /* Light theme */
@@ -111,7 +112,7 @@ body {
 /* Transparent / Glass theme */
 :root.transparent-mode {
   --bg:      rgba(0, 0, 0, 0);
-  --surface: rgba(10, 10, 15, 0.45);
+  --surface: rgba(10, 10, 15, var(--glass-opacity));
   --border:  rgba(255, 255, 255, 0.08);
   --text:    #e8e8f0;
   --muted:   #70708a;
@@ -127,7 +128,7 @@ body {
 }
 
 :root.transparent-mode .titlebar {
-  background: rgba(10, 10, 15, 0.5);
+  background: rgba(10, 10, 15, calc(var(--glass-opacity) + 0.05));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
