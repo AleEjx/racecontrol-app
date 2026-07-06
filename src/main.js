@@ -281,7 +281,7 @@ function createOverlayWindow(key, defaultBounds) {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    resizable: false,
+    resizable: true,
     skipTaskbar: true,
     hasShadow: false,
     webPreferences: {
