@@ -1825,6 +1825,7 @@ function sanitizeKeybinds(keybinds) {
     let hasDriver = false;
     let hasMarshal = false;
     let hasDev = false;
+    let hasSpectator = false;
     let toastTimer;
     let _currentFlagAudio = null;
     let _actionLoggingEnabled = false;
@@ -3403,8 +3404,12 @@ if (saved && apiUrl) {
   user = JSON.parse(saved);
   delete user.isAdmin;
   delete user.roles;
-  if (!user.driverToken) user.driverToken = user.id;   // backfill stale/cached sessions
-  await afterLogin();
+  if (user.spectatorOnly) {
+    enterSpectatorMode();
+  } else {
+    if (!user.driverToken) user.driverToken = user.id;   // backfill stale/cached sessions
+    await afterLogin();
+  }
 }
 
       startSSE();
@@ -3743,6 +3748,20 @@ function _renderFuelStats() {
         } catch (fetchErr) { errEl.style.color = "var(--red)"; errEl.textContent = "❌ Can't reach API. Is the URL still valid?"; showChangeUrlPrompt(); return; }
 
         if (dRes.ok) {
+  if (dData.spectatorOnly) {
+    user = dData.user;
+    user.discordId = user.id;
+    const safeUser = {
+      id: user.id, discordId: user.id, username: user.username, avatar: user.avatar,
+      token: null, marshalToken: null, driverToken: null, spectatorOnly: true,
+    };
+    sessionStorage.setItem("rc_user", JSON.stringify(safeUser));
+    localStorage.setItem("rc_user", JSON.stringify(safeUser));
+    user = { ...user, ...safeUser };
+    errEl.textContent = "";
+    enterSpectatorMode();
+    return;
+  }
   user = dData.user;
   user.driverToken = dData.user.token || user.id;
         } else if (dRes.status === 403 && !dData.disabled) {
@@ -3870,6 +3889,14 @@ function _renderFuelStats() {
         showToast("✓ API URL updated", "ok");
       };
     }
+
+function enterSpectatorMode() {
+  hasDriver = false; hasMarshal = false; hasDev = false; hasSpectator = true;
+  engineerPending = false;
+  document.getElementById("mode-badge").style.display = "none";
+  updateSwitcher();
+  launchSpectatePanel();
+}
 
 async function afterLogin() {
   await fetchActiveLeague();
@@ -4208,7 +4235,7 @@ function practiceReset() {
     
     function reLogin() {
       sessionStorage.removeItem("rc_user"); localStorage.removeItem("rc_user");
-      user = null; hasDriver = false; hasMarshal = false; hasDev = false; isEngineer = false; engineerPending = false;
+      user = null; hasDriver = false; hasMarshal = false; hasDev = false; hasSpectator = false; isEngineer = false; engineerPending = false;
       document.getElementById("panel-switcher").style.display = "none";
       document.getElementById("mode-badge").style.display = "none";
       location.reload();
@@ -4423,18 +4450,19 @@ function updateSwitcher() {
     return;
   }
 
-  const show = hasDriver || hasMarshal || hasDev;
+  const show = hasDriver || hasMarshal || hasDev || hasSpectator;
   document.getElementById("panel-switcher").style.display = show ? "flex" : "none";
-  const driverTabAllowed = hasDriver && (config.driver || engineerPending || hasMarshal);
+  const spectatorOnly = hasSpectator && !hasDriver && !hasMarshal && !hasDev;
+  const driverTabAllowed = !spectatorOnly && hasDriver && (config.driver || engineerPending || hasMarshal);
   const swDriverBtn = document.getElementById("sw-driver");
   swDriverBtn.style.display = (driverTabAllowed && _userTabPrefs.driver !== false) ? "" : "none";
   const driverNeedsChoice = engineerPending && !config.driver;
   swDriverBtn.style.opacity = driverNeedsChoice ? "0.4" : "";
   swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
   swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
-  document.getElementById("sw-marshal").style.display = _userTabPrefs.marshal !== false ? "" : "none";
+  document.getElementById("sw-marshal").style.display = (!spectatorOnly && _userTabPrefs.marshal !== false) ? "" : "none";
   document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
-  document.getElementById("sw-dev").style.display = hasDev ? "" : "none";
+  document.getElementById("sw-dev").style.display = (!spectatorOnly && hasDev) ? "" : "none";
   document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
   const aId = currentPanel === "driver" ? "sw-driver"
     : currentPanel === "marshal" ? "sw-marshal"
