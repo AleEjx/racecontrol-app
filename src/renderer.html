@@ -624,6 +624,13 @@
           <button onclick="devTogglePanel('both',false)" class="dev-btn font-9">Disable All</button>
         </div>
         <div id="dev-panel-status" class="text-muted-sm mt-4"></div>
+        <div class="flex-row-gap-6 mt-6" style="border-top:1px solid var(--border);padding-top:8px;">
+          <button id="btn-league-main" onclick="devSwitchLeague('main')" class="dev-btn success-small">Main
+            League</button>
+          <button id="btn-league-academy" onclick="devSwitchLeague('academy')" class="dev-btn font-9">Academy
+            League</button>
+        </div>
+        <div id="dev-league-status" class="text-muted-sm mt-4"></div>
       </div>
 
       <div class="dev-card" id="dev-watchmarshal">
@@ -748,7 +755,10 @@
       <div class="dev-card" id="dev-drivers-card">
         <div class="flex-row-between">
           <div class="dev-title">Driver Database</div>
-          <span id="dev-drivers-badge" class="badge-pill badge-pill-green">0 drivers</span>
+          <span style="display:flex;gap:4px;">
+            <span id="dev-drivers-league-badge" class="badge-pill" style="background:rgba(0,180,255,0.12);border-color:rgba(0,180,255,0.3);color:#4db8ff;">Main</span>
+            <span id="dev-drivers-badge" class="badge-pill badge-pill-green">0 drivers</span>
+          </span>
         </div>
         <div class="flex-row-gap-4 mt-2">
           <input type="text" id="dev-drivers-search" placeholder="Search..." class="input-inline" oninput="renderDriverDB()" />
@@ -2696,11 +2706,15 @@ async function toggleAttendance(name) {
     }
 
     // DD
-    const DRIVER_DB_KEY = "rc_driver_db";
+    let _activeLeague = "main"; // "main" | "academy" — synced with server
+
+    function driverDbKey() {
+      return _activeLeague === "academy" ? "rc_driver_db_academy" : "rc_driver_db";
+    }
 
     function loadDriverDB() {
       try {
-        const saved = localStorage.getItem(DRIVER_DB_KEY);
+        const saved = localStorage.getItem(driverDbKey());
         if (saved) {
           const drivers = JSON.parse(saved);
           DRIVER_IDS = {};
@@ -2712,6 +2726,7 @@ async function toggleAttendance(name) {
           return drivers;
         }
       } catch (e) { console.warn("[DriverDB] Load failed:", e); }
+      if (_activeLeague === "academy") { DRIVER_IDS = {}; DRIVER_INFO = {}; return []; }
       return Object.entries(DRIVER_IDS).map(([discordId, name]) => ({
         name, discordId,
         number: DRIVER_INFO[name]?.number || "??",
@@ -2720,7 +2735,7 @@ async function toggleAttendance(name) {
     }
 
     async function saveDriverDB(drivers) {
-      localStorage.setItem(DRIVER_DB_KEY, JSON.stringify(drivers));
+      localStorage.setItem(driverDbKey(), JSON.stringify(drivers));
       DRIVER_IDS = {};
       DRIVER_INFO = {};
       drivers.forEach(d => {
@@ -2732,7 +2747,7 @@ async function toggleAttendance(name) {
           const res = await fetch(`${apiUrl}/admin/driver-db`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-            body: JSON.stringify({ drivers }),
+            body: JSON.stringify({ drivers, league: _activeLeague }),
           });
           if (res.ok) console.log("[DriverDB] Synced to server");
           else console.warn("[DriverDB] Server sync failed:", await res.text());
@@ -2813,7 +2828,7 @@ async function toggleAttendance(name) {
 
     function getDriverDB() {
       try {
-        const saved = localStorage.getItem(DRIVER_DB_KEY);
+        const saved = localStorage.getItem(driverDbKey());
         return saved ? JSON.parse(saved) : loadDriverDB();
       } catch { return loadDriverDB(); }
     }
@@ -2934,11 +2949,12 @@ async function toggleAttendance(name) {
     }
 
     function devResetDriverDB() {
-      if (!confirm("Reset driver database to the hardcoded defaults? This cannot be undone.")) return;
-      localStorage.removeItem(DRIVER_DB_KEY);
+      const leagueLabel = _activeLeague === "academy" ? "Academy" : "Main";
+      if (!confirm(`Reset ${leagueLabel} League driver database to the hardcoded defaults? This cannot be undone.`)) return;
+      localStorage.removeItem(driverDbKey());
       loadDriverDB();
       renderDriverDB();
-      showToast("✓ Driver DB reset to defaults", "ok");
+      showToast(`✓ ${leagueLabel} League driver DB reset to defaults`, "ok");
     }
 
     async function fetchAttendanceFromServer() {
@@ -3113,13 +3129,14 @@ async function toggleActionLogging() {
     async function syncDriverDBFromServer() {
       if (!apiUrl) return;
       try {
-        const res = await fetch(`${apiUrl}/driver-db`);
+        const res = await fetch(`${apiUrl}/driver-db?league=${_activeLeague}`);
         if (!res.ok) return;
         const data = await res.json();
+        if (data.league) _activeLeague = data.league;
         if (data.drivers?.length) {
-          localStorage.setItem(DRIVER_DB_KEY, JSON.stringify(data.drivers));
+          localStorage.setItem(driverDbKey(), JSON.stringify(data.drivers));
           loadDriverDB();
-          console.log(`[DriverDB] Synced ${data.drivers.length} drivers from server`);
+          console.log(`[DriverDB] Synced ${data.drivers.length} drivers from server (${_activeLeague})`);
         }
       } catch (e) { console.warn("[DriverDB] Sync failed:", e.message); }
     }
@@ -3855,6 +3872,7 @@ function _renderFuelStats() {
     }
 
 async function afterLogin() {
+  await fetchActiveLeague();
   loadDriverDB();
   await syncDriverDBFromServer();
   if (apiUrl) { _sseStarted = true; _connectSSE(); }
@@ -5917,7 +5935,7 @@ async function submitDNF() {
               "x-discord-id": user.id,
               "x-discord-token": user.token
             },
-            body: JSON.stringify({ drivers }),
+            body: JSON.stringify({ drivers, league: _activeLeague }),
           });
           if (!res.ok) {
             const data = await res.json();
@@ -5926,7 +5944,7 @@ async function submitDNF() {
             statusEl.textContent = "✗ Push failed";
             return;
           }
-          localStorage.setItem("rc_driver_db", JSON.stringify(drivers));
+          localStorage.setItem(driverDbKey(), JSON.stringify(drivers));
           DRIVER_IDS = {};
           DRIVER_INFO = {};
           drivers.forEach(d => {
@@ -6000,6 +6018,7 @@ async function submitDNF() {
         try {
           await loadActionLoggingState();
           await loadWatchMarshalState();
+          await fetchActiveLeague();
           const headers = { "x-discord-id": user.id, "x-discord-token": user.token };
           const [ai, si, li, dl] = await Promise.all([
             fetch(`${apiUrl}/admin/info`, { headers }).then(r => r.json()),
@@ -6240,6 +6259,57 @@ async function submitDNF() {
           } catch { }
         }
         showToast("✓ Mock leaderboard cleared", "ok");
+      }
+
+      async function fetchActiveLeague() {
+        if (!apiUrl) return;
+        try {
+          const res = await fetch(`${apiUrl}/league`);
+          if (!res.ok) return;
+          const data = await res.json();
+          _activeLeague = data.league === "academy" ? "academy" : "main";
+          updateLeagueButtons();
+        } catch (e) { console.warn("[League] Fetch failed:", e.message); }
+      }
+
+      function updateLeagueButtons() {
+        const mainBtn = document.getElementById("btn-league-main");
+        const acadBtn = document.getElementById("btn-league-academy");
+        if (mainBtn) mainBtn.className = _activeLeague === "main" ? "dev-btn success-small" : "dev-btn font-9";
+        if (acadBtn) acadBtn.className = _activeLeague === "academy" ? "dev-btn success-small" : "dev-btn font-9";
+        const badge = document.getElementById("dev-drivers-league-badge");
+        if (badge) badge.textContent = _activeLeague === "academy" ? "Academy" : "Main";
+        const statusEl = document.getElementById("dev-league-status");
+        if (statusEl) statusEl.textContent = `Active: ${_activeLeague === "academy" ? "Academy" : "Main"} League`;
+      }
+
+      async function devSwitchLeague(league) {
+        if (league === _activeLeague) return;
+        if (!user?.token) { const ok = await devAutoAuth(); if (!ok) { showToast("❌ Dev auth failed", "err"); return; } }
+        const statusEl = document.getElementById("dev-league-status");
+        if (statusEl) { statusEl.style.color = "var(--muted)"; statusEl.textContent = "Switching..."; }
+        try {
+          const res = await fetch(`${apiUrl}/admin/league`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+            body: JSON.stringify({ league }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showToast(`✗ ${data.error || "Failed"}`, "err");
+            if (statusEl) { statusEl.style.color = "var(--red)"; statusEl.textContent = "✗ Switch failed"; }
+            return;
+          }
+          _activeLeague = data.league;
+          updateLeagueButtons();
+          await syncDriverDBFromServer();
+          renderDriverDB();
+          showToast(`✓ Switched to ${_activeLeague === "academy" ? "Academy" : "Main"} League`, "ok");
+          if (statusEl) statusEl.style.color = "var(--green)";
+        } catch {
+          showToast("✗ Bot unreachable", "err");
+          if (statusEl) { statusEl.style.color = "var(--red)"; statusEl.textContent = "✗ Bot unreachable"; }
+        }
       }
 
       async function devTogglePanel(target, enable) {
