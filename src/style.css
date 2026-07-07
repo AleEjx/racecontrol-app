@@ -2170,6 +2170,15 @@ textarea:focus {
 
 .icon-badge { font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 3px; flex-shrink: 0; }
 
+.dev-btn.no-grow {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+input.fixed-square {
+  width: 50px;
+  flex: 0 0 auto;
+}
 
 /* =============================================================================
    28. Toggle & Generic Buttons
