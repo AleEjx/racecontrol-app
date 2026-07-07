@@ -211,9 +211,9 @@ button:focus-visible,
       const graphEl = document.getElementById("rc-lap-graph");
       const legendEl = document.getElementById("rc-lap-graph-legend");
 
-      if (statsEl) statsEl.style.display = (statsRowOn && !graphOn) ? "flex" : "none";
-      if (graphEl) graphEl.classList.toggle("on", statsRowOn && graphOn);
-      if (legendEl) legendEl.classList.toggle("on", statsRowOn && graphOn);
+      if (statsEl) statsEl.style.display = statsRowOn ? "flex" : "none";
+      if (graphEl) graphEl.classList.toggle("on", graphOn);
+      if (legendEl) legendEl.classList.toggle("on", graphOn);
     }
 
     function applyOverlayScale(scale) {
