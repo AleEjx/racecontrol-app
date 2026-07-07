@@ -238,7 +238,11 @@ button:focus-visible,
     }, { passive: false });
 
     async function poll() {
-      if (!apiUrl || !config?.driver) return;
+      try {
+        config = await window.api.getConfig();
+      } catch {}
+      if (!apiUrl || !config?.driver) { apiUrl = config?.apiUrl || apiUrl; return; }
+      apiUrl = config.apiUrl || apiUrl;
       try {
         const res = await fetch(`${apiUrl}/driver/state`);
         if (!res.ok) return;
