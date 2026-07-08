@@ -2719,9 +2719,27 @@ async function toggleAttendance(name) {
     // see everything; Junior Devs see only the Driver Database card.
     function applyDevPanelAccess() {
       const restricted = hasJuniorDev && !hasDev;
-      document.querySelectorAll("#screen-dev .dev-card").forEach(card => {
-        card.style.display = (!restricted || card.id === "dev-drivers-card") ? "" : "none";
-      });
+      if (restricted) {
+        // Junior Dev restriction: show only the drivers card, hide everything else.
+        document.querySelectorAll("#screen-dev .dev-card").forEach(card => {
+          card.style.display = (card.id === "dev-drivers-card") ? "" : "none";
+        });
+      } else {
+        // Full dev: reset everything visible, then reapply the user's own
+        // Toolbox hide/show prefs (mirrors the resolution logic in
+        // loadToolboxPrefs/toggleToolboxSection, since a TOOLBOX_SECTIONS id
+        // isn't always the card's own id — e.g. action-log-toggle-btn is a
+        // button inside a card, not a card itself).
+        document.querySelectorAll("#screen-dev .dev-card").forEach(card => {
+          card.style.display = "";
+        });
+        TOOLBOX_SECTIONS.forEach(s => {
+          if (_toolboxVisible[s.id] === false) {
+            const el = document.getElementById(s.id);
+            if (el) { const card = el.closest(".dev-card") || el; card.style.display = "none"; }
+          }
+        });
+      }
       const toolboxBtn = document.getElementById("dev-toolbox-btn");
       if (toolboxBtn) toolboxBtn.style.display = restricted ? "none" : "";
       const heading = document.querySelector("#screen-dev .dev-heading");
