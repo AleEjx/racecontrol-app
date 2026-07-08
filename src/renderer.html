@@ -768,11 +768,13 @@
         <div class="flex-row-gap-4 mt-2">
           <button onclick="devPushDriverDB()" class="dev-btn pill-btn-green flex-1 font-9">⬆
             Push to Server</button>
-          <button onclick="devExportDriverCode()" class="dev-btn pill-btn-blue flex-1 font-9">Export
+          <button id="dev-export-code-btn" onclick="devExportDriverCode()" class="dev-btn pill-btn-blue flex-1 font-9">Export
             Code</button>
         </div>
         <div class="flex-row-gap-4 mt-2">
-          <button class="dev-btn no-grow font-9" onclick="devResetDriverDB()">↺ Reset to Defaults</button>
+          <button id="dev-import-code-btn" onclick="devOpenImportModal()" class="dev-btn pill-btn-blue flex-1 font-9">⬇
+            Import Code</button>
+          <button id="dev-reset-db-btn" class="dev-btn no-grow font-9" onclick="devResetDriverDB()">↺ Reset to Defaults</button>
         </div>
         <div id="dev-drivers-status" class="font-9 text-muted min-h-12 mt-2"></div>
       </div>
@@ -1419,6 +1421,21 @@
       <div class="small-note">Replace your DRIVER_IDS and DRIVER_INFO constants with this:</div>
       <pre id="driver-export-code" class="code-block"></pre>
       <button class="save-btn" onclick="devCopyDriverExport()">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+
+<div id="driver-import-modal" class="modal">
+    <div class="modal-panel">
+      <div class="flex-row-between">
+        <div class="modal-heading">Import — paste exported code</div>
+        <button onclick="document.getElementById('driver-import-modal').style.display='none'"
+          class="modal-close">✕</button>
+      </div>
+
+      <div class="small-note">Paste a previously exported DRIVER_IDS / DRIVER_INFO block below. This will replace the current <span id="driver-import-league-label">Main</span> League driver list.</div>
+      <textarea id="driver-import-code" class="code-block" style="width:100%;min-height:160px;resize:vertical;" placeholder="const DRIVER_IDS = { ... };&#10;&#10;const DRIVER_INFO = { ... };"></textarea>
+      <div id="driver-import-status" class="font-9 text-muted min-h-12 mt-2"></div>
+      <button class="save-btn" onclick="devImportDriverCode()">⬇ Import</button>
     </div>
   </div>
 
@@ -2744,6 +2761,13 @@ async function toggleAttendance(name) {
       if (toolboxBtn) toolboxBtn.style.display = restricted ? "none" : "";
       const heading = document.querySelector("#screen-dev .dev-heading");
       if (heading) heading.textContent = restricted ? "⚙️ Developer Panel — Driver Database" : "⚙️ Developer Panel";
+
+      // Export Code, Import Code, and Reset to Defaults are full-dev-only —
+      // Junior Devs can view/add/edit drivers but not bulk export/import/reset.
+      ["dev-export-code-btn", "dev-import-code-btn", "dev-reset-db-btn"].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.display = restricted ? "none" : "";
+      });
     }
 
     // DD
@@ -2997,6 +3021,60 @@ async function toggleAttendance(name) {
     function devCopyDriverExport() {
       navigator.clipboard.writeText(document.getElementById("driver-export-code").textContent)
         .then(() => showToast("✓ Copied to clipboard", "ok"));
+    }
+
+    // Full-dev-only: paste back a DRIVER_IDS / DRIVER_INFO block previously
+    // produced by devExportDriverCode() and load it into the driver DB.
+    function devOpenImportModal() {
+      if (!hasDev) return;
+      document.getElementById("driver-import-code").value = "";
+      const statusEl = document.getElementById("driver-import-status");
+      statusEl.style.color = "var(--muted)";
+      statusEl.textContent = "";
+      const label = document.getElementById("driver-import-league-label");
+      if (label) label.textContent = _activeLeague === "academy" ? "Academy" : "Main";
+      document.getElementById("driver-import-modal").style.display = "flex";
+    }
+
+    function devImportDriverCode() {
+      if (!hasDev) return;
+      const statusEl = document.getElementById("driver-import-status");
+      const raw = (document.getElementById("driver-import-code").value || "").trim();
+      if (!raw) {
+        statusEl.style.color = "var(--red)";
+        statusEl.textContent = "❌ Paste exported code first.";
+        return;
+      }
+      let drivers;
+      try {
+        const idsMatch = raw.match(/DRIVER_IDS\s*=\s*(\{[\s\S]*?\n\s*\})\s*;/);
+        const infoMatch = raw.match(/DRIVER_INFO\s*=\s*(\{[\s\S]*?\n\s*\})\s*;/);
+        if (!idsMatch || !infoMatch) {
+          throw new Error("Couldn't find DRIVER_IDS/DRIVER_INFO blocks in the pasted code.");
+        }
+        const ids = Function(`"use strict"; return (${idsMatch[1]});`)();
+        const info = Function(`"use strict"; return (${infoMatch[1]});`)();
+        drivers = Object.entries(ids).map(([discordId, name]) => ({
+          discordId: String(discordId),
+          name,
+          number: info[name]?.number || "??",
+          callsign: info[name]?.callsign || name,
+        }));
+        if (!drivers.length) throw new Error("No drivers found in pasted code.");
+      } catch (e) {
+        statusEl.style.color = "var(--red)";
+        statusEl.textContent = `❌ ${e.message}`;
+        return;
+      }
+
+      const leagueLabel = _activeLeague === "academy" ? "Academy" : "Main";
+      if (!confirm(`Import ${drivers.length} driver(s) into the ${leagueLabel} League database? This replaces the current list and cannot be undone.`)) return;
+
+      logDriverDbChange(`Imported ${drivers.length} driver(s) from pasted code`);
+      saveDriverDB(drivers);
+      renderDriverDB();
+      document.getElementById("driver-import-modal").style.display = "none";
+      showToast(`✓ Imported ${drivers.length} driver(s)`, "ok");
     }
 
     function devResetDriverDB() {
