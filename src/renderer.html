@@ -3539,7 +3539,6 @@ if (saved && apiUrl) {
   user = JSON.parse(saved);
   const wasJuniorDevOnly = !!user.juniorDevOnly;
   delete user.isAdmin;
-  delete user.roles;
   if (user.spectatorOnly) {
     enterSpectatorMode();
   } else if (wasJuniorDevOnly) {
@@ -3918,7 +3917,9 @@ function _renderFuelStats() {
     return;
   }
   user = dData.user;
-  user.driverToken = dData.user.token || user.id;
+  user.driverToken = user.id;
+  user.token = dData.user.token || null;
+  user.roles = dData.roles || [];
   user.roles = dData.roles || [];
   computeJuniorDev();
         } else if (dRes.status === 403 && !dData.disabled) {
