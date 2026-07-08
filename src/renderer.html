@@ -1123,6 +1123,10 @@
     <span class="font-11">👁️ Spectator Tab</span>
     <button id="utab-spectate-btn" onclick="toggleUserTab('spectate')" class="toggle-button"></button>
   </div>
+  <div class="card-row-between" id="utab-dev-row" style="display:none;">
+    <span class="font-11">⚙️ Dev Tab</span>
+    <button id="utab-dev-btn" onclick="toggleUserTab('dev')" class="toggle-button"></button>
+  </div>
 <div class="small-note">Hide tabs you don't use from the top switcher. This only affects your view.</div>
 </div>
 
@@ -2482,7 +2486,7 @@ evtSource.addEventListener("flag", e => {
     }
 
 
-    let _userTabPrefs = { driver: true, marshal: true, spectate: true };
+    let _userTabPrefs = { driver: true, marshal: true, spectate: true, dev: true };
 
 function loadUserTabPrefs() {
   try {
@@ -2493,7 +2497,7 @@ function loadUserTabPrefs() {
 }
 
 function updateUserTabToggleBtns() {
-  [["driver", "utab-driver-btn"], ["marshal", "utab-marshal-btn"], ["spectate", "utab-spectate-btn"]].forEach(([key, id]) => {
+  [["driver", "utab-driver-btn"], ["marshal", "utab-marshal-btn"], ["spectate", "utab-spectate-btn"], ["dev", "utab-dev-btn"]].forEach(([key, id]) => {
     const btn = document.getElementById(id);
     if (!btn) return;
     const on = _userTabPrefs[key] !== false;
@@ -4628,7 +4632,9 @@ function updateSwitcher() {
   swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
   document.getElementById("sw-marshal").style.display = (!spectatorOnly && !_juniorDevOnlyMode && _userTabPrefs.marshal !== false) ? "" : "none";
   document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
-  document.getElementById("sw-dev").style.display = (!spectatorOnly && (hasDev || hasJuniorDev)) ? "" : "none";
+  document.getElementById("sw-dev").style.display = (!spectatorOnly && (hasDev || hasJuniorDev) && _userTabPrefs.dev !== false) ? "" : "none";
+  const utabDevRow = document.getElementById("utab-dev-row");
+  if (utabDevRow) utabDevRow.style.display = (hasDev || hasJuniorDev) ? "" : "none";
   document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
   const aId = currentPanel === "driver" ? "sw-driver"
     : currentPanel === "marshal" ? "sw-marshal"
