@@ -785,7 +785,7 @@
       <div class="dev-card">
         <button class="dev-btn" onclick="window.api.openDevTools()">Open DevTools</button>
       </div>
-      <button class="dev-btn btn-outline-blue" onclick="openToolbox()">🧰 Toolbox</button>
+      <button id="dev-toolbox-btn" class="dev-btn btn-outline-blue" onclick="openToolbox()">🧰 Toolbox</button>
     </div>
   </div>
 
@@ -1440,6 +1440,7 @@
     const MARSHAL_ROLE = "1464788931823538430";
     const DIRECTOR_ROLES = ["1464788930296549572", "1510621069864603718"];
     const DEV_USER_ID = "790254318389166111";
+    const JUNIOR_DEV_ROLE = "1516779546886803569";
     const GIST_ID = "746339b1b2924446563e6349ef89ce8a";
 
     const INVALID_KEYBIND_VALUES = new Set([
@@ -1825,6 +1826,7 @@ function sanitizeKeybinds(keybinds) {
     let hasDriver = false;
     let hasMarshal = false;
     let hasDev = false;
+    let hasJuniorDev = false; // Junior Developer role — sees dev panel, driver DB section only
     let hasSpectator = false;
     let toastTimer;
     let _currentFlagAudio = null;
@@ -2706,6 +2708,25 @@ async function toggleAttendance(name) {
       renderLeaderboard({ ..._lastRaceState, drivers: filtered });
     }
 
+    // Junior Developer — limited dev panel access (Driver Database only)
+    function computeJuniorDev() {
+      hasJuniorDev = !hasDev && !!(user?.roles?.includes(JUNIOR_DEV_ROLE));
+      return hasJuniorDev;
+    }
+
+    // Shows/hides dev panel sections based on access level. Full devs (hasDev)
+    // see everything; Junior Devs see only the Driver Database card.
+    function applyDevPanelAccess() {
+      const restricted = hasJuniorDev && !hasDev;
+      document.querySelectorAll("#screen-dev .dev-card").forEach(card => {
+        card.style.display = (!restricted || card.id === "dev-drivers-card") ? "" : "none";
+      });
+      const toolboxBtn = document.getElementById("dev-toolbox-btn");
+      if (toolboxBtn) toolboxBtn.style.display = restricted ? "none" : "";
+      const heading = document.querySelector("#screen-dev .dev-heading");
+      if (heading) heading.textContent = restricted ? "⚙️ Developer Panel — Driver Database" : "⚙️ Developer Panel";
+    }
+
     // DD
     let _activeLeague = "main"; // "main" | "academy" — synced with server
 
@@ -2735,7 +2756,17 @@ async function toggleAttendance(name) {
       }));
     }
 
+    // Logs who changed the driver database, for accountability. Called on every
+    // add/edit/delete/push/reset of the driver DB.
+    function logDriverDbChange(action) {
+      const who = user?.username || "Unknown";
+      const id = user?.id || "unknown";
+      const role = hasDev ? "Dev" : hasJuniorDev ? "Junior Dev" : hasMarshal ? "Marshal" : "Unknown";
+      console.log(`[DriverDB] ${action} by ${who} (${id}) [${role}] — league: ${_activeLeague}`);
+    }
+
     async function saveDriverDB(drivers) {
+      logDriverDbChange(`Saved ${drivers.length} driver(s)`);
       localStorage.setItem(driverDbKey(), JSON.stringify(drivers));
       DRIVER_IDS = {};
       DRIVER_INFO = {};
@@ -2952,6 +2983,7 @@ async function toggleAttendance(name) {
     function devResetDriverDB() {
       const leagueLabel = _activeLeague === "academy" ? "Academy" : "Main";
       if (!confirm(`Reset ${leagueLabel} League driver database to the hardcoded defaults? This cannot be undone.`)) return;
+      logDriverDbChange(`Reset ${leagueLabel} League driver DB to defaults`);
       localStorage.removeItem(driverDbKey());
       loadDriverDB();
       renderDriverDB();
@@ -3786,6 +3818,7 @@ function _renderFuelStats() {
             errEl.textContent = "";
             hasDriver = !!mData.hasDriverRole || user.id === DEV_USER_ID;
             hasDev = user.id === DEV_USER_ID;
+            computeJuniorDev();
             updateSwitcher();
             showPasswordScreen();
             return;
@@ -3810,6 +3843,7 @@ function _renderFuelStats() {
             errEl.textContent = "";
             hasDriver = false;
             hasDev = user.id === DEV_USER_ID;
+            computeJuniorDev();
             showEngineerScreen();
             return;
           }
@@ -3893,7 +3927,7 @@ function _renderFuelStats() {
     }
 
 function enterSpectatorMode() {
-  hasDriver = false; hasMarshal = false; hasDev = false; hasSpectator = true;
+  hasDriver = false; hasMarshal = false; hasDev = false; hasJuniorDev = false; hasSpectator = true;
   engineerPending = false;
   document.getElementById("mode-badge").style.display = "none";
   updateSwitcher();
@@ -3906,6 +3940,7 @@ async function afterLogin() {
   await syncDriverDBFromServer();
   if (apiUrl) { _sseStarted = true; _connectSSE(); }
   hasDev = user.id === DEV_USER_ID;
+  computeJuniorDev();
   if (hasDev) {
     document.getElementById("api-url-display").style.display = "block";
     document.getElementById("change-url-btn").style.display = "block";
@@ -4004,6 +4039,7 @@ function chooseRoleEngineer() {
       engineerPending = true;
       isEngineer = false;
       hasDev = user?.id === DEV_USER_ID;
+      computeJuniorDev();
       const screen = document.getElementById("screen-login");
       screen.innerHTML = `
     <div class="login-logo">Race<span>Control</span></div>
@@ -4237,7 +4273,7 @@ function practiceReset() {
     
     function reLogin() {
       sessionStorage.removeItem("rc_user"); localStorage.removeItem("rc_user");
-      user = null; hasDriver = false; hasMarshal = false; hasDev = false; hasSpectator = false; isEngineer = false; engineerPending = false;
+      user = null; hasDriver = false; hasMarshal = false; hasDev = false; hasJuniorDev = false; hasSpectator = false; isEngineer = false; engineerPending = false;
       document.getElementById("panel-switcher").style.display = "none";
       document.getElementById("mode-badge").style.display = "none";
       location.reload();
@@ -4317,6 +4353,7 @@ function practiceReset() {
         updateBetaVisibility();
         hasMarshal = true;
         hasDev = user.id === DEV_USER_ID;
+        computeJuniorDev();
         engineerPending = false;
         const safeUser = { id: user.id, discordId: user.id, username: user.username, avatar: user.avatar, token: user.token, marshalToken: user.marshalToken, isAdmin: user.isAdmin, roles: user.roles };
         sessionStorage.setItem("rc_user", JSON.stringify(safeUser));
@@ -4347,7 +4384,7 @@ function switchPanel(panel) {
       else if (panel === "dev") {
         document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
         document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
-        showScreen("screen-dev"); currentPanel = "dev"; updateSwitcher(); loadDevInfo();
+        showScreen("screen-dev"); currentPanel = "dev"; updateSwitcher(); applyDevPanelAccess(); loadDevInfo();
       }
       else if (panel === "settings") {
         document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
@@ -4452,9 +4489,9 @@ function updateSwitcher() {
     return;
   }
 
-  const show = hasDriver || hasMarshal || hasDev || hasSpectator;
+  const show = hasDriver || hasMarshal || hasDev || hasJuniorDev || hasSpectator;
   document.getElementById("panel-switcher").style.display = show ? "flex" : "none";
-  const spectatorOnly = hasSpectator && !hasDriver && !hasMarshal && !hasDev;
+  const spectatorOnly = hasSpectator && !hasDriver && !hasMarshal && !hasDev && !hasJuniorDev;
   const driverTabAllowed = !spectatorOnly && hasDriver && (config.driver || engineerPending || hasMarshal);
   const swDriverBtn = document.getElementById("sw-driver");
   swDriverBtn.style.display = (driverTabAllowed && _userTabPrefs.driver !== false) ? "" : "none";
@@ -4464,7 +4501,7 @@ function updateSwitcher() {
   swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
   document.getElementById("sw-marshal").style.display = (!spectatorOnly && _userTabPrefs.marshal !== false) ? "" : "none";
   document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
-  document.getElementById("sw-dev").style.display = (!spectatorOnly && hasDev) ? "" : "none";
+  document.getElementById("sw-dev").style.display = (!spectatorOnly && (hasDev || hasJuniorDev)) ? "" : "none";
   document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
   const aId = currentPanel === "driver" ? "sw-driver"
     : currentPanel === "marshal" ? "sw-marshal"
@@ -5950,6 +5987,7 @@ async function submitDNF() {
       async function devPushDriverDB() {
         const drivers = getDriverDB();
         if (!drivers.length) return showToast("❌ No drivers to push", "err");
+        logDriverDbChange(`Pushed ${drivers.length} driver(s) to server`);
         const statusEl = document.getElementById("dev-drivers-status");
         statusEl.style.color = "var(--muted)";
         statusEl.textContent = "Pushing...";
@@ -6045,6 +6083,15 @@ async function submitDNF() {
         if (!apiUrl) return;
         if (!user?.token && !user?.marshalToken) { showToast("❌ Marshal login required for Dev panel", "err"); return; }
         if (!user?.token) { const ok = await devAutoAuth(); if (!ok) { showToast("❌ Dev auth failed", "err"); return; } }
+
+        // Junior Devs only get the Driver Database — skip the admin-only endpoints
+        // (they'd 403 anyway) and just refresh the driver list.
+        if (hasJuniorDev && !hasDev) {
+          try { await fetchActiveLeague(); } catch {}
+          renderDriverDB();
+          return;
+        }
+
         try {
           await loadActionLoggingState();
           await loadWatchMarshalState();
