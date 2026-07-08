@@ -3983,6 +3983,7 @@ function _renderFuelStats() {
           token: user.token || null,
           marshalToken: user.marshalToken || user.token || null,
           driverToken: user.driverToken || null,
+          roles: user.roles || [],
         };
         sessionStorage.setItem("rc_user", JSON.stringify(safeUser));
         localStorage.setItem("rc_user", JSON.stringify(safeUser));
