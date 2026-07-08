@@ -3537,12 +3537,15 @@ window.api.onKeybindFired(action => {
 const saved = sessionStorage.getItem("rc_user") || localStorage.getItem("rc_user");
 if (saved && apiUrl) {
   user = JSON.parse(saved);
+  const wasJuniorDevOnly = !!user.juniorDevOnly;
   delete user.isAdmin;
   delete user.roles;
   if (user.spectatorOnly) {
     enterSpectatorMode();
+  } else if (wasJuniorDevOnly) {
+    enterJuniorDevMode();
   } else {
-    if (!user.driverToken) user.driverToken = user.id;   // backfill stale/cached sessions
+    if (!user.driverToken) user.driverToken = user.id;
     await afterLogin();
   }
 }
