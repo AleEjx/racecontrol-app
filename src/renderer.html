@@ -2793,6 +2793,15 @@ async function toggleAttendance(name) {
     // DD
     let _activeLeague = "main"; // "main" | "academy" — synced with server
 
+const DRIVER_ROLE_MAIN    = "1464790972679454903";
+const DRIVER_ROLE_ACADEMY = "1477760574451617922";
+
+function canEngineerForActiveLeague() {
+  if (hasDev || hasMarshal) return true; // devs/marshals aren't league-restricted
+  const requiredRole = _activeLeague === "academy" ? DRIVER_ROLE_ACADEMY : DRIVER_ROLE_MAIN;
+  return (user?.roles || []).includes(requiredRole);
+}
+
     function driverDbKey() {
       return _activeLeague === "academy" ? "rc_driver_db_academy" : "rc_driver_db";
     }
@@ -4125,12 +4134,12 @@ function showRoleSelectScreen(isInDB) {
       <div class="role-sub">You are driving today</div>
     </button>` : '';
 
-  const engineerCard = `
+const engineerCard = canEngineerForActiveLeague() ? `
     <button onclick="chooseRoleEngineer()" class="role-card engineer">
       <span class="role-icon">🎧</span>
       <div class="role-title">Engineer</div>
       <div class="role-sub">You are managing a driver remotely</div>
-    </button>`;
+    </button>` : '';
 
   screen.innerHTML = `
     <div class="login-logo">Race<span>Control</span></div>
@@ -4182,7 +4191,11 @@ function chooseRoleRacer() {
 }
 
 function chooseRoleEngineer() {
-  hasDriver = true;
+  if (!canEngineerForActiveLeague()) {
+    const err = document.getElementById("role-select-error");
+    if (err) err.textContent = "❌ Engineering isn't available for your role in the active league.";
+    return;
+  }
   engineerPending = true;
   isEngineer = false;
   showEngineerScreen();
