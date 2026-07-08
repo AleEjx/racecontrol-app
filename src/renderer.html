@@ -2795,11 +2795,13 @@ async function toggleAttendance(name) {
 
 const DRIVER_ROLE_MAIN    = "1464790972679454903";
 const DRIVER_ROLE_ACADEMY = "1477760574451617922";
+const MARSHAL_ROLE        = "1464788931823538430";
 
 function canEngineerForActiveLeague() {
-  if (hasDev || hasMarshal) return true; // devs/marshals aren't league-restricted
+  if (hasDev) return true; // devs aren't league-restricted
   const requiredRole = _activeLeague === "academy" ? DRIVER_ROLE_ACADEMY : DRIVER_ROLE_MAIN;
-  return (user?.roles || []).includes(requiredRole);
+  const roles = user?.roles || [];
+  return roles.includes(MARSHAL_ROLE) || roles.includes(requiredRole);
 }
 
     function driverDbKey() {
@@ -4111,13 +4113,20 @@ async function afterLogin() {
   config.driver = "";
   config.engineer = false;
   isEngineer = false;
-  const driverName = DRIVER_IDS[user.id];
+const driverName = DRIVER_IDS[user.id];
   hasDriver = true;
   if (_practiceModeEnabled) {
     launchPracticePanel();
     return;
   }
-showRoleSelectScreen(!!driverName);
+  const racerEligible = !!driverName;
+  const engineerEligible = canEngineerForActiveLeague();
+  if (!racerEligible && !engineerEligible) {
+    enterSpectatorMode();
+    return;
+  }
+
+showRoleSelectScreen(racerEligible);
 }
 
 function showRoleSelectScreen(isInDB) {
