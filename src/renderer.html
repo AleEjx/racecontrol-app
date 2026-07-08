@@ -1827,6 +1827,7 @@ function sanitizeKeybinds(keybinds) {
     let hasMarshal = false;
     let hasDev = false;
     let hasJuniorDev = false; // Junior Developer role — sees dev panel, driver DB section only
+    let _juniorDevOnlyMode = false; // true when the user has ONLY the Junior Dev role (no driver/marshal) — hides Marshal tab
     let hasSpectator = false;
     let toastTimer;
     let _currentFlagAudio = null;
@@ -3782,6 +3783,23 @@ function _renderFuelStats() {
         } catch (fetchErr) { errEl.style.color = "var(--red)"; errEl.textContent = "❌ Can't reach API. Is the URL still valid?"; showChangeUrlPrompt(); return; }
 
         if (dRes.ok) {
+  if (dData.juniorDevOnly) {
+    user = dData.user;
+    user.discordId = user.id;
+    user.roles = dData.roles || [];
+    user.token = dData.user.token || null;
+    const safeUser = {
+      id: user.id, discordId: user.id, username: user.username, avatar: user.avatar,
+      token: user.token, marshalToken: null, driverToken: null, roles: user.roles, juniorDevOnly: true,
+    };
+    sessionStorage.setItem("rc_user", JSON.stringify(safeUser));
+    localStorage.setItem("rc_user", JSON.stringify(safeUser));
+    user = { ...user, ...safeUser };
+    errEl.textContent = "";
+    computeJuniorDev();
+    enterJuniorDevMode();
+    return;
+  }
   if (dData.spectatorOnly) {
     user = dData.user;
     user.discordId = user.id;
@@ -3928,13 +3946,26 @@ function _renderFuelStats() {
 
 function enterSpectatorMode() {
   hasDriver = false; hasMarshal = false; hasDev = false; hasJuniorDev = false; hasSpectator = true;
+  _juniorDevOnlyMode = false;
   engineerPending = false;
   document.getElementById("mode-badge").style.display = "none";
   updateSwitcher();
   launchSpectatePanel();
 }
 
+// Junior Developer with no Driver/Marshal role — skips the password screen entirely.
+// Lands directly on the Dev panel (Driver Database only) with Spectate also available.
+function enterJuniorDevMode() {
+  hasDriver = false; hasMarshal = false; hasDev = false; hasJuniorDev = true; hasSpectator = true;
+  _juniorDevOnlyMode = true;
+  engineerPending = false;
+  document.getElementById("mode-badge").style.display = "none";
+  updateSwitcher();
+  switchPanel("dev");
+}
+
 async function afterLogin() {
+  _juniorDevOnlyMode = false;
   await fetchActiveLeague();
   loadDriverDB();
   await syncDriverDBFromServer();
@@ -4499,7 +4530,7 @@ function updateSwitcher() {
   swDriverBtn.style.opacity = driverNeedsChoice ? "0.4" : "";
   swDriverBtn.style.cursor = driverNeedsChoice ? "not-allowed" : "";
   swDriverBtn.title = driverNeedsChoice ? "Choose Racer or Engineer first" : "";
-  document.getElementById("sw-marshal").style.display = (!spectatorOnly && _userTabPrefs.marshal !== false) ? "" : "none";
+  document.getElementById("sw-marshal").style.display = (!spectatorOnly && !_juniorDevOnlyMode && _userTabPrefs.marshal !== false) ? "" : "none";
   document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
   document.getElementById("sw-dev").style.display = (!spectatorOnly && (hasDev || hasJuniorDev)) ? "" : "none";
   document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
