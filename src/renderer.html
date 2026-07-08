@@ -2255,13 +2255,21 @@ function updateSplitViewBtn() {
   const btn = document.getElementById("split-view-toggle-btn");
   if (!btn) return;
   const on = !!config.splitViewEnabled;
+  const locked = _panelStyle === "legacy";
   btn.textContent = on ? "ON" : "OFF";
   btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
   btn.style.borderColor = on ? "var(--green)" : "var(--red)";
   btn.style.color = on ? "var(--green)" : "var(--red)";
+  btn.style.opacity = locked ? "0.4" : "";
+  btn.style.cursor = locked ? "not-allowed" : "";
+  btn.title = locked ? "Not available in Legacy panel style" : "";
 }
 
 async function toggleSplitView() {
+  if (_panelStyle === "legacy" && !config.splitViewEnabled) {
+    showToast("❌ Overlay windows aren't available in Legacy panel style", "err");
+    return;
+  }
   config.splitViewEnabled = !config.splitViewEnabled;
   await window.api.saveConfig(config);
   await window.api.toggleSplitView(config.splitViewEnabled);
@@ -2355,12 +2363,20 @@ function updatePanelStyleBtns() {
   if (sel) sel.value = _panelStyle;
 }
 
-function setPanelStyle(style) {
+async function setPanelStyle(style) {
   _panelStyle = style;
   localStorage.setItem("rc_panel_style", style);
   updatePanelStyleBtns();
   applyDriverPanelStyle();
   applyMarshalPanelStyle();
+  if (style === "legacy" && config.splitViewEnabled) {
+    config.splitViewEnabled = false;
+    await window.api.saveConfig(config);
+    await window.api.toggleSplitView(false);
+    updateSplitViewBtn();
+    showToast("✓ Panel style set to Legacy — overlay windows turned off", "ok");
+    return;
+  }
   showToast(`✓ Panel style set to ${style === "legacy" ? "Legacy" : "Modern"}`, "ok");
 }
 
