@@ -3916,6 +3916,8 @@ function _renderFuelStats() {
   }
   user = dData.user;
   user.driverToken = dData.user.token || user.id;
+  user.roles = dData.roles || [];
+  computeJuniorDev();
         } else if (dRes.status === 403 && !dData.disabled) {
           errEl.style.color = "var(--muted)"; errEl.textContent = "Trying marshal login...";
           let mRes, mData;
