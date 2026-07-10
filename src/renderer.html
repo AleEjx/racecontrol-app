@@ -6,6 +6,26 @@
   <title>RaceLeague Control</title>
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .s-kb-row { display: flex; align-items: center; gap: 8px; }
+    .s-kb-row .settings-label { flex: 1; }
+    .kb-clear-btn {
+      flex-shrink: 0;
+      font-family: 'Oxanium', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 5px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border, #333);
+      background: none;
+      color: var(--muted, #888);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .kb-clear-btn:hover { border-color: var(--red, #ff1744); color: var(--red, #ff1744); }
+  </style>
 </head>
 
 <body>
@@ -977,20 +997,20 @@
         <div class="s-section-title">Driver 1</div>
         <div class="s-card gap-0 mb-4">
           <div class="s-kb-row"><span class="settings-label">🔵 Blue Flag</span><input type="text" class="kb-input"
-              id="kb-blue_flag" readonly onclick="listenKey('blue_flag')" /></div>
+              id="kb-blue_flag" readonly onclick="listenKey('blue_flag')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('blue_flag')" title="Remove this keybind">Set No Keybind</button></div>
           <div class="s-kb-row"><span class="settings-label">🏁 Next Lap</span><input type="text" class="kb-input"
-              id="kb-next_lap" readonly onclick="listenKey('next_lap')" /></div>
+              id="kb-next_lap" readonly onclick="listenKey('next_lap')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('next_lap')" title="Remove this keybind">Set No Keybind</button></div>
           <div class="s-kb-row"><span class="settings-label">🔧 Pitting</span><input type="text" class="kb-input"
-              id="kb-pitting" readonly onclick="listenKey('pitting')" /></div>
+              id="kb-pitting" readonly onclick="listenKey('pitting')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('pitting')" title="Remove this keybind">Set No Keybind</button></div>
           <div class="s-kb-row no-border-bottom"><span class="settings-label">🚫 DNF</span><input
-              type="text" class="kb-input" id="kb-dnf" readonly onclick="listenKey('dnf')" /></div>
+              type="text" class="kb-input" id="kb-dnf" readonly onclick="listenKey('dnf')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('dnf')" title="Remove this keybind">Set No Keybind</button></div>
         </div>
 
         <div class="s-section-title mt-4">Practice Stopwatch</div>
         <div class="s-card gap-0">
-          <div class="s-kb-row"><span class="settings-label">▶ Start</span><input type="text" class="kb-input" id="kb-practice_start" readonly onclick="listenKey('practice_start')" /></div>
-          <div class="s-kb-row"><span class="settings-label">🏁 Lap</span><input type="text" class="kb-input" id="kb-practice_lap" readonly onclick="listenKey('practice_lap')" /></div>
-          <div class="s-kb-row no-border-bottom"><span class="settings-label">↺ Reset</span><input type="text" class="kb-input" id="kb-practice_reset" readonly onclick="listenKey('practice_reset')" /></div>
+          <div class="s-kb-row"><span class="settings-label">▶ Start</span><input type="text" class="kb-input" id="kb-practice_start" readonly onclick="listenKey('practice_start')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('practice_start')" title="Remove this keybind">Set No Keybind</button></div>
+          <div class="s-kb-row"><span class="settings-label">🏁 Lap</span><input type="text" class="kb-input" id="kb-practice_lap" readonly onclick="listenKey('practice_lap')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('practice_lap')" title="Remove this keybind">Set No Keybind</button></div>
+          <div class="s-kb-row no-border-bottom"><span class="settings-label">↺ Reset</span><input type="text" class="kb-input" id="kb-practice_reset" readonly onclick="listenKey('practice_reset')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('practice_reset')" title="Remove this keybind">Set No Keybind</button></div>
         </div>
       </div>
 
@@ -1474,6 +1494,16 @@ const KEYBIND_DEFAULTS = {
   blue_flag: "F1", next_lap: "F2", pitting: "F3", dnf: "F8",
   practice_start: "F9", practice_lap: "F10", practice_reset: "F11",
 };
+
+const NO_KEYBIND = "None"; // sentinel value meaning "this action has no keybind assigned"
+
+function getActiveKeybinds(keybinds) {
+  const out = {};
+  Object.keys(keybinds || {}).forEach(action => {
+    if (keybinds[action] && keybinds[action] !== NO_KEYBIND) out[action] = keybinds[action];
+  });
+  return out;
+}
 
   // ===================== FUEL GAUGE TRACKING =====================
 let _fuelTrackingEnabled = false;
@@ -2481,7 +2511,7 @@ evtSource.addEventListener("flag", e => {
     }
 
     function _registerHotkeys() {
-      if (config.keybinds) window.api.registerHotkeys(config.keybinds);
+      if (config.keybinds) window.api.registerHotkeys(getActiveKeybinds(config.keybinds));
     }
 
     function _initHotkeyPauseObserver() {
@@ -3548,7 +3578,7 @@ window.api.onKeybindFired(action => {
         document.getElementById("update-banner").style.display = "flex";
       });
 
-      if (config.keybinds) window.api.registerHotkeys(config.keybinds);
+      if (config.keybinds) window.api.registerHotkeys(getActiveKeybinds(config.keybinds));
 
       const apiDisplay = document.getElementById("api-url-display");
       if (apiDisplay) apiDisplay.textContent = apiUrl || "No API URL set — click Login to set one";
@@ -6643,7 +6673,7 @@ const keybinds = {
         const { keybinds: cleanKeybinds, changed } = sanitizeKeybinds(keybinds);
         if (changed) showToast("⚠️ Invalid keybind detected — reset to default", "err");
         const newConfig = { ...config, apiUrl: newApi, keybinds: cleanKeybinds };
-        await window.api.saveConfig(newConfig); await window.api.registerHotkeys(cleanKeybinds);
+        await window.api.saveConfig(newConfig); await window.api.registerHotkeys(getActiveKeybinds(cleanKeybinds));
         localStorage.setItem("rc_flag_volume", Math.round(_flagVolume * 100));
         config = newConfig; updateKeybindLabels(); showToast("✓ Settings saved", "ok"); goBack();
       }
@@ -6667,6 +6697,13 @@ function updateKeybindLabels() {
         if (listeningKey) document.getElementById(`kb-${listeningKey}`)?.classList.remove("listening");
         listeningKey = action; const el = document.getElementById(`kb-${action}`);
         el.classList.add("listening"); el.value = "Press a key...";
+      }
+      function clearKeybind(action) {
+        if (listeningKey === action) listeningKey = null;
+        const el = document.getElementById(`kb-${action}`);
+        if (!el) return;
+        el.classList.remove("listening");
+        el.value = NO_KEYBIND;
       }
 document.addEventListener("keydown", e => {
         if (!listeningKey) return; e.preventDefault();
