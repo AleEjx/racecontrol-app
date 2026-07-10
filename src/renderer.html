@@ -5482,18 +5482,28 @@ function renderPracticeLeaderboard() {
   const times = _practiceLaps.map(l => l.time);
   const best = Math.min(...times);
   const worst = Math.max(...times);
-  el.innerHTML = _practiceLaps.slice().reverse().map(l => {
+  el.innerHTML = _practiceLaps.map((l, idx) => {
     const isBest = l.time === best;
     const isWorst = l.time === worst && !isBest;
     const cls = isBest ? "best" : isWorst ? "worst" : "";
     const badge = isBest ? '<span class="pm-row-badge best">Best</span>' : isWorst ? '<span class="pm-row-badge worst">Slowest</span>' : "";
     return `
-      <div class="pm-row ${cls}">
+      <div class="pm-row ${cls}" style="display:flex;align-items:center;">
         <div class="pm-row-num">L${l.lap}</div>
         <div class="pm-row-time">${formatLapTime(l.time)}</div>
         ${badge}
+        <button class="pm-row-del" onclick="removePracticeLap(${idx})" title="Remove this lap" style="margin-left:8px;background:none;border:1px solid var(--border);color:var(--red);width:18px;height:18px;line-height:1;border-radius:4px;cursor:pointer;font-size:10px;font-family:'Oxanium',sans-serif;flex-shrink:0;">✕</button>
       </div>`;
-  }).join("");
+  }).reverse().join("");
+}
+
+function removePracticeLap(idx) {
+  if (idx < 0 || idx >= _practiceLaps.length) return;
+  _practiceLaps.splice(idx, 1);
+  _practiceLaps.forEach((l, i) => { l.lap = i + 1; });
+  savePracticeLaps();
+  renderPracticeLeaderboard();
+  renderPracticeGraph();
 }
 
 function renderPracticeGraph() {
