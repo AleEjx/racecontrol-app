@@ -653,22 +653,15 @@
         <div id="dev-league-status" class="text-muted-sm mt-4"></div>
       </div>
 
-      <div class="dev-card" id="dev-watchmarshal">
-        <div class="dev-title">WatchMarshal</div>
-        <div class="text-muted-note">Use this section to show or hide the WatchMarshal controls from the toolbox.</div>
+      <div class="dev-card" id="dev-toggles">
+        <div class="dev-title">Toggles</div>
+        <div class="text-muted-note">Use this section to show or hide these controls from the toolbox.</div>
         <div class="card-row-between">
           <span class="font-11">👁️ WatchMarshal monitoring</span>
           <button id="watchmarshal-toggle-btn" onclick="toggleWatchMarshal()" class="toggle-button"></button>
         </div>
         <div id="watchmarshal-status" class="text-muted-sm mt-4"></div>
-      </div>
-
-      <div class="dev-card">
-        <div class="dev-title">Action Logging</div>
-        <div class="text-muted-note">
-          Posts a message in the marshalling channel when a driver logs a lap, pit, or returns to track.
-        </div>
-        <div class="card-row-between">
+        <div class="card-row-between mt-6" style="border-top:1px solid var(--border);padding-top:8px;">
           <span class="font-11">📋 Log laps &amp; pits to Discord</span>
           <button id="action-log-toggle-btn" onclick="toggleActionLogging()" class="toggle-button"></button>
         </div>
@@ -2796,7 +2789,7 @@ async function toggleAttendance(name) {
         // Toolbox hide/show prefs (mirrors the resolution logic in
         // loadToolboxPrefs/toggleToolboxSection, since a TOOLBOX_SECTIONS id
         // isn't always the card's own id — e.g. action-log-toggle-btn is a
-        // button inside a card, not a card itself).
+        // button inside the merged "Toggles" card, not a card itself).
         document.querySelectorAll("#screen-dev .dev-card").forEach(card => {
           card.style.display = "";
         });
@@ -5386,8 +5379,7 @@ function launchMarshalPanel(startPoll = true) {
         { id: "dev-flag-text", label: "Custom Flag (dev)" },
         { id: "dev-engineers", label: "Engineering Assignments" },
         { id: "dev-drivers-card", label: "Driver Database" },
-        { id: "dev-watchmarshal", label: "WatchMarshal Toggle" },
-        { id: "action-log-toggle-btn", label: "Action Logging" },
+        { id: "dev-toggles", label: "Toggles" },
       ];
       let _toolboxVisible = {};
 
