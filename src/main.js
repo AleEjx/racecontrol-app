@@ -582,15 +582,17 @@ ipcMain.handle("overlay:resize-by", (e, dw, dh) => {
 });
 
 ipcMain.handle("get-config",     ()      => config);
-ipcMain.handle("save-config",    (_, cfg) => {
-  // overlayBounds is only ever authoritative from boundsPoll (in createOverlayWindow)
-  // and overlay:reset-positions. Callers here are usually working off an older
-  // cached config snapshot, so letting their overlayBounds through would silently
-  // stomp on a resize/move the user just made.
+ipcMain.handle("save-config", (_, cfg) => {
   const { overlayBounds, ...safeCfg } = cfg || {};
   config = { ...config, ...safeCfg };
   saveConfig(config);
-  if (cfg.keybinds) registerHotkeys(cfg.keybinds);
+  if (cfg.keybinds) {
+    const active = {};
+    Object.entries(cfg.keybinds).forEach(([action, key]) => {
+      if (key && key !== "None") active[action] = key;
+    });
+    registerHotkeys(active);
+  }
   return true;
 });
 ipcMain.handle("send-action",    (_, action) => sendDriverAction(action));
