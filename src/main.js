@@ -5,7 +5,36 @@ const os   = require("os");
 const https = require("https");
 const { exec, execFile } = require('child_process');
 const { autoUpdater } = require("electron-updater");
+const { uIOhook } = require("uiohook-napi");
 const CONFIG_FILE = path.join(app.getPath("userData"), "config.json");
+
+// libuiohook mouse button codes: 1=left 2=right 3=middle 4=side-back 5=side-forward
+const MOUSE_BUTTON_CODES = { Mouse4: 4, Mouse5: 5 };
+function isMouseBind(key) { return typeof key === "string" && Object.prototype.hasOwnProperty.call(MOUSE_BUTTON_CODES, key); }
+
+let mouseBindings = {};   // { [buttonCode]: actionHandlerFn }
+let uiohookStarted = false;
+
+function ensureUiohookStarted() {
+  if (uiohookStarted) return;
+  uIOhook.on("mousedown", (e) => {
+    const handler = mouseBindings[e.button];
+    if (handler) handler();
+  });
+  uIOhook.start();
+  uiohookStarted = true;
+}
+
+function stopAllHotkeys() {
+  globalShortcut.unregisterAll();
+  mouseBindings = {};
+}
+
+function shutdownUiohook() {
+  if (!uiohookStarted) return;
+  try { uIOhook.stop(); } catch {}
+  uiohookStarted = false;
+}
 
 function loadConfig() {
   try { if (fs.existsSync(CONFIG_FILE)) return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8")); } catch {}
@@ -150,7 +179,8 @@ mainWindow.on("focus", () => mainWindow.webContents.invalidate());
 mainWindow.on("resize", () => mainWindow.webContents.invalidate());
 
   mainWindow.on("close", () => {
-    globalShortcut.unregisterAll();
+    stopAllHotkeys();
+    shutdownUiohook();
     app.quit();
   });
 
@@ -169,7 +199,7 @@ function createTray() {
   const menu = Menu.buildFromTemplate([
     { label: "Show", click: () => { mainWindow?.show(); mainWindow?.focus(); } },
     { type: "separator" },
-    { label: "Quit", click: () => { globalShortcut.unregisterAll(); app.quit(); } },
+    { label: "Quit", click: () => { stopAllHotkeys(); shutdownUiohook(); app.quit(); } },
   ]);
 
   tray.setContextMenu(menu);
@@ -206,38 +236,48 @@ function setupFuelDisplayMediaHandler() {
 
 function registerHotkeys(keybinds) {
   globalShortcut.unregisterAll();
-  const { blue_flag, next_lap, pitting } = keybinds || {};
+  mouseBindings = {};
+  keybinds = keybinds || {};
 
-  if (blue_flag) globalShortcut.register(toElectronAccelerator(blue_flag), () => {
-    if (onCooldown) return;
-    mainWindow?.webContents.send("keybind-fired", "blue_flag");
-    sendDriverAction("blue_flag");
-  });
-  if (next_lap) globalShortcut.register(toElectronAccelerator(next_lap), () => {
-    if (onCooldown) return;
-    mainWindow?.webContents.send("keybind-fired", "next_lap");
-    sendDriverAction("next_lap");
-  });
-if (pitting) globalShortcut.register(toElectronAccelerator(pitting), () => {
-    if (onCooldown || inPits) return;
-    mainWindow?.webContents.send("keybind-fired", "pitting");
-    enterPits(1);
+  // Shared per-action handlers, called from either globalShortcut (keyboard)
+  // or the uiohook mousedown listener (mouse side buttons).
+  const actionHandlers = {
+    blue_flag: () => {
+      if (onCooldown) return;
+      mainWindow?.webContents.send("keybind-fired", "blue_flag");
+      sendDriverAction("blue_flag");
+    },
+    next_lap: () => {
+      if (onCooldown) return;
+      mainWindow?.webContents.send("keybind-fired", "next_lap");
+      sendDriverAction("next_lap");
+    },
+    pitting: () => {
+      if (onCooldown || inPits) return;
+      mainWindow?.webContents.send("keybind-fired", "pitting");
+      enterPits(1);
+    },
+    dnf: () => { mainWindow?.webContents.send("keybind-fired", "dnf"); },
+    practice_start: () => { mainWindow?.webContents.send("keybind-fired", "practice_start"); },
+    practice_lap: () => { mainWindow?.webContents.send("keybind-fired", "practice_lap"); },
+    practice_reset: () => { mainWindow?.webContents.send("keybind-fired", "practice_reset"); },
+  };
+
+  let needsMouseHook = false;
+
+  Object.entries(actionHandlers).forEach(([action, handler]) => {
+    const key = keybinds[action];
+    if (!key) return;
+
+    if (isMouseBind(key)) {
+      mouseBindings[MOUSE_BUTTON_CODES[key]] = handler;
+      needsMouseHook = true;
+    } else {
+      globalShortcut.register(toElectronAccelerator(key), handler);
+    }
   });
 
-const { dnf, practice_start, practice_lap, practice_reset } = keybinds || {};
-  if (dnf) globalShortcut.register(toElectronAccelerator(dnf), () => {
-    mainWindow?.webContents.send("keybind-fired", "dnf");
-  });
-
-  if (practice_start) globalShortcut.register(toElectronAccelerator(practice_start), () => {
-    mainWindow?.webContents.send("keybind-fired", "practice_start");
-  });
-  if (practice_lap) globalShortcut.register(toElectronAccelerator(practice_lap), () => {
-    mainWindow?.webContents.send("keybind-fired", "practice_lap");
-  });
-  if (practice_reset) globalShortcut.register(toElectronAccelerator(practice_reset), () => {
-    mainWindow?.webContents.send("keybind-fired", "practice_reset");
-  });
+  if (needsMouseHook) ensureUiohookStarted();
 }
 
 function pickAssetForPlatform(assets) {
@@ -607,7 +647,7 @@ ipcMain.handle("dev-auth-password", () => {
   try { secrets = require("./secrets.json"); } catch {}
   return process.env.ADMIN_PASSWORD || secrets.adminPassword || null;
 });
-ipcMain.handle("close-app",      () => { globalShortcut.unregisterAll(); app.quit(); });
+ipcMain.handle("close-app",      () => { stopAllHotkeys(); shutdownUiohook(); app.quit(); });
 ipcMain.handle("toggle-top", () => {
   config.alwaysOnTop = !config.alwaysOnTop;
   mainWindow?.setAlwaysOnTop(config.alwaysOnTop, "screen-saver");
@@ -619,7 +659,7 @@ ipcMain.handle("install-update", () => autoUpdater.quitAndInstall());
 ipcMain.handle("check-version",  () => app.getVersion());
 ipcMain.handle("flag-broadcast", (_, data) => mainWindow?.webContents.send("flag-event", data));
 ipcMain.handle("register-hotkeys",  (_, keybinds) => { registerHotkeys(keybinds); return true; });
-ipcMain.handle("suspend-hotkeys",   () => { globalShortcut.unregisterAll(); return true; });
+ipcMain.handle("suspend-hotkeys",   () => { stopAllHotkeys(); return true; });
 ipcMain.handle("send-action2",    (_, action) => sendDriverAction2(action));
 ipcMain.handle("toggle-pitting2", () => {
   if (inPits2) return inPits2;
@@ -667,17 +707,20 @@ del "%~f0"
 `;
       fs.writeFileSync(batPath, batScript);
       execFile("cmd.exe", ["/c", batPath], { detached: true, stdio: "ignore", windowsHide: true }).unref();
-      globalShortcut.unregisterAll();
+      stopAllHotkeys();
+      shutdownUiohook();
       mainWindow?.destroy();
       app.exit(0);
     } else if (process.platform === "darwin") {
       await shell.openPath(destPath);
-      globalShortcut.unregisterAll();
+      stopAllHotkeys();
+      shutdownUiohook();
       app.quit();
     } else {
       fs.chmodSync(destPath, 0o755);
       execFile(destPath, [], { detached: true, stdio: "ignore" }).unref();
-      globalShortcut.unregisterAll();
+      stopAllHotkeys();
+      shutdownUiohook();
       app.quit();
     }
   } catch (err) {
@@ -754,7 +797,7 @@ ipcMain.handle("uninstall", async () => {
             return;
           }
         });
-        setTimeout(() => { globalShortcut.unregisterAll(); app.quit(); }, 1000);
+        setTimeout(() => { stopAllHotkeys(); shutdownUiohook(); app.quit(); }, 1000);
         return true;
       }
     }
@@ -775,4 +818,4 @@ ipcMain.handle("uninstall", async () => {
   }
 });
 
-app.on("will-quit", () => globalShortcut.unregisterAll());
+app.on("will-quit", () => { stopAllHotkeys(); shutdownUiohook(); });
