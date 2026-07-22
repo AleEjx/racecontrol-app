@@ -1782,7 +1782,7 @@ function sanitizeKeybinds(keybinds) {
 }
 
     function canManageAttendance() {
-  return !!(user?.isAdmin || DIRECTOR_ROLES.some(r => user?.roles?.includes(r)));
+  return !!(user?.roles?.includes(MARSHAL_ROLE) || user?.isAdmin || hasDev);
 }
 
     const FLAG_DEFS = {
@@ -2449,7 +2449,7 @@ function applyDriverPanelStyle() {
 
   if (_panelStyle === "modern") setMarshalTab("flags");
 
-  if (DIRECTOR_ROLES.some(r => user?.roles?.includes(r)) || user?.isAdmin || hasDev) {
+  if (user?.roles?.includes(MARSHAL_ROLE) || DIRECTOR_ROLES.some(r => user?.roles?.includes(r)) || user?.isAdmin || hasDev) {
     const rs = document.getElementById("m-race-setup");
     if (rs) rs.style.display = "block";
   }
@@ -2644,7 +2644,7 @@ function renderAttendance() {
       </div>`;
   }).join("");
   if (!canManage && !document.getElementById("attendance-permission-note")) {
-    el.insertAdjacentHTML("beforeend", `<div id="attendance-permission-note" class="small-note" style="text-align:center;padding:6px;">Only Admins and Directors can edit attendance.</div>`);
+    el.insertAdjacentHTML("beforeend", `<div id="attendance-permission-note" class="small-note" style="text-align:center;padding:6px;">Only Marshals can edit attendance.</div>`);
   }
 }
 
@@ -2741,7 +2741,7 @@ async function saveControlEntry() {
 
 async function toggleAttendance(name) {
   if (!canManageAttendance()) {
-    showToast("❌ Only Admins and Directors can edit attendance", "err");
+    showToast("❌ Only Marshals can edit attendance", "err");
     return;
   }
   const present = _attendance[name] !== false;
@@ -5349,7 +5349,7 @@ function launchMarshalPanel(startPoll = true) {
       document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
       document.getElementById("sw-marshal").textContent = "🏁 Marshal";
       updateSwitcher();
-      if (DIRECTOR_ROLES.some(r => user?.roles?.includes(r)) || user?.isAdmin || hasDev)
+      if (user?.roles?.includes(MARSHAL_ROLE) || DIRECTOR_ROLES.some(r => user?.roles?.includes(r)) || user?.isAdmin || hasDev)
   document.getElementById("m-race-setup").style.display = "block";
       renderAttendance();
       if (startPoll) {
