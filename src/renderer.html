@@ -6688,7 +6688,7 @@ function updateKeybindLabels() {
       function listenKey(action) {
         if (listeningKey) document.getElementById(`kb-${listeningKey}`)?.classList.remove("listening");
         listeningKey = action; const el = document.getElementById(`kb-${action}`);
-        el.classList.add("listening"); el.value = "Press a key...";
+        el.classList.add("listening"); el.value = "Press a key or mouse side button...";
       }
       function clearKeybind(action) {
         if (listeningKey === action) listeningKey = null;
@@ -6720,6 +6720,21 @@ document.addEventListener("keydown", e => {
           return;
         }
 
+        kbInput.value = key;
+        kbInput.classList.remove("listening");
+        listeningKey = null;
+      });
+
+      // Mouse side buttons (back/forward) as keybinds. Regular left/right/middle
+      // clicks are ignored here so normal UI clicking still works everywhere else.
+      document.addEventListener("mousedown", e => {
+        if (!listeningKey) return;
+        // DOM MouseEvent.button: 3 = back (X1), 4 = forward (X2)
+        if (e.button !== 3 && e.button !== 4) return;
+        e.preventDefault();
+
+        const key = e.button === 3 ? "Mouse4" : "Mouse5";
+        const kbInput = document.getElementById(`kb-${listeningKey}`);
         kbInput.value = key;
         kbInput.classList.remove("listening");
         listeningKey = null;
