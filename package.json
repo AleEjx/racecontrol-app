@@ -29,6 +29,9 @@
       "src/**/*",
       "assets/**/*",
       "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**/*"
     ]
   },
   "devDependencies": {
@@ -36,6 +39,7 @@
     "electron-builder": "^24.0.0"
   },
   "dependencies": {
-    "electron-updater": "^6.1.7"
+    "electron-updater": "^6.1.7",
+    "uiohook-napi": "^1.5.5"
   }
 }
