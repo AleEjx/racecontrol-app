@@ -90,15 +90,17 @@
       border: none;
       box-shadow: none;
     }
-    body.livesplit-mode .pm-controls,
-    body.livesplit-mode .pm-controls * {
-      -webkit-app-region: no-drag;
+    body.livesplit-mode .pm-controls {
+      display: none !important;
     }
     body.livesplit-mode .pm-time {
       font-size: 64px !important;
     }
     body.livesplit-mode .pm-livesplit-btn {
-      opacity: 0.25;
+      opacity: 0;
+    }
+    body.livesplit-mode .pm-livesplit-btn:hover {
+      opacity: 1;
     }
   </style>
 </head>
