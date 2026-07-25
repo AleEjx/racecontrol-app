@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body { background: transparent; margin: 0; overflow: hidden; }
+    .ov-body {
+      -webkit-app-region: drag;
+      cursor: grab;
+      padding: 6px;
+    }
+    .ov-body:active { cursor: grabbing; }
+    .ov-resize-grip {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      cursor: nwse-resize;
+      -webkit-app-region: no-drag;
+      background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.25) 50%);
+    }
+    .ov-resize-grip-h {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      cursor: ew-resize;
+      -webkit-app-region: no-drag;
+    }
+
+    .ov-scale-wrap {
+      transform-origin: top left;
+    }
+
+    .ov-zoom-ctrl {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: flex;
+      gap: 3px;
+      opacity: 0.5;
+      transition: opacity 0.15s ease;
+      z-index: 5;
+      -webkit-app-region: no-drag;
+    }
+    .ov-zoom-ctrl:hover { opacity: 1; }
+    .ov-zoom-ctrl button {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 3px;
+      background: rgba(0,0,0,0.55);
+      color: #e8e8f0;
+      font-size: 10px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+    }
+    .ov-zoom-ctrl button:hover {
+      background: rgba(41,121,255,0.6);
+      border-color: rgba(41,121,255,0.8);
+    }
+
+    button:focus,
+    button:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+
+    /* --- just the numbers --- */
+    .rc-timer-plate {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 22px;
+      border-radius: 10px;
+      background: rgba(10, 10, 14, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .rc-timer-time {
+      font-family: 'Oxanium', sans-serif;
+      font-weight: 800;
+      font-size: 48px;
+      line-height: 1;
+      letter-spacing: 0.5px;
+      color: #e8e8f0;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      transition: color 0.15s ease;
+    }
+    .rc-timer-plate.running .rc-timer-time { color: var(--green, #00e676); }
+  </style>
+</head>
+<body>
+  <div class="ov-body" id="ov-body">
+    <div class="ov-zoom-ctrl" id="ov-zoom-ctrl">
+      <button onclick="adjustOverlayScale(-0.1)" title="Smaller">－</button>
+      <button onclick="adjustOverlayScale(0.1)" title="Bigger">＋</button>
+    </div>
+    <div class="ov-scale-wrap" id="ov-scale-wrap">
+      <div class="rc-timer-plate" id="rc-timer-plate">
+        <div class="rc-timer-time" id="rc-timer-time">00:00.00</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let config = null;
+    let _ovScale = 1;
+    let _ovScaleSaveTimer = null;
+
+    function formatStopwatchTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = (seconds % 60).toFixed(2);
+      return `${String(mins).padStart(2, "0")}:${secs.padStart(5, "0")}`;
+    }
+
+    function applyOverlayScale(scale) {
+      _ovScale = Math.round(Math.min(2, Math.max(0.7, scale)) * 100) / 100;
+      const wrap = document.getElementById("ov-scale-wrap");
+      if (wrap) wrap.style.zoom = _ovScale;
+      requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
+    }
+
+    function adjustOverlayScale(delta) {
+      applyOverlayScale(_ovScale + delta);
+      if (config) {
+        config.timerOverlayScale = _ovScale;
+        clearTimeout(_ovScaleSaveTimer);
+        _ovScaleSaveTimer = setTimeout(() => window.api.saveConfig(config), 400);
+      }
+    }
+
+    document.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      adjustOverlayScale(e.deltaY < 0 ? 0.05 : -0.05);
+    }, { passive: false });
+
+    function fitWindowHeight() {
+      const body = document.querySelector(".ov-body");
+      if (!body) return;
+      const h = Math.ceil(body.getBoundingClientRect().height) + 4;
+      window.api.overlayFitHeight(h);
+    }
+
+    // --- Live timer readout, driven off the same localStorage keys the
+    // main window writes to on practiceStart/practiceLap/practiceReset ---
+    let _lastRunningState = null;
+
+    function tickTimer() {
+      const running = localStorage.getItem("rc_practice_running") === "1";
+      const plate = document.getElementById("rc-timer-plate");
+      const timeEl = document.getElementById("rc-timer-time");
+
+      if (running !== _lastRunningState) {
+        plate.classList.toggle("running", running);
+        _lastRunningState = running;
+      }
+
+      if (running) {
+        const lastLapTs = Number(localStorage.getItem("rc_practice_last_lap_ts") || 0);
+        const elapsed = lastLapTs ? (Date.now() - lastLapTs) / 1000 : 0;
+        timeEl.textContent = formatStopwatchTime(Math.max(elapsed, 0));
+      } else {
+        timeEl.textContent = "00:00.00";
+      }
+    }
+
+    // Catch changes instantly when they happen in the other window...
+    window.addEventListener("storage", (e) => {
+      if (e.key === "rc_practice_running" || e.key === "rc_practice_last_lap_ts") tickTimer();
+    });
+    // ...and keep ticking smoothly while running.
+    setInterval(tickTimer, 47);
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      config = await window.api.getConfig();
+      applyOverlayScale(config.timerOverlayScale || 1);
+      requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
+      tickTimer();
+    });
+  </script>
+  <div class="ov-resize-grip" id="ov-resize-grip"></div>
+  <div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
+</body>
+</html>
