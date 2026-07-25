@@ -4515,6 +4515,8 @@ function practiceStart() {
   _practiceRunning = true;
   _practiceStartTs = Date.now();
   _practiceLastLapTs = _practiceStartTs;
+  localStorage.setItem("rc_practice_running", "1");
+  localStorage.setItem("rc_practice_last_lap_ts", String(_practiceLastLapTs));
   document.getElementById("pm-stopwatch")?.classList.add("running");
   document.getElementById("pm-time-sub").textContent = "Running";
   document.getElementById("pm-btn-start").disabled = true;
@@ -4530,6 +4532,7 @@ function practiceLap() {
   const now = Date.now();
   const lapTimeSec = (now - _practiceLastLapTs) / 1000;
   _practiceLastLapTs = now;
+  localStorage.setItem("rc_practice_last_lap_ts", String(_practiceLastLapTs));
   const lapNum = _practiceLaps.length + 1;
   _practiceLaps.push({ lap: lapNum, time: lapTimeSec });
   savePracticeLaps();
@@ -4543,6 +4546,8 @@ function practiceReset() {
   _practiceRunning = false;
   _practiceStartTs = 0;
   _practiceLastLapTs = 0;
+  localStorage.setItem("rc_practice_running", "0");
+  localStorage.setItem("rc_practice_last_lap_ts", "0");
   if (_practiceTickInterval) { clearInterval(_practiceTickInterval); _practiceTickInterval = null; }
   document.getElementById("pm-stopwatch")?.classList.remove("running");
   document.getElementById("pm-time").textContent = "00:00.00";
@@ -5346,6 +5351,18 @@ function applyLiveSplitMode() {
   if (btn) btn.title = _liveSplitModeEnabled ? "Exit Live Split view" : "Show just the timer, LiveSplit-style";
 }
 function toggleLiveSplitMode() {
+  // Preferred path: a real transparent, floating overlay window — same
+  // mechanism as the plate/field overlays (needs main.js support for a
+  // window.api.toggleTimerOverlay()-style handler that opens overlay-timer.html).
+  if (window.api?.toggleTimerOverlay) {
+    window.api.toggleTimerOverlay().then(isOpen => {
+      _liveSplitModeEnabled = isOpen;
+      const label = document.getElementById("pm-livesplit-btn-label");
+      if (label) label.textContent = isOpen ? "✕ Exit" : "🔴 Live Split";
+    });
+    return;
+  }
+  // Fallback: hide everything but the timer in the current window.
   _liveSplitModeEnabled = !_liveSplitModeEnabled;
   localStorage.setItem("rc_livesplit_mode_enabled", _liveSplitModeEnabled ? "1" : "0");
   applyLiveSplitMode();
@@ -5554,6 +5571,8 @@ function practiceStart() {
   _practiceRunning = true;
   _practiceStartTs = Date.now();
   _practiceLastLapTs = _practiceStartTs;
+  localStorage.setItem("rc_practice_running", "1");
+  localStorage.setItem("rc_practice_last_lap_ts", String(_practiceLastLapTs));
   document.getElementById("pm-stopwatch")?.classList.add("running");
   document.getElementById("pm-time-sub").textContent = "Running";
   document.getElementById("pm-btn-start").disabled = true;
@@ -5567,6 +5586,7 @@ function practiceLap() {
   const now = Date.now();
   const lapTimeSec = (now - _practiceLastLapTs) / 1000;
   _practiceLastLapTs = now;
+  localStorage.setItem("rc_practice_last_lap_ts", String(_practiceLastLapTs));
   const lapNum = _practiceLaps.length + 1;
   _practiceLaps.push({ lap: lapNum, time: lapTimeSec });
   savePracticeLaps();
@@ -5579,6 +5599,8 @@ function practiceReset() {
   _practiceRunning = false;
   _practiceStartTs = 0;
   _practiceLastLapTs = 0;
+  localStorage.setItem("rc_practice_running", "0");
+  localStorage.setItem("rc_practice_last_lap_ts", "0");
   if (_practiceTickInterval) { clearInterval(_practiceTickInterval); _practiceTickInterval = null; }
   document.getElementById("pm-stopwatch")?.classList.remove("running");
   document.getElementById("pm-time").textContent = "00:00.00";
