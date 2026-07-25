@@ -661,6 +661,15 @@
           <span class="pi">↺</span><span class="pl">Reset</span><span class="pk" id="pm-key-reset">F11</span>
         </button>
       </div>
+
+      <div id="pm-livesplit-opacity-row" class="s-card gap-10 mb-4" style="display:none; margin-top:10px;">
+        <div class="flex-row-gap-6 align-center">
+          <span class="font-11">Overlay Transparency</span>
+          <input type="range" id="pm-livesplit-opacity-slider" class="vol-slider" min="10" max="90" value="55"
+            oninput="onTimerOverlayOpacitySlider(this.value)" />
+          <span id="pm-livesplit-opacity-label" class="font-11 fw-700 text-blue text-right flex-shrink-0 width-34">55%</span>
+        </div>
+      </div>
     </div>
 
     <div id="pm-extra-content">
