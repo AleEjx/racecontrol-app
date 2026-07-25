@@ -105,6 +105,9 @@ app.whenReady().then(() => {
     plateWin = createOverlayWindow("plate", { width: 260, height: 330, x: 40, y: 40 });
     fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
   }
+  if (config.timerOverlayEnabled) {
+    timerWin = createOverlayWindow("timer", { width: 260, height: 90, x: 40, y: 760 });
+  }
 });
 
 
@@ -313,6 +316,7 @@ function downloadFile(url, destPath, onProgress) {
 
 let plateWin = null;
 let fieldWin = null;
+let timerWin = null;
 
 function createOverlayWindow(key, defaultBounds) {
   const saved = config.overlayBounds?.[key] || defaultBounds;
@@ -346,7 +350,9 @@ function createOverlayWindow(key, defaultBounds) {
 
   win.on("closed", () => {
     clearInterval(boundsPoll);
-    if (key === "plate") plateWin = null; else fieldWin = null;
+    if (key === "plate") plateWin = null;
+    else if (key === "field") fieldWin = null;
+    else if (key === "timer") timerWin = null;
   });
 
   return win;
@@ -366,6 +372,21 @@ ipcMain.handle("overlay:toggle-split", (e, enable) => {
   return true;
 });
 
+ipcMain.handle("overlay:toggle-timer", () => {
+  if (timerWin) {
+    timerWin.close();
+    timerWin = null;
+    config.timerOverlayEnabled = false;
+    saveConfig(config);
+    return false;
+  } else {
+    timerWin = createOverlayWindow("timer", { width: 260, height: 90, x: 40, y: 760 });
+    config.timerOverlayEnabled = true;
+    saveConfig(config);
+    return true;
+  }
+});
+
 ipcMain.handle("overlay:fit-height", (e, height) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   if (!win) return;
@@ -378,6 +399,7 @@ ipcMain.handle("overlay:reset-positions", () => {
   saveConfig(config);
   if (plateWin) plateWin.setBounds({ width: 260, height: 330, x: 40, y: 40 });
   if (fieldWin) fieldWin.setBounds({ width: 300, height: 420, x: 40, y: 400 });
+  if (timerWin) timerWin.setBounds({ width: 260, height: 90, x: 40, y: 760 });
   return true;
 });
 
