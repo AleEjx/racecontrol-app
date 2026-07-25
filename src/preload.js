@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("api", {
   toggleTop:        ()       => ipcRenderer.invoke("toggle-top"),
   openDevTools:     ()       => ipcRenderer.invoke("open-devtools"),
   openOAuth:        (url)    => ipcRenderer.invoke("open-oauth", url),
+  toggleTimerOverlay: () => ipcRenderer.invoke("overlay:toggle-timer"),
   installUpdate:    ()       => ipcRenderer.invoke("install-update"),
   checkVersion:     ()       => ipcRenderer.invoke("check-version"),
   overlayNudge:      (dx, dy) => ipcRenderer.invoke("overlay:nudge", dx, dy),
