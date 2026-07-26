@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage, shell, session, desktopCapturer } = require("electron");
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage, shell, session, desktopCapturer, screen } = require("electron");
 const path = require("path");
 const fs   = require("fs");
 const os   = require("os");
@@ -107,6 +107,9 @@ app.whenReady().then(() => {
   }
   if (config.timerOverlayEnabled) {
     timerWin = createOverlayWindow("timer", { width: 260, height: 90, x: 40, y: 760 });
+  }
+  if (config.notifOverlayEnabled) {
+    notifWin = createOverlayWindow("notif", notifBoundsForPosition(config.notifPosition || "right"));
   }
 });
 
@@ -317,6 +320,15 @@ function downloadFile(url, destPath, onProgress) {
 let plateWin = null;
 let fieldWin = null;
 let timerWin = null;
+let notifWin = null;
+
+function notifBoundsForPosition(position) {
+  const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize;
+  const width = 320, height = 120, margin = 20;
+  if (position === "top") return { width, height, x: Math.round((sw - width) / 2), y: margin };
+  if (position === "left") return { width, height, x: margin, y: margin };
+  return { width, height, x: sw - width - margin, y: margin }; // "right" (default)
+}
 
 function createOverlayWindow(key, defaultBounds) {
   const saved = config.overlayBounds?.[key] || defaultBounds;
@@ -353,6 +365,7 @@ function createOverlayWindow(key, defaultBounds) {
     if (key === "plate") plateWin = null;
     else if (key === "field") fieldWin = null;
     else if (key === "timer") timerWin = null;
+    else if (key === "notif") notifWin = null;
   });
 
   return win;
@@ -400,7 +413,47 @@ ipcMain.handle("overlay:reset-positions", () => {
   if (plateWin) plateWin.setBounds({ width: 260, height: 330, x: 40, y: 40 });
   if (fieldWin) fieldWin.setBounds({ width: 300, height: 420, x: 40, y: 400 });
   if (timerWin) timerWin.setBounds({ width: 260, height: 90, x: 40, y: 760 });
+  if (notifWin) notifWin.setBounds(notifBoundsForPosition(config.notifPosition || "right"));
   return true;
+});
+
+ipcMain.handle("overlay:set-notif-enabled", (e, enabled) => {
+  config.notifOverlayEnabled = !!enabled;
+  saveConfig(config);
+  if (enabled) {
+    if (!notifWin) notifWin = createOverlayWindow("notif", notifBoundsForPosition(config.notifPosition || "right"));
+  } else {
+    notifWin?.close();
+    notifWin = null;
+  }
+  return config.notifOverlayEnabled;
+});
+
+ipcMain.handle("overlay:set-notif-position", (e, position) => {
+  config.notifPosition = position;
+  saveConfig(config);
+  config.overlayBounds = config.overlayBounds || {};
+  delete config.overlayBounds["notif"]; // a manual drag shouldn't fight the new preset corner
+  saveConfig(config);
+  if (notifWin) notifWin.setBounds(notifBoundsForPosition(position));
+  return true;
+});
+
+ipcMain.handle("overlay:send-notification", (e, payload) => {
+  if (notifWin && !notifWin.isDestroyed()) notifWin.webContents.send("notif:incoming", payload);
+});
+
+ipcMain.handle("overlay:test-notification", () => {
+  const wasClosed = !notifWin;
+  if (!notifWin) notifWin = createOverlayWindow("notif", notifBoundsForPosition(config.notifPosition || "right"));
+  const send = () => notifWin?.webContents.send("notif:incoming", { message: "🔔 This is a test notification", type: "ok" });
+  if (wasClosed) notifWin.webContents.once("did-finish-load", send);
+  else send();
+  if (wasClosed) {
+    setTimeout(() => {
+      if (notifWin && !config.notifOverlayEnabled) { notifWin.close(); notifWin = null; }
+    }, 4500);
+  }
 });
 
 async function sendDriverAction(action) {
