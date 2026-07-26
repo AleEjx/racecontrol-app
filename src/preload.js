@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("api", {
   openDevTools:     ()       => ipcRenderer.invoke("open-devtools"),
   openOAuth:        (url)    => ipcRenderer.invoke("open-oauth", url),
   toggleTimerOverlay: () => ipcRenderer.invoke("overlay:toggle-timer"),
+  setClickThrough: (ignore) => ipcRenderer.invoke("overlay:set-click-through", ignore),
   installUpdate:    ()       => ipcRenderer.invoke("install-update"),
   checkVersion:     ()       => ipcRenderer.invoke("check-version"),
   setNotifEnabled: (enabled) => ipcRenderer.invoke("overlay:set-notif-enabled", enabled),
