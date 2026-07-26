@@ -3997,6 +3997,7 @@ function _renderFuelStats() {
       loadPracticeLaps();
       loadFuelTrackingPref();
       loadLiveSplitPref();
+      loadTimerOverlayOpacityPref();
 
 
       _initHotkeyPauseObserver();
@@ -5358,6 +5359,11 @@ function applyLiveSplitMode() {
   if (label) label.textContent = _liveSplitModeEnabled ? "✕ Exit" : "🔴 Live Split";
   const btn = document.getElementById("pm-livesplit-btn");
   if (btn) btn.title = _liveSplitModeEnabled ? "Exit Live Split view" : "Show just the timer, LiveSplit-style";
+  setLiveSplitOpacityRowVisible(_liveSplitModeEnabled);
+}
+function setLiveSplitOpacityRowVisible(visible) {
+  const row = document.getElementById("pm-livesplit-opacity-row");
+  if (row) row.style.display = visible ? "block" : "none";
 }
 function toggleLiveSplitMode() {
   // Preferred path: a real transparent, floating overlay window — same
@@ -5368,6 +5374,7 @@ function toggleLiveSplitMode() {
       _liveSplitModeEnabled = isOpen;
       const label = document.getElementById("pm-livesplit-btn-label");
       if (label) label.textContent = isOpen ? "✕ Exit" : "🔴 Live Split";
+      setLiveSplitOpacityRowVisible(isOpen);
     });
     return;
   }
@@ -5379,6 +5386,24 @@ function toggleLiveSplitMode() {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && _liveSplitModeEnabled) toggleLiveSplitMode();
 });
+
+// --- Overlay timer transparency slider ---
+function onTimerOverlayOpacitySlider(val) {
+  const pct = Number(val);
+  localStorage.setItem("rc_timer_overlay_opacity", pct);
+  const label = document.getElementById("pm-livesplit-opacity-label");
+  if (label) label.textContent = pct + "%";
+  document.documentElement.style.setProperty("--timer-overlay-opacity", (pct / 100).toString());
+}
+function loadTimerOverlayOpacityPref() {
+  const saved = localStorage.getItem("rc_timer_overlay_opacity");
+  const pct = saved ? Number(saved) : 55;
+  const slider = document.getElementById("pm-livesplit-opacity-slider");
+  const label = document.getElementById("pm-livesplit-opacity-label");
+  if (slider) slider.value = pct;
+  if (label) label.textContent = pct + "%";
+  document.documentElement.style.setProperty("--timer-overlay-opacity", (pct / 100).toString());
+}
     
 function toggleLapGraphPref() {
   _rcLapGraphEnabled = !_rcLapGraphEnabled;
