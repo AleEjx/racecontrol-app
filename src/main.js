@@ -346,6 +346,7 @@ function createOverlayWindow(key, defaultBounds) {
     },
   });
   win.setAlwaysOnTop(true, "screen-saver");
+  if (key === "notif") win.setIgnoreMouseEvents(true, { forward: true }); // empty most of the time — never block clicks under it
   win.loadFile(path.join(__dirname, `overlay-${key}.html`));
 
   let lastBounds = win.getBounds();
@@ -405,6 +406,11 @@ ipcMain.handle("overlay:fit-height", (e, height) => {
   if (!win) return;
   const b = win.getBounds();
   win.setBounds({ ...b, height: Math.max(120, Math.round(height)) });
+});
+
+ipcMain.handle("overlay:set-click-through", (e, ignore) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (win) win.setIgnoreMouseEvents(!!ignore, { forward: true });
 });
 
 ipcMain.handle("overlay:reset-positions", () => {
