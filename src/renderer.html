@@ -137,6 +137,7 @@
   <button class="switch-btn" id="sw-driver" onclick="switchPanel('driver')">🏎️ Driver</button>
   <button class="switch-btn" id="sw-marshal" onclick="switchPanel('marshal')">🏁 Marshal 🔒</button>
   <button class="switch-btn" id="sw-spectate" onclick="switchPanel('spectate')">👁️ Spectate</button>
+  <button id="sw-committee" onclick="switchPanel('committee')" class="switch-btn" style="display:none;">🗂️ Committee</button>
   <button id="sw-dev" onclick="switchPanel('dev')" class="switch-btn" style="display:none;">⚙️ Dev</button>
 </div>
     </div>
@@ -730,7 +731,31 @@
 
   </div>
 </div>
-  
+
+<!-- COMMITTEE MODE PANEL -->
+<div class="screen" id="screen-committee">
+  <div class="scroll-body scroll-body-padded">
+    <div class="s-section-title">🗂️ Log a Qualifying Time</div>
+    <div class="s-card gap-8 mb-4">
+      <div class="small-note">Enter the race number, the driver's in-game name, and their time. This logs it and refreshes the leaderboard the same way a normal <span class="monospace-text">-timechange</span> would.</div>
+
+      <input type="text" id="committee-race-input" placeholder="Race number, e.g. 3" class="font-11" />
+      <input type="text" id="committee-driver-input" placeholder="Driver / in-game username" class="font-11" />
+      <input type="text" id="committee-time-input" placeholder="Time, e.g. 1:23.456" class="font-11" />
+
+      <button class="save-btn" onclick="submitCommitteeTime()">✅ Log Time</button>
+      <div id="committee-submit-status" class="font-9 text-muted min-h-12"></div>
+    </div>
+
+    <div class="s-section-title">Recently Logged</div>
+    <div class="s-card gap-8 mb-4">
+      <div id="committee-recent-list">
+        <div class="placeholder-text">Nothing logged yet this session.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- DEVELOPER PANEL -->
   <div class="screen" id="screen-dev">
     <div class="scroll-body">
@@ -931,6 +956,7 @@
       <button class="stab" data-tab="audio" onclick="openSettingsTab('audio')">🔊 Audio</button>
       <button class="stab" data-tab="keybinds" onclick="openSettingsTab('keybinds')">⌨️ Keys</button>
       <button class="stab" data-tab="connection" onclick="openSettingsTab('connection')">🔗 API</button>
+      <button class="stab" data-tab="modes" onclick="openSettingsTab('modes')">🕹️ Modes</button>
       <button class="stab" data-tab="account" onclick="openSettingsTab('account')">👤 Account</button>
     </div>
 
@@ -1163,6 +1189,31 @@
         </div>
       </div>
 
+      <div class="stab-panel" id="stab-modes">
+        <div class="s-section-title">Practice Mode</div>
+        <div class="s-card gap-8 mb-4">
+          <div class="pm-toggle-row">
+            <div>
+              <div class="font-11 fw-700">⏱️ Practice Mode</div>
+              <div class="small-note">Solo lap-timing tool. Hides Driver/Marshal/Spectate tabs and jumps straight to your stopwatch and lap leaderboard.</div>
+            </div>
+            <button id="practice-mode-toggle-btn" onclick="togglePracticeModePref()" class="toggle-button"></button>
+          </div>
+        </div>
+
+        <div class="s-section-title">Committee Mode</div>
+        <div class="s-card gap-8 mb-4">
+          <div class="pm-toggle-row">
+            <div>
+              <div class="font-11 fw-700">🗂️ Committee Mode</div>
+              <div class="small-note">For Race Committee members timing qualifying. Log a driver's time straight from the app — no Discord command needed.</div>
+            </div>
+            <button id="committee-mode-toggle-btn" onclick="toggleCommitteeModePref()" class="toggle-button" disabled>...</button>
+          </div>
+          <div id="committee-access-note" class="small-note text-muted">Checking access…</div>
+        </div>
+      </div>
+
       <div class="stab-panel" id="stab-account">
         <div class="s-section-title">Signed In As</div>
         <div class="s-card gap-10 mb-4">
@@ -1246,16 +1297,6 @@
   </div>
 </div>
 
-<div class="s-section-title">Practice Mode</div>
-<div class="s-card gap-8 mb-4">
-  <div class="pm-toggle-row">
-    <div>
-      <div class="font-11 fw-700">⏱️ Practice Mode</div>
-      <div class="small-note">Solo lap-timing tool. Hides Driver/Marshal/Spectate tabs and jumps straight to your stopwatch and lap leaderboard.</div>
-    </div>
-    <button id="practice-mode-toggle-btn" onclick="togglePracticeModePref()" class="toggle-button"></button>
-  </div>
-</div>
 <div class="s-card gap-8 mb-4">
   <div class="card-row-between">
     <span class="font-11">🏎️ Driver Tab</span>
@@ -4041,6 +4082,8 @@ function _renderFuelStats() {
       loadLiveSplitPref();
       loadTimerOverlayOpacityPref();
       loadNotifPrefs();
+      loadCommitteeModePref();
+      checkCommitteeAccess();
 
 
       _initHotkeyPauseObserver();
@@ -4264,6 +4307,7 @@ async function afterLogin() {
   if (apiUrl) { _sseStarted = true; _connectSSE(); }
   hasDev = user.id === DEV_USER_ID;
   computeJuniorDev();
+  checkCommitteeAccess();
   if (hasDev) {
     document.getElementById("api-url-display").style.display = "block";
     document.getElementById("change-url-btn").style.display = "block";
@@ -4728,6 +4772,12 @@ function switchPanel(panel) {
         document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
         showScreen("screen-dev"); currentPanel = "dev"; updateSwitcher(); applyDevPanelAccess(); loadDevInfo();
       }
+      else if (panel === "committee") {
+        if (!_committeeAccess) return;
+        document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
+        document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
+        showScreen("screen-committee"); currentPanel = "committee"; updateSwitcher();
+      }
       else if (panel === "settings") {
         document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
         document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
@@ -4831,7 +4881,7 @@ function updateSwitcher() {
     return;
   }
 
-  const show = hasDriver || hasMarshal || hasDev || hasJuniorDev || hasSpectator;
+  const show = hasDriver || hasMarshal || hasDev || hasJuniorDev || hasSpectator || (_committeeAccess && _committeeModeEnabled);
   document.getElementById("panel-switcher").style.display = show ? "flex" : "none";
   const spectatorOnly = hasSpectator && !hasDriver && !hasMarshal && !hasDev && !hasJuniorDev;
   const driverTabAllowed = !spectatorOnly && hasDriver && (config.driver || engineerPending || hasMarshal);
@@ -4844,12 +4894,14 @@ function updateSwitcher() {
   document.getElementById("sw-marshal").style.display = (!spectatorOnly && !_juniorDevOnlyMode && _userTabPrefs.marshal !== false) ? "" : "none";
   document.getElementById("sw-spectate").style.display = _userTabPrefs.spectate !== false ? "" : "none";
   document.getElementById("sw-dev").style.display = (!spectatorOnly && (hasDev || hasJuniorDev) && _userTabPrefs.dev !== false) ? "" : "none";
+  document.getElementById("sw-committee").style.display = (_committeeAccess && _committeeModeEnabled) ? "" : "none";
   const utabDevRow = document.getElementById("utab-dev-row");
   if (utabDevRow) utabDevRow.style.display = (hasDev || hasJuniorDev) ? "" : "none";
   document.querySelectorAll(".switch-btn").forEach(b => b.classList.remove("active"));
   const aId = currentPanel === "driver" ? "sw-driver"
     : currentPanel === "marshal" ? "sw-marshal"
     : currentPanel === "spectate" ? "sw-spectate"
+    : currentPanel === "committee" ? "sw-committee"
     : "sw-dev";
   document.getElementById(aId)?.classList.add("active");
   const badge = document.getElementById("mode-badge");
@@ -4857,6 +4909,7 @@ function updateSwitcher() {
   if (currentPanel === "marshal")  { badge.textContent = "Marshal";  badge.className = "tl-badge marshal";  badge.style.display = ""; }
   if (currentPanel === "spectate") { badge.textContent = "Spectate"; badge.className = "tl-badge";          badge.style.display = ""; }
   if (currentPanel === "dev")      { badge.textContent = "Dev";      badge.className = "tl-badge dev";      badge.style.display = ""; }
+  if (currentPanel === "committee"){ badge.textContent = "Committee";badge.className = "tl-badge";          badge.style.display = ""; }
 }
 
     async function pollDriverState() {
@@ -5378,6 +5431,128 @@ function updatePracticeModeToggleBtn() {
   btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
   btn.style.borderColor = on ? "var(--green)" : "var(--red)";
   btn.style.color = on ? "var(--green)" : "var(--red)";
+}
+
+// --- Committee Mode ---
+// Gated behind the Race Committee Discord role (1464788930296549572).
+// The desktop app has no direct way to read a user's Discord roles (login
+// only requests the "identify" OAuth scope), so access is verified by the
+// backend, which does hold a bot token. See note below for the expected
+// API contract.
+let _committeeAccess = false;
+let _committeeModeEnabled = false;
+let _committeeRecent = [];
+
+async function checkCommitteeAccess() {
+  if (!apiUrl || !user) { _committeeAccess = false; updateCommitteeModeUI(); return; }
+  try {
+    const res = await fetch(`${apiUrl}/committee/access`, {
+      headers: { "x-discord-id": user.id, "x-discord-token": user.token }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      _committeeAccess = !!data.allowed;
+    } else {
+      _committeeAccess = false;
+    }
+  } catch {
+    _committeeAccess = false;
+  }
+  updateCommitteeModeUI();
+  updateSwitcher();
+}
+
+function loadCommitteeModePref() {
+  _committeeModeEnabled = localStorage.getItem("rc_committee_mode_enabled") === "1";
+  updateCommitteeModeUI();
+}
+
+function updateCommitteeModeUI() {
+  const btn = document.getElementById("committee-mode-toggle-btn");
+  const note = document.getElementById("committee-access-note");
+  if (!btn) return;
+  if (!_committeeAccess) {
+    btn.disabled = true;
+    btn.textContent = "🔒";
+    btn.style.background = "";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+    if (note) note.textContent = "🔒 You need the Race Committee role in Discord to use this.";
+    return;
+  }
+  btn.disabled = false;
+  const on = _committeeModeEnabled;
+  btn.textContent = on ? "ON" : "OFF";
+  btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+  btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+  btn.style.color = on ? "var(--green)" : "var(--red)";
+  if (note) note.textContent = "✓ Race Committee access confirmed. A Committee tab will appear up top when this is on.";
+}
+
+function toggleCommitteeModePref() {
+  if (!_committeeAccess) return;
+  _committeeModeEnabled = !_committeeModeEnabled;
+  localStorage.setItem("rc_committee_mode_enabled", _committeeModeEnabled ? "1" : "0");
+  updateCommitteeModeUI();
+  updateSwitcher();
+  showToast(_committeeModeEnabled ? "✓ Committee Mode ON" : "✓ Committee Mode OFF", "ok");
+}
+
+function renderCommitteeRecent() {
+  const list = document.getElementById("committee-recent-list");
+  if (!list) return;
+  if (!_committeeRecent.length) {
+    list.innerHTML = `<div class="placeholder-text">Nothing logged yet this session.</div>`;
+    return;
+  }
+  list.innerHTML = _committeeRecent.map(r =>
+    `<div class="notif-log-row"><span class="nl-msg">R${r.race} — ${r.name}: ${r.time}</span></div>`
+  ).join("");
+}
+
+async function submitCommitteeTime() {
+  const raceInput = document.getElementById("committee-race-input");
+  const driverInput = document.getElementById("committee-driver-input");
+  const timeInput = document.getElementById("committee-time-input");
+  const status = document.getElementById("committee-submit-status");
+
+  const race = raceInput.value.trim();
+  const name = driverInput.value.trim();
+  const time = timeInput.value.trim();
+
+  if (!race || !name || !time) {
+    status.style.color = "var(--red)";
+    status.textContent = "Fill in race number, driver, and time.";
+    return;
+  }
+
+  status.style.color = "var(--muted)";
+  status.textContent = "Logging...";
+
+  try {
+    const res = await fetch(`${apiUrl}/committee/log-time`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+      body: JSON.stringify({ raceNumber: race, username: name, time })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      status.style.color = "var(--red)";
+      status.textContent = `✗ ${data.error || "Failed to log time"}`;
+      return;
+    }
+    status.style.color = "var(--green)";
+    status.textContent = `✓ Logged ${name} — ${time} (R${race})`;
+    showAppNotification(`⏱️ Logged ${name}'s time for R${race}`, "ok");
+    _committeeRecent.unshift({ race, name, time });
+    if (_committeeRecent.length > 20) _committeeRecent.length = 20;
+    renderCommitteeRecent();
+    timeInput.value = "";
+    timeInput.focus();
+  } catch {
+    status.style.color = "var(--red)";
+    status.textContent = "✗ Couldn't reach the server.";
+  }
 }
 function togglePracticeModePref() {
   _practiceModeEnabled = !_practiceModeEnabled;
