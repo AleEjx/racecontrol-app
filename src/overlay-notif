@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body { background: transparent; margin: 0; overflow: hidden; }
+    .ov-body {
+      -webkit-app-region: drag;
+      cursor: grab;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ov-body:active { cursor: grabbing; }
+    .ov-resize-grip-h {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      cursor: ew-resize;
+      -webkit-app-region: no-drag;
+    }
+
+    .notif-card {
+      -webkit-app-region: no-drag;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(15, 15, 20, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      font-family: 'Oxanium', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #e8e8f0;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .notif-card.show { opacity: 1; transform: translate(0, 0); }
+    .notif-card.ok { border-color: rgba(0, 230, 118, 0.4); }
+    .notif-card.err { border-color: rgba(255, 23, 68, 0.4); }
+  </style>
+</head>
+<body>
+  <div class="ov-body" id="ov-body"></div>
+  <div class="ov-resize-grip-h" id="ov-resize-grip-h"></div>
+
+  <script>
+    function fitWindowHeight() {
+      const body = document.getElementById("ov-body");
+      if (!body) return;
+      const h = Math.ceil(body.getBoundingClientRect().height) + 4;
+      window.api.overlayFitHeight(h);
+    }
+
+    function showNotifCard({ message, type }) {
+      const body = document.getElementById("ov-body");
+      const card = document.createElement("div");
+      card.className = `notif-card ${type || ""}`.trim();
+      card.textContent = message;
+      body.appendChild(card);
+      requestAnimationFrame(() => {
+        card.classList.add("show");
+        requestAnimationFrame(fitWindowHeight);
+      });
+
+      setTimeout(() => {
+        card.classList.remove("show");
+        setTimeout(() => {
+          card.remove();
+          fitWindowHeight();
+        }, 300);
+      }, 3500);
+
+      while (body.children.length > 4) body.removeChild(body.firstChild);
+    }
+
+    window.api.onNotification((payload) => showNotifCard(payload));
+
+    window.addEventListener("DOMContentLoaded", () => {
+      fitWindowHeight();
+    });
+  </script>
+</body>
+</html>
