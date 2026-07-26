@@ -4577,7 +4577,8 @@ function practiceStart() {
   if (_practiceTickInterval) clearInterval(_practiceTickInterval);
   _practiceTickInterval = setInterval(updatePracticeDisplay, 47);
   _fuelLapLog = [];              
-  startFuelSampling();           
+  startFuelSampling();
+  showAppNotification("✅ Stopwatch timer has started", "ok");
 }
 
 function practiceLap() {
@@ -4592,7 +4593,8 @@ function practiceLap() {
   renderPracticeLeaderboard();
   renderPracticeGraph();
   _fuelSnapshotOnLap(lapNum);    
-  showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok");
+  showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok", true);
+  showAppNotification("🏁 Lap has been logged", "ok");
 }
 
 function practiceReset() {
@@ -4607,7 +4609,8 @@ function practiceReset() {
   document.getElementById("pm-time-sub").textContent = "Ready";
   document.getElementById("pm-btn-start").disabled = false;
   document.getElementById("pm-btn-lap").disabled = true;
-  stopFuelSampling();    
+  stopFuelSampling();
+  showAppNotification("🔄️ Timer has restarted", "");
 }
     
     function reLogin() {
@@ -5713,6 +5716,7 @@ function practiceStart() {
   document.getElementById("pm-btn-lap").disabled = false;
   if (_practiceTickInterval) clearInterval(_practiceTickInterval);
   _practiceTickInterval = setInterval(updatePracticeDisplay, 47);
+  showAppNotification("✅ Stopwatch timer has started", "ok");
 }
 
 function practiceLap() {
@@ -5726,7 +5730,8 @@ function practiceLap() {
   savePracticeLaps();
   renderPracticeLeaderboard();
   renderPracticeGraph();
-  showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok");
+  showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok", true);
+  showAppNotification("🏁 Lap has been logged", "ok");
 }
 
 function practiceReset() {
@@ -5741,6 +5746,7 @@ function practiceReset() {
   document.getElementById("pm-time-sub").textContent = "Ready";
   document.getElementById("pm-btn-start").disabled = false;
   document.getElementById("pm-btn-lap").disabled = true;
+  showAppNotification("🔄️ Timer has restarted", "");
 }
 
 function updatePracticeDisplay() {
@@ -6158,6 +6164,12 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         }
       }
 
+      function _actionNotifMessage(action) {
+        if (action === "next_lap") return "✅ Your lap has been logged";
+        if (action === "blue_flag") return "🔵 Your blue flag call has been logged";
+        return null;
+      }
+
       function doAction(action) {
         if (_cooldownActive || !_canFire(action)) return;
         playKeybindSound(action);
@@ -6165,11 +6177,14 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         if (!btn || btn.disabled) return;
         btn.classList.add("fired"); setTimeout(() => btn.classList.remove("fired"), 300);
         window.api.sendAction(action);
+        const msg = _actionNotifMessage(action);
+        if (msg) showAppNotification(msg, "ok");
       }
       function doTogglePitting() {
         if (_cooldownActive || !_canFire('pitting')) return;
         playKeybindSound("pitting");
         window.api.togglePitting().then(v => updatePitBtn(v));
+        showAppNotification("🔧 Your pit has been logged", "ok");
       }
       function updatePitBtn(v) {
         document.getElementById("pit-icon").textContent = "🔧";
@@ -6184,12 +6199,16 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         if (!btn || btn.disabled) return;
         btn.classList.add("fired"); setTimeout(() => btn.classList.remove("fired"), 300);
         window.api.sendAction2(action);
+        const msg = _actionNotifMessage(action);
+        if (msg) showAppNotification(msg, "ok");
       }
       function doTogglePitting2() {
         if (_cooldownActive2 || !_canFire('pitting_2')) return;
         playKeybindSound("pitting2");
         window.api.togglePitting2().then(v => updatePitBtn2(v));
+        showAppNotification("🔧 Your pit has been logged", "ok");
       }
+
 
       let _dnfSlot = 1;
       let _dnfTimer = null;
@@ -6260,7 +6279,8 @@ async function submitDNF() {
             }),
           });
           if (res.ok) {
-            showToast(`🚫 ${driver} DNF`, "err");
+            showToast(`🚫 ${driver} DNF`, "err", true);
+            showAppNotification("⛔ Your dnf has been logged", "err");
             const btns = _dnfSlot === 1
               ? ["btn-blue_flag", "btn-next_lap", "btn-pitting", "btn-dnf"]
               : ["btn2-blue_flag", "btn2-next_lap", "btn2-pitting", "btn2-dnf"];
@@ -7008,10 +7028,10 @@ document.addEventListener("keydown", e => {
         showToast(v ? "📌 App pinned!" : "📌 Unpinned", v ? "ok" : "");
       }
       function installUpdate() { window.api.installUpdate(); }
-      function showToast(msg, type = "") {
+      function showToast(msg, type = "", skipNotify = false) {
         const t = document.getElementById("toast"); t.textContent = msg; t.className = `show ${type}`;
         clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ""; }, 2500);
-        showAppNotification(msg, type);
+        if (!skipNotify) showAppNotification(msg, type);
       }
 
       setTimeout(() => {
