@@ -5498,11 +5498,15 @@ function showAppNotification(message, type = "") {
   if (!_notifEnabled) return;
   window.api?.sendNotification?.(message, type);
 }
-// Always shows a preview card, regardless of the enable toggle, so people
-// can see what it looks like before turning it on.
+// Requires the Enable toggle to be on — the overlay window only ever gets
+// created by that toggle, never by this button, so there's nothing to test yet.
 function testNotification() {
   if (!window.api?.testNotification) {
     showToast("⚠️ Notification overlay isn't wired up in preload.js yet", "err");
+    return;
+  }
+  if (!_notifEnabled) {
+    showToast("Turn on notification popups above first, then test it", "");
     return;
   }
   window.api.testNotification();
