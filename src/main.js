@@ -450,16 +450,9 @@ ipcMain.handle("overlay:send-notification", (e, payload) => {
 });
 
 ipcMain.handle("overlay:test-notification", () => {
-  const wasClosed = !notifWin;
-  if (!notifWin) notifWin = createOverlayWindow("notif", notifBoundsForPosition(config.notifPosition || "right"));
-  const send = () => notifWin?.webContents.send("notif:incoming", { message: "🔔 This is a test notification", type: "ok" });
-  if (wasClosed) notifWin.webContents.once("did-finish-load", send);
-  else send();
-  if (wasClosed) {
-    setTimeout(() => {
-      if (notifWin && !config.notifOverlayEnabled) { notifWin.close(); notifWin = null; }
-    }, 4500);
-  }
+  if (!notifWin) return false; // window only ever exists because the Enable toggle created it — never spin one up just to test
+  notifWin.webContents.send("notif:incoming", { message: "🔔 This is a test notification", type: "ok" });
+  return true;
 });
 
 async function sendDriverAction(action) {
