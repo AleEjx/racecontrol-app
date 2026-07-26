@@ -102,6 +102,93 @@
     body.livesplit-mode .pm-livesplit-btn:hover {
       opacity: 1;
     }
+
+    /* --- Notification popups --- */
+    .notif-pos-group { display: flex; gap: 4px; }
+    .notif-pos-btn {
+      font-family: 'Oxanium', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 5px 9px;
+      border-radius: 5px;
+      border: 1px solid var(--border, #333);
+      background: rgba(255,255,255,0.03);
+      color: var(--muted, #999);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .notif-pos-btn:hover { border-color: var(--blue, #4fc3f7); color: var(--blue, #4fc3f7); }
+    .notif-pos-btn.active {
+      background: rgba(41,121,255,0.18);
+      border-color: var(--blue, #4fc3f7);
+      color: var(--blue, #4fc3f7);
+    }
+
+    .notif-log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .notif-log-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border, #2a2a2a);
+    }
+    .notif-log-row .nl-msg { color: var(--fg, #e8e8f0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .notif-log-row .nl-time { color: var(--muted, #999); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+    .notif-stack {
+      position: fixed;
+      z-index: 99999;
+      display: flex;
+      gap: 8px;
+      pointer-events: none;
+      max-width: 320px;
+    }
+    .notif-stack.pos-top {
+      top: 14px; left: 50%; transform: translateX(-50%);
+      flex-direction: column; align-items: center;
+    }
+    .notif-stack.pos-left {
+      top: 50%; left: 14px; transform: translateY(-50%);
+      flex-direction: column; align-items: flex-start;
+    }
+    .notif-stack.pos-right {
+      top: 50%; right: 14px; transform: translateY(-50%);
+      flex-direction: column; align-items: flex-end;
+    }
+
+    .notif-card {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(15,15,20,0.92);
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      font-family: 'Oxanium', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #e8e8f0;
+      max-width: 300px;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .notif-card.ok { border-color: rgba(0,230,118,0.4); }
+    .notif-card.err { border-color: rgba(255,23,68,0.4); }
+    .notif-stack.pos-top .notif-card { transform: translateY(-14px); }
+    .notif-stack.pos-left .notif-card { transform: translateX(-14px); }
+    .notif-stack.pos-right .notif-card { transform: translateX(14px); }
+    .notif-card.show { opacity: 1; transform: translate(0, 0); }
   </style>
 </head>
 
@@ -985,6 +1072,34 @@
   <div id="fuel-calib-status" class="small-note text-muted">Not calibrated yet.</div>
   <button class="btn-outline-blue" onclick="openFuelCalibration()">🎯 Calibrate Gauge</button>
 </div>
+
+<div class="s-section-title">Notifications</div>
+<div class="s-card gap-8 mb-4">
+  <div class="card-row-between">
+    <span class="font-11">🔔 Enable notification popups</span>
+    <button id="notif-enable-toggle-btn" onclick="toggleNotifPref()" class="toggle-button"></button>
+  </div>
+  <div class="small-note">Pops up a small card whenever the app would normally show a toast — in addition to the toast itself.</div>
+
+  <div class="card-row-between">
+    <span class="font-11">Position</span>
+    <div class="notif-pos-group">
+      <button id="notif-pos-top-btn" onclick="setNotifPosition('top')" class="notif-pos-btn">⬆ Top</button>
+      <button id="notif-pos-left-btn" onclick="setNotifPosition('left')" class="notif-pos-btn">⬅ Left</button>
+      <button id="notif-pos-right-btn" onclick="setNotifPosition('right')" class="notif-pos-btn">➡ Right</button>
+    </div>
+  </div>
+
+  <button class="btn-outline-blue" onclick="testNotification()">🔔 Test Notification</button>
+</div>
+
+<div class="s-section-title">Notification Log</div>
+<div class="s-card gap-8 mb-4">
+  <div id="notif-log-list" class="notif-log-list">
+    <div class="placeholder-text">No notifications logged yet.</div>
+  </div>
+  <button class="secondary-btn" onclick="clearNotifLog()">✕ Clear Log</button>
+</div>
       </div>
 
       <div class="stab-panel" id="stab-audio">
@@ -1316,6 +1431,7 @@
   </div>
 </div>
   <div id="toast"></div>
+  <div id="notif-stack" class="notif-stack pos-right"></div>
 
   <div id="fuel-source-modal" class="fuel-source-modal">
   <div class="fsm-panel">
@@ -3998,6 +4114,7 @@ function _renderFuelStats() {
       loadFuelTrackingPref();
       loadLiveSplitPref();
       loadTimerOverlayOpacityPref();
+      loadNotifPrefs();
 
 
       _initHotkeyPauseObserver();
@@ -5403,6 +5520,105 @@ function loadTimerOverlayOpacityPref() {
   if (slider) slider.value = pct;
   if (label) label.textContent = pct + "%";
   document.documentElement.style.setProperty("--timer-overlay-opacity", (pct / 100).toString());
+}
+
+// --- Notification popups ---
+let _notifEnabled = false;
+let _notifPosition = "right";
+let _notifLog = [];
+
+function loadNotifPrefs() {
+  _notifEnabled = localStorage.getItem("rc_notif_enabled") === "1";
+  _notifPosition = localStorage.getItem("rc_notif_position") || "right";
+  try { _notifLog = JSON.parse(localStorage.getItem("rc_notif_log") || "[]"); } catch { _notifLog = []; }
+  updateNotifEnableToggleBtn();
+  updateNotifPositionButtons();
+  applyNotifStackPosition();
+  renderNotifLog();
+}
+function updateNotifEnableToggleBtn() {
+  const btn = document.getElementById("notif-enable-toggle-btn");
+  if (!btn) return;
+  btn.textContent = _notifEnabled ? "ON" : "OFF";
+  btn.style.background = _notifEnabled ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+  btn.style.borderColor = _notifEnabled ? "var(--green)" : "var(--red)";
+  btn.style.color = _notifEnabled ? "var(--green)" : "var(--red)";
+}
+function toggleNotifPref() {
+  _notifEnabled = !_notifEnabled;
+  localStorage.setItem("rc_notif_enabled", _notifEnabled ? "1" : "0");
+  updateNotifEnableToggleBtn();
+}
+function updateNotifPositionButtons() {
+  ["top", "left", "right"].forEach(p => {
+    document.getElementById(`notif-pos-${p}-btn`)?.classList.toggle("active", _notifPosition === p);
+  });
+}
+function applyNotifStackPosition() {
+  const stack = document.getElementById("notif-stack");
+  if (!stack) return;
+  stack.classList.remove("pos-top", "pos-left", "pos-right");
+  stack.classList.add(`pos-${_notifPosition}`);
+}
+function setNotifPosition(pos) {
+  _notifPosition = pos;
+  localStorage.setItem("rc_notif_position", pos);
+  updateNotifPositionButtons();
+  applyNotifStackPosition();
+}
+
+function _notifRenderCard(message, type) {
+  const stack = document.getElementById("notif-stack");
+  if (!stack) return;
+  const card = document.createElement("div");
+  card.className = `notif-card ${type || ""}`.trim();
+  card.textContent = message;
+  stack.appendChild(card);
+  requestAnimationFrame(() => card.classList.add("show"));
+  setTimeout(() => {
+    card.classList.remove("show");
+    setTimeout(() => card.remove(), 300);
+  }, 3500);
+  while (stack.children.length > 4) stack.removeChild(stack.firstChild);
+}
+
+function _notifLogAdd(message) {
+  _notifLog.unshift({ message, ts: Date.now() });
+  if (_notifLog.length > 50) _notifLog.length = 50;
+  localStorage.setItem("rc_notif_log", JSON.stringify(_notifLog));
+  renderNotifLog();
+}
+
+function renderNotifLog() {
+  const list = document.getElementById("notif-log-list");
+  if (!list) return;
+  if (!_notifLog.length) {
+    list.innerHTML = `<div class="placeholder-text">No notifications logged yet.</div>`;
+    return;
+  }
+  list.innerHTML = _notifLog.map(n => {
+    const d = new Date(n.ts);
+    const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return `<div class="notif-log-row"><span class="nl-msg">${n.message}</span><span class="nl-time">${time}</span></div>`;
+  }).join("");
+}
+function clearNotifLog() {
+  _notifLog = [];
+  localStorage.setItem("rc_notif_log", "[]");
+  renderNotifLog();
+}
+
+// Called by app events (piggybacks on showToast so every existing toast
+// also becomes a positioned popup + gets logged, when enabled).
+function showAppNotification(message, type = "") {
+  _notifLogAdd(message);
+  if (!_notifEnabled) return;
+  _notifRenderCard(message, type);
+}
+// Always shows a preview card, regardless of the enable toggle, so people
+// can see what it looks like before turning it on.
+function testNotification() {
+  _notifRenderCard("🔔 This is a test notification", "ok");
 }
     
 function toggleLapGraphPref() {
@@ -6911,6 +7127,7 @@ document.addEventListener("keydown", e => {
       function showToast(msg, type = "") {
         const t = document.getElementById("toast"); t.textContent = msg; t.className = `show ${type}`;
         clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ""; }, 2500);
+        showAppNotification(msg, type);
       }
 
       setTimeout(() => {
