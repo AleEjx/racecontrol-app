@@ -123,72 +123,6 @@
       border-color: var(--blue, #4fc3f7);
       color: var(--blue, #4fc3f7);
     }
-
-    .notif-log-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      max-height: 180px;
-      overflow-y: auto;
-    }
-    .notif-log-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 11px;
-      padding: 5px 8px;
-      border-radius: 5px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border, #2a2a2a);
-    }
-    .notif-log-row .nl-msg { color: var(--fg, #e8e8f0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .notif-log-row .nl-time { color: var(--muted, #999); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-
-    .notif-stack {
-      position: fixed;
-      z-index: 99999;
-      display: flex;
-      gap: 8px;
-      pointer-events: none;
-      max-width: 320px;
-    }
-    .notif-stack.pos-top {
-      top: 14px; left: 50%; transform: translateX(-50%);
-      flex-direction: column; align-items: center;
-    }
-    .notif-stack.pos-left {
-      top: 50%; left: 14px; transform: translateY(-50%);
-      flex-direction: column; align-items: flex-start;
-    }
-    .notif-stack.pos-right {
-      top: 50%; right: 14px; transform: translateY(-50%);
-      flex-direction: column; align-items: flex-end;
-    }
-
-    .notif-card {
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: rgba(15,15,20,0.92);
-      border: 1px solid rgba(255,255,255,0.1);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 12px;
-      font-weight: 600;
-      color: #e8e8f0;
-      max-width: 300px;
-      opacity: 0;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-    }
-    .notif-card.ok { border-color: rgba(0,230,118,0.4); }
-    .notif-card.err { border-color: rgba(255,23,68,0.4); }
-    .notif-stack.pos-top .notif-card { transform: translateY(-14px); }
-    .notif-stack.pos-left .notif-card { transform: translateX(-14px); }
-    .notif-stack.pos-right .notif-card { transform: translateX(14px); }
-    .notif-card.show { opacity: 1; transform: translate(0, 0); }
   </style>
 </head>
 
@@ -1079,7 +1013,7 @@
     <span class="font-11">🔔 Enable notification popups</span>
     <button id="notif-enable-toggle-btn" onclick="toggleNotifPref()" class="toggle-button"></button>
   </div>
-  <div class="small-note">Pops up a small card whenever the app would normally show a toast — in addition to the toast itself.</div>
+  <div class="small-note">Shows a small floating card on your screen whenever the app would normally show a toast — even if RaceControl isn't focused.</div>
 
   <div class="card-row-between">
     <span class="font-11">Position</span>
@@ -1092,15 +1026,8 @@
 
   <button class="btn-outline-blue" onclick="testNotification()">🔔 Test Notification</button>
 </div>
-
-<div class="s-section-title">Notification Log</div>
-<div class="s-card gap-8 mb-4">
-  <div id="notif-log-list" class="notif-log-list">
-    <div class="placeholder-text">No notifications logged yet.</div>
-  </div>
-  <button class="secondary-btn" onclick="clearNotifLog()">✕ Clear Log</button>
-</div>
       </div>
+
 
       <div class="stab-panel" id="stab-audio">
         <div class="s-section-title">Flag Alert Volume</div>
@@ -1431,7 +1358,6 @@
   </div>
 </div>
   <div id="toast"></div>
-  <div id="notif-stack" class="notif-stack pos-right"></div>
 
   <div id="fuel-source-modal" class="fuel-source-modal">
   <div class="fsm-panel">
@@ -5522,19 +5448,16 @@ function loadTimerOverlayOpacityPref() {
   document.documentElement.style.setProperty("--timer-overlay-opacity", (pct / 100).toString());
 }
 
-// --- Notification popups ---
+// --- Notification popups (shown in a separate, always-on-top overlay
+// window on the screen — see overlay-notif.html / main.js) ---
 let _notifEnabled = false;
 let _notifPosition = "right";
-let _notifLog = [];
 
 function loadNotifPrefs() {
   _notifEnabled = localStorage.getItem("rc_notif_enabled") === "1";
   _notifPosition = localStorage.getItem("rc_notif_position") || "right";
-  try { _notifLog = JSON.parse(localStorage.getItem("rc_notif_log") || "[]"); } catch { _notifLog = []; }
   updateNotifEnableToggleBtn();
   updateNotifPositionButtons();
-  applyNotifStackPosition();
-  renderNotifLog();
 }
 function updateNotifEnableToggleBtn() {
   const btn = document.getElementById("notif-enable-toggle-btn");
@@ -5544,8 +5467,13 @@ function updateNotifEnableToggleBtn() {
   btn.style.borderColor = _notifEnabled ? "var(--green)" : "var(--red)";
   btn.style.color = _notifEnabled ? "var(--green)" : "var(--red)";
 }
-function toggleNotifPref() {
-  _notifEnabled = !_notifEnabled;
+async function toggleNotifPref() {
+  const next = !_notifEnabled;
+  if (window.api?.setNotifEnabled) {
+    _notifEnabled = await window.api.setNotifEnabled(next);
+  } else {
+    _notifEnabled = next;
+  }
   localStorage.setItem("rc_notif_enabled", _notifEnabled ? "1" : "0");
   updateNotifEnableToggleBtn();
 }
@@ -5554,71 +5482,23 @@ function updateNotifPositionButtons() {
     document.getElementById(`notif-pos-${p}-btn`)?.classList.toggle("active", _notifPosition === p);
   });
 }
-function applyNotifStackPosition() {
-  const stack = document.getElementById("notif-stack");
-  if (!stack) return;
-  stack.classList.remove("pos-top", "pos-left", "pos-right");
-  stack.classList.add(`pos-${_notifPosition}`);
-}
 function setNotifPosition(pos) {
   _notifPosition = pos;
   localStorage.setItem("rc_notif_position", pos);
   updateNotifPositionButtons();
-  applyNotifStackPosition();
-}
-
-function _notifRenderCard(message, type) {
-  const stack = document.getElementById("notif-stack");
-  if (!stack) return;
-  const card = document.createElement("div");
-  card.className = `notif-card ${type || ""}`.trim();
-  card.textContent = message;
-  stack.appendChild(card);
-  requestAnimationFrame(() => card.classList.add("show"));
-  setTimeout(() => {
-    card.classList.remove("show");
-    setTimeout(() => card.remove(), 300);
-  }, 3500);
-  while (stack.children.length > 4) stack.removeChild(stack.firstChild);
-}
-
-function _notifLogAdd(message) {
-  _notifLog.unshift({ message, ts: Date.now() });
-  if (_notifLog.length > 50) _notifLog.length = 50;
-  localStorage.setItem("rc_notif_log", JSON.stringify(_notifLog));
-  renderNotifLog();
-}
-
-function renderNotifLog() {
-  const list = document.getElementById("notif-log-list");
-  if (!list) return;
-  if (!_notifLog.length) {
-    list.innerHTML = `<div class="placeholder-text">No notifications logged yet.</div>`;
-    return;
-  }
-  list.innerHTML = _notifLog.map(n => {
-    const d = new Date(n.ts);
-    const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    return `<div class="notif-log-row"><span class="nl-msg">${n.message}</span><span class="nl-time">${time}</span></div>`;
-  }).join("");
-}
-function clearNotifLog() {
-  _notifLog = [];
-  localStorage.setItem("rc_notif_log", "[]");
-  renderNotifLog();
+  window.api?.setNotifPosition?.(pos);
 }
 
 // Called by app events (piggybacks on showToast so every existing toast
-// also becomes a positioned popup + gets logged, when enabled).
+// also pops up on-screen when enabled).
 function showAppNotification(message, type = "") {
-  _notifLogAdd(message);
   if (!_notifEnabled) return;
-  _notifRenderCard(message, type);
+  window.api?.sendNotification?.(message, type);
 }
 // Always shows a preview card, regardless of the enable toggle, so people
 // can see what it looks like before turning it on.
 function testNotification() {
-  _notifRenderCard("🔔 This is a test notification", "ok");
+  window.api?.testNotification?.();
 }
     
 function toggleLapGraphPref() {
