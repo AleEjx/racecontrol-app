@@ -66,6 +66,8 @@
       card.className = `notif-card ${type || ""}`.trim();
       card.textContent = message;
       body.appendChild(card);
+      _cardCount++;
+      updateClickThrough();
       requestAnimationFrame(() => {
         card.classList.add("show");
         requestAnimationFrame(fitWindowHeight);
@@ -75,6 +77,8 @@
         card.classList.remove("show");
         setTimeout(() => {
           card.remove();
+          _cardCount--;
+          updateClickThrough();
           fitWindowHeight();
         }, 300);
       }, 3500);
@@ -82,10 +86,18 @@
       while (body.children.length > 4) body.removeChild(body.firstChild);
     }
 
+    let _cardCount = 0;
+    function updateClickThrough() {
+      // Click-through when empty (so it never blocks whatever's underneath),
+      // clickable/draggable only while a card is actually showing.
+      window.api.setClickThrough(_cardCount <= 0);
+    }
+
     window.api.onNotification((payload) => showNotifCard(payload));
 
     window.addEventListener("DOMContentLoaded", () => {
       fitWindowHeight();
+      updateClickThrough();
     });
   </script>
 </body>
