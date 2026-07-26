@@ -5498,7 +5498,11 @@ function showAppNotification(message, type = "") {
 // Always shows a preview card, regardless of the enable toggle, so people
 // can see what it looks like before turning it on.
 function testNotification() {
-  window.api?.testNotification?.();
+  if (!window.api?.testNotification) {
+    showToast("⚠️ Notification overlay isn't wired up in preload.js yet", "err");
+    return;
+  }
+  window.api.testNotification();
 }
     
 function toggleLapGraphPref() {
