@@ -82,7 +82,7 @@
       justify-content: center;
       padding: 10px 22px;
       border-radius: 10px;
-      background: rgba(10, 10, 14, 0.55);
+      background: rgb(10 10 14 / var(--timer-overlay-opacity, 0.55));
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .rc-timer-time {
@@ -177,13 +177,21 @@
     // Catch changes instantly when they happen in the other window...
     window.addEventListener("storage", (e) => {
       if (e.key === "rc_practice_running" || e.key === "rc_practice_last_lap_ts") tickTimer();
+      if (e.key === "rc_timer_overlay_opacity") applyTimerOverlayOpacity();
     });
     // ...and keep ticking smoothly while running.
     setInterval(tickTimer, 47);
 
+    function applyTimerOverlayOpacity() {
+      const saved = localStorage.getItem("rc_timer_overlay_opacity");
+      const pct = saved ? Number(saved) : 55;
+      document.documentElement.style.setProperty("--timer-overlay-opacity", (pct / 100).toString());
+    }
+
     window.addEventListener("DOMContentLoaded", async () => {
       config = await window.api.getConfig();
       applyOverlayScale(config.timerOverlayScale || 1);
+      applyTimerOverlayOpacity();
       requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
       tickTimer();
     });
