@@ -133,10 +133,57 @@
     }
     #settings-tabs-row::-webkit-scrollbar { display: none; }
     #settings-tabs-row .stab { flex-shrink: 0; }
+
     .settings-tabs-scroll-slider {
+      -webkit-appearance: none;
+      appearance: none;
       width: 100%;
       margin: 2px 0 8px 0;
-      height: 4px;
+      height: 10px;
+      background: transparent;
+      cursor: pointer;
+    }
+    .settings-tabs-scroll-slider:focus { outline: none; }
+    /* Track — barely-there, same tone as the surrounding surface */
+    .settings-tabs-scroll-slider::-webkit-slider-runnable-track {
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.05);
+    }
+    .settings-tabs-scroll-slider::-moz-range-track {
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+    }
+    /* Thumb — a soft bar, not a bright popout knob */
+    .settings-tabs-scroll-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 28px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.22);
+      border: none;
+      box-shadow: none;
+      margin-top: 0;
+      transition: background 0.15s ease;
+    }
+    .settings-tabs-scroll-slider::-moz-range-thumb {
+      width: 28px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.22);
+      border: none;
+      box-shadow: none;
+      transition: background 0.15s ease;
+    }
+    .settings-tabs-scroll-slider:hover::-webkit-slider-thumb,
+    .settings-tabs-scroll-slider:active::-webkit-slider-thumb {
+      background: rgba(255,255,255,0.4);
+    }
+    .settings-tabs-scroll-slider:hover::-moz-range-thumb,
+    .settings-tabs-scroll-slider:active::-moz-range-thumb {
+      background: rgba(255,255,255,0.4);
     }
   </style>
 </head>
@@ -974,7 +1021,7 @@
       <button class="stab" data-tab="modes" onclick="openSettingsTab('modes')">🕹️ Modes</button>
       <button class="stab" data-tab="account" onclick="openSettingsTab('account')">👤 Account</button>
     </div>
-    <input type="range" id="settings-tabs-scroll-slider" class="vol-slider settings-tabs-scroll-slider"
+    <input type="range" id="settings-tabs-scroll-slider" class="settings-tabs-scroll-slider"
       min="0" max="100" value="0" step="0.1"
       oninput="onSettingsTabsScrollSlider(this.value)" style="display:none;" />
 
