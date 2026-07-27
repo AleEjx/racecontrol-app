@@ -123,6 +123,21 @@
       border-color: var(--blue, #4fc3f7);
       color: var(--blue, #4fc3f7);
     }
+
+    /* --- Scrollable settings tab row --- */
+    #settings-tabs-row {
+      overflow-x: auto;
+      flex-wrap: nowrap !important;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #settings-tabs-row::-webkit-scrollbar { display: none; }
+    #settings-tabs-row .stab { flex-shrink: 0; }
+    .settings-tabs-scroll-slider {
+      width: 100%;
+      margin: 2px 0 8px 0;
+      height: 4px;
+    }
   </style>
 </head>
 
@@ -951,7 +966,7 @@
 
   <div class="screen" id="screen-settings">
     <div
-      class="toolbar-row">
+      class="toolbar-row" id="settings-tabs-row">
       <button class="stab active" data-tab="appearance" onclick="openSettingsTab('appearance')">🎨 Look</button>
       <button class="stab" data-tab="audio" onclick="openSettingsTab('audio')">🔊 Audio</button>
       <button class="stab" data-tab="keybinds" onclick="openSettingsTab('keybinds')">⌨️ Keys</button>
@@ -959,6 +974,9 @@
       <button class="stab" data-tab="modes" onclick="openSettingsTab('modes')">🕹️ Modes</button>
       <button class="stab" data-tab="account" onclick="openSettingsTab('account')">👤 Account</button>
     </div>
+    <input type="range" id="settings-tabs-scroll-slider" class="vol-slider settings-tabs-scroll-slider"
+      min="0" max="100" value="0" step="0.1"
+      oninput="onSettingsTabsScrollSlider(this.value)" style="display:none;" />
 
 <div class="scroll-body scroll-body-padded">
 
@@ -4807,6 +4825,7 @@ function switchPanel(panel) {
         openSettingsTab('appearance');
         showScreen("screen-settings");
         currentPanel = "settings";
+        requestAnimationFrame(() => requestAnimationFrame(syncSettingsTabsScrollSlider));
       }
     }
 
@@ -5187,7 +5206,40 @@ function launchDriverPanel(startPoll = true) {
     function openSettingsTab(tab) {
       document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
       document.querySelectorAll('.stab-panel').forEach(p => p.classList.toggle('active', p.id === 'stab-' + tab));
+      requestAnimationFrame(syncSettingsTabsScrollSlider);
     }
+
+    // --- Settings tab row scroll slider ---
+    // The tab row can overflow the window width (e.g. Account getting cut
+    // off on a narrower window) — this slider lets you scroll it into view.
+    function _settingsTabsMaxScroll() {
+      const row = document.getElementById("settings-tabs-row");
+      if (!row) return 0;
+      return Math.max(0, row.scrollWidth - row.clientWidth);
+    }
+    function syncSettingsTabsScrollSlider() {
+      const row = document.getElementById("settings-tabs-row");
+      const slider = document.getElementById("settings-tabs-scroll-slider");
+      if (!row || !slider) return;
+      const maxScroll = _settingsTabsMaxScroll();
+      if (maxScroll <= 2) {
+        slider.style.display = "none";
+        return;
+      }
+      slider.style.display = "";
+      slider.value = (row.scrollLeft / maxScroll) * 100;
+    }
+    function onSettingsTabsScrollSlider(val) {
+      const row = document.getElementById("settings-tabs-row");
+      if (!row) return;
+      const maxScroll = _settingsTabsMaxScroll();
+      row.scrollLeft = (Number(val) / 100) * maxScroll;
+    }
+    (function initSettingsTabsScrollSync() {
+      const row = document.getElementById("settings-tabs-row");
+      if (row) row.addEventListener("scroll", syncSettingsTabsScrollSlider);
+      window.addEventListener("resize", syncSettingsTabsScrollSlider);
+    })();
 
     function onFontSizeSlider(val) {
       const px = parseInt(val, 10);
