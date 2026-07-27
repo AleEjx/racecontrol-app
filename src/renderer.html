@@ -804,8 +804,12 @@
       <input type="text" id="committee-race-input" placeholder="Race number, e.g. 3" class="font-11" />
       <input type="text" id="committee-driver-input" placeholder="Driver / in-game username" class="font-11" />
       <input type="text" id="committee-time-input" placeholder="Time, e.g. 1:23.456" class="font-11" />
+      <input type="text" id="committee-emoji-input" placeholder="Team emoji (optional), e.g. <:vassetti:1464970527465541809>" class="font-11" />
 
-      <button class="save-btn" onclick="submitCommitteeTime()">✅ Log Time</button>
+      <div class="flex-row-gap-6">
+        <button class="save-btn" onclick="submitCommitteeTime()" style="flex:1;">✅ Log Time</button>
+        <button class="s-danger-btn" onclick="removeCommitteeTime()" style="flex:1;">🗑️ Remove Time</button>
+      </div>
       <div id="committee-submit-status" class="font-9 text-muted min-h-12"></div>
     </div>
 
@@ -5604,20 +5608,38 @@ function renderCommitteeRecent() {
     list.innerHTML = `<div class="placeholder-text">Nothing logged yet this session.</div>`;
     return;
   }
-  list.innerHTML = _committeeRecent.map(r =>
-    `<div class="notif-log-row"><span class="nl-msg">R${r.race} — ${r.name}: ${r.time}</span></div>`
+  list.innerHTML = _committeeRecent.map((r, i) =>
+    `<div class="notif-log-row">
+       <span class="nl-msg">R${r.race} — ${r.name} ${r.emoji || ""}: ${r.time}</span>
+       <span class="flex-row-gap-6">
+         <button class="btn-compact" onclick="loadCommitteeRecentEntry(${i})" title="Load into form to edit">✏️</button>
+         <button class="btn-danger btn-compact" onclick="removeCommitteeTime('${r.race}', '${r.name.replace(/'/g, "\\'")}')" title="Remove">✕</button>
+       </span>
+     </div>`
   ).join("");
+}
+
+function loadCommitteeRecentEntry(i) {
+  const r = _committeeRecent[i];
+  if (!r) return;
+  document.getElementById("committee-race-input").value = r.race;
+  document.getElementById("committee-driver-input").value = r.name;
+  document.getElementById("committee-time-input").value = r.time;
+  document.getElementById("committee-emoji-input").value = r.emoji || "";
+  document.getElementById("committee-time-input").focus();
 }
 
 async function submitCommitteeTime() {
   const raceInput = document.getElementById("committee-race-input");
   const driverInput = document.getElementById("committee-driver-input");
   const timeInput = document.getElementById("committee-time-input");
+  const emojiInput = document.getElementById("committee-emoji-input");
   const status = document.getElementById("committee-submit-status");
 
   const race = raceInput.value.trim();
   const name = driverInput.value.trim();
   const time = timeInput.value.trim();
+  const emoji = emojiInput.value.trim();
 
   if (!race || !name || !time) {
     status.style.color = "var(--red)";
@@ -5632,7 +5654,7 @@ async function submitCommitteeTime() {
     const res = await fetch(`${apiUrl}/committee/log-time`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-      body: JSON.stringify({ raceNumber: race, username: name, time })
+      body: JSON.stringify({ raceNumber: race, username: name, time, emoji })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -5641,13 +5663,54 @@ async function submitCommitteeTime() {
       return;
     }
     status.style.color = "var(--green)";
-    status.textContent = `✓ Logged ${name} — ${time} (R${race})`;
+    status.textContent = `✓ Logged ${name} ${emoji || ""} — ${time} (R${race})`;
     showAppNotification(`⏱️ Logged ${name}'s time for R${race}`, "ok");
-    _committeeRecent.unshift({ race, name, time });
+    _committeeRecent = _committeeRecent.filter(r => !(r.race === race && r.name === name));
+    _committeeRecent.unshift({ race, name, time, emoji });
     if (_committeeRecent.length > 20) _committeeRecent.length = 20;
     renderCommitteeRecent();
     timeInput.value = "";
     timeInput.focus();
+  } catch {
+    status.style.color = "var(--red)";
+    status.textContent = "✗ Couldn't reach the server.";
+  }
+}
+
+async function removeCommitteeTime(raceArg, nameArg) {
+  const raceInput = document.getElementById("committee-race-input");
+  const driverInput = document.getElementById("committee-driver-input");
+  const status = document.getElementById("committee-submit-status");
+
+  const race = raceArg ?? raceInput.value.trim();
+  const name = nameArg ?? driverInput.value.trim();
+
+  if (!race || !name) {
+    status.style.color = "var(--red)";
+    status.textContent = "Fill in race number and driver to remove.";
+    return;
+  }
+
+  status.style.color = "var(--muted)";
+  status.textContent = "Removing...";
+
+  try {
+    const res = await fetch(`${apiUrl}/committee/log-time`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+      body: JSON.stringify({ raceNumber: race, username: name })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      status.style.color = "var(--red)";
+      status.textContent = `✗ ${data.error || "Failed to remove time"}`;
+      return;
+    }
+    status.style.color = "var(--green)";
+    status.textContent = `✓ Removed ${name} from R${race}`;
+    showAppNotification(`🗑️ Removed ${name}'s time for R${race}`, "ok");
+    _committeeRecent = _committeeRecent.filter(r => !(r.race === race && r.name === name));
+    renderCommitteeRecent();
   } catch {
     status.style.color = "var(--red)";
     status.textContent = "✗ Couldn't reach the server.";
