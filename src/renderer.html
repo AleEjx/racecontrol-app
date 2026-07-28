@@ -801,10 +801,15 @@
     <div class="s-card gap-8 mb-4">
       <div class="small-note">Enter the race number, the driver's in-game name, and their time. This logs it and refreshes the leaderboard the same way a normal <span class="monospace-text">-timechange</span> would.</div>
 
+      <div class="notif-pos-group">
+        <button id="committee-league-main-btn" onclick="setCommitteeLeague('main')" class="notif-pos-btn active">Main League</button>
+        <button id="committee-league-jr-btn" onclick="setCommitteeLeague('jr')" class="notif-pos-btn">Junior League</button>
+      </div>
+
       <input type="text" id="committee-race-input" placeholder="Race number, e.g. 3" class="font-11" />
       <input type="text" id="committee-driver-input" placeholder="Driver / in-game username" class="font-11" />
       <input type="text" id="committee-time-input" placeholder="Time, e.g. 1:23.456" class="font-11" />
-      <input type="text" id="committee-emoji-input" placeholder="Team emoji (optional), e.g. <:vassetti:1464970527465541809>" class="font-11" />
+      <input type="text" id="committee-emoji-input" placeholder="Team emoji (optional — auto-looked-up if left blank), e.g. <:vassetti:1464970527465541809>" class="font-11" />
 
       <div class="flex-row-gap-6">
         <button class="save-btn" onclick="submitCommitteeTime()" style="flex:1;">✅ Log Time</button>
@@ -5601,6 +5606,13 @@ function toggleCommitteeModePref() {
   showToast(_committeeModeEnabled ? "✓ Committee Mode ON" : "✓ Committee Mode OFF", "ok");
 }
 
+let _committeeLeague = "main";
+function setCommitteeLeague(league) {
+  _committeeLeague = league === "jr" ? "jr" : "main";
+  document.getElementById("committee-league-main-btn")?.classList.toggle("active", _committeeLeague === "main");
+  document.getElementById("committee-league-jr-btn")?.classList.toggle("active", _committeeLeague === "jr");
+}
+
 function renderCommitteeRecent() {
   const list = document.getElementById("committee-recent-list");
   if (!list) return;
@@ -5654,7 +5666,7 @@ async function submitCommitteeTime() {
     const res = await fetch(`${apiUrl}/committee/log-time`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-      body: JSON.stringify({ raceNumber: race, username: name, time, emoji })
+      body: JSON.stringify({ raceNumber: race, username: name, time, emoji, league: _committeeLeague })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -5698,7 +5710,7 @@ async function removeCommitteeTime(raceArg, nameArg) {
     const res = await fetch(`${apiUrl}/committee/log-time`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-      body: JSON.stringify({ raceNumber: race, username: name })
+      body: JSON.stringify({ raceNumber: race, username: name, league: _committeeLeague })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
