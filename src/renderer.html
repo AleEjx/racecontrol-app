@@ -811,16 +811,21 @@
   <div class="scroll-body scroll-body-padded">
     <div class="s-section-title">⏱️ Stopwatch</div>
     <div class="s-card gap-8 mb-4">
-      <div class="small-note">Time a lap here, then send it straight into the form below.</div>
+      <div class="small-note">Time laps here, then send any of them straight into the form below.</div>
       <div class="cm-time" id="cm-time">00:00.00</div>
       <div class="flex-row-gap-6">
         <button class="pm-btn start" id="cm-btn-start" onclick="committeeStopwatchStart()" style="flex:1;">
           <span class="pi">▶</span><span class="pl">Start</span>
         </button>
+        <button class="pm-btn lap" id="cm-btn-lap" onclick="committeeStopwatchLap()" style="flex:1;" disabled>
+          <span class="pi">🏁</span><span class="pl">Lap</span>
+        </button>
         <button class="pm-btn reset" id="cm-btn-reset" onclick="committeeStopwatchReset()" style="flex:1;">
           <span class="pi">↺</span><span class="pl">Reset</span>
         </button>
-        <button class="btn-outline-blue" id="cm-btn-use" onclick="useCommitteeStopwatchTime()" style="flex:1;" disabled>⬇️ Use This Time</button>
+      </div>
+      <div id="cm-laps-list">
+        <div class="placeholder-text">No laps yet — hit Start, then Lap after each lap.</div>
       </div>
     </div>
 
@@ -5628,57 +5633,70 @@ function toggleCommitteeModePref() {
   showToast(_committeeModeEnabled ? "✓ Committee Mode ON" : "✓ Committee Mode OFF", "ok");
 }
 
-// --- Committee stopwatch (times a lap, then hands the value to the form) ---
+// --- Committee stopwatch (times laps, then hands any of them to the form) ---
 let _cmRunning = false;
-let _cmStartTs = 0;
+let _cmLastLapTs = 0;
 let _cmTickInterval = null;
-let _cmLastReading = null;
+let _cmLaps = [];
 
 function committeeStopwatchStart() {
   if (_cmRunning) return;
   _cmRunning = true;
-  _cmStartTs = Date.now();
+  _cmLastLapTs = Date.now();
   document.getElementById("cm-time")?.classList.add("running");
-  document.getElementById("cm-btn-use").disabled = true;
+  document.getElementById("cm-btn-start").disabled = true;
+  document.getElementById("cm-btn-lap").disabled = false;
   if (_cmTickInterval) clearInterval(_cmTickInterval);
   _cmTickInterval = setInterval(updateCommitteeStopwatchDisplay, 47);
-  const startBtn = document.getElementById("cm-btn-start");
-  if (startBtn) { startBtn.querySelector(".pl").textContent = "Stop"; startBtn.onclick = committeeStopwatchStop; }
 }
 
-function committeeStopwatchStop() {
+function committeeStopwatchLap() {
   if (!_cmRunning) return;
-  _cmRunning = false;
-  _cmLastReading = (Date.now() - _cmStartTs) / 1000;
-  if (_cmTickInterval) { clearInterval(_cmTickInterval); _cmTickInterval = null; }
-  document.getElementById("cm-time")?.classList.remove("running");
-  document.getElementById("cm-btn-use").disabled = false;
-  const startBtn = document.getElementById("cm-btn-start");
-  if (startBtn) { startBtn.querySelector(".pl").textContent = "Start"; startBtn.onclick = committeeStopwatchStart; }
+  const now = Date.now();
+  const lapTimeSec = (now - _cmLastLapTs) / 1000;
+  _cmLastLapTs = now;
+  _cmLaps.push({ lap: _cmLaps.length + 1, time: lapTimeSec });
+  renderCommitteeLaps();
 }
 
 function committeeStopwatchReset() {
   _cmRunning = false;
-  _cmStartTs = 0;
-  _cmLastReading = null;
+  _cmLastLapTs = 0;
+  _cmLaps = [];
   if (_cmTickInterval) { clearInterval(_cmTickInterval); _cmTickInterval = null; }
   const timeEl = document.getElementById("cm-time");
   if (timeEl) { timeEl.textContent = "00:00.00"; timeEl.classList.remove("running"); }
-  document.getElementById("cm-btn-use").disabled = true;
-  const startBtn = document.getElementById("cm-btn-start");
-  if (startBtn) { startBtn.querySelector(".pl").textContent = "Start"; startBtn.onclick = committeeStopwatchStart; }
+  document.getElementById("cm-btn-start").disabled = false;
+  document.getElementById("cm-btn-lap").disabled = true;
+  renderCommitteeLaps();
 }
 
 function updateCommitteeStopwatchDisplay() {
   if (!_cmRunning) return;
-  const elapsed = (Date.now() - _cmStartTs) / 1000;
+  const elapsed = (Date.now() - _cmLastLapTs) / 1000;
   const timeEl = document.getElementById("cm-time");
   if (timeEl) timeEl.textContent = formatStopwatchTime(elapsed);
 }
 
-function useCommitteeStopwatchTime() {
-  if (_cmLastReading === null) return;
-  document.getElementById("committee-time-input").value = formatStopwatchTime(_cmLastReading);
+function renderCommitteeLaps() {
+  const list = document.getElementById("cm-laps-list");
+  if (!list) return;
+  if (!_cmLaps.length) {
+    list.innerHTML = `<div class="placeholder-text">No laps yet — hit Start, then Lap after each lap.</div>`;
+    return;
+  }
+  list.innerHTML = _cmLaps.map((l, i) =>
+    `<div class="notif-log-row">
+       <span class="nl-msg">Lap ${l.lap} — ${formatStopwatchTime(l.time)}</span>
+       <button class="btn-compact" onclick="useCommitteeLapTime(${i})" title="Use this time">➡️</button>
+     </div>`
+  ).join("");
+}
+
+function useCommitteeLapTime(i) {
+  const l = _cmLaps[i];
+  if (!l) return;
+  document.getElementById("committee-time-input").value = formatStopwatchTime(l.time);
   document.getElementById("committee-driver-input")?.focus();
 }
 
