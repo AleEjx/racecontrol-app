@@ -124,6 +124,18 @@
       color: var(--blue, #4fc3f7);
     }
 
+    .cm-time {
+      font-family: 'Oxanium', sans-serif;
+      font-weight: 800;
+      font-size: 40px;
+      text-align: center;
+      letter-spacing: 0.5px;
+      color: var(--fg, #e8e8f0);
+      font-variant-numeric: tabular-nums;
+      padding: 6px 0 10px 0;
+    }
+    .cm-time.running { color: var(--green, #00e676); }
+
     /* --- Scrollable settings tab row --- */
     #settings-tabs-row {
       overflow-x: auto;
@@ -797,14 +809,24 @@
 <!-- COMMITTEE MODE PANEL -->
 <div class="screen" id="screen-committee">
   <div class="scroll-body scroll-body-padded">
+    <div class="s-section-title">⏱️ Stopwatch</div>
+    <div class="s-card gap-8 mb-4">
+      <div class="small-note">Time a lap here, then send it straight into the form below.</div>
+      <div class="cm-time" id="cm-time">00:00.00</div>
+      <div class="flex-row-gap-6">
+        <button class="pm-btn start" id="cm-btn-start" onclick="committeeStopwatchStart()" style="flex:1;">
+          <span class="pi">▶</span><span class="pl">Start</span>
+        </button>
+        <button class="pm-btn reset" id="cm-btn-reset" onclick="committeeStopwatchReset()" style="flex:1;">
+          <span class="pi">↺</span><span class="pl">Reset</span>
+        </button>
+        <button class="btn-outline-blue" id="cm-btn-use" onclick="useCommitteeStopwatchTime()" style="flex:1;" disabled>⬇️ Use This Time</button>
+      </div>
+    </div>
+
     <div class="s-section-title">🗂️ Log a Qualifying Time</div>
     <div class="s-card gap-8 mb-4">
       <div class="small-note">Enter the race number, the driver's in-game name, and their time. This logs it and refreshes the leaderboard the same way a normal <span class="monospace-text">-timechange</span> would.</div>
-
-      <div class="notif-pos-group">
-        <button id="committee-league-main-btn" onclick="setCommitteeLeague('main')" class="notif-pos-btn active">Main League</button>
-        <button id="committee-league-jr-btn" onclick="setCommitteeLeague('jr')" class="notif-pos-btn">Junior League</button>
-      </div>
 
       <input type="text" id="committee-race-input" placeholder="Race number, e.g. 3" class="font-11" />
       <input type="text" id="committee-driver-input" placeholder="Driver / in-game username" class="font-11" />
@@ -5606,11 +5628,58 @@ function toggleCommitteeModePref() {
   showToast(_committeeModeEnabled ? "✓ Committee Mode ON" : "✓ Committee Mode OFF", "ok");
 }
 
-let _committeeLeague = "main";
-function setCommitteeLeague(league) {
-  _committeeLeague = league === "jr" ? "jr" : "main";
-  document.getElementById("committee-league-main-btn")?.classList.toggle("active", _committeeLeague === "main");
-  document.getElementById("committee-league-jr-btn")?.classList.toggle("active", _committeeLeague === "jr");
+// --- Committee stopwatch (times a lap, then hands the value to the form) ---
+let _cmRunning = false;
+let _cmStartTs = 0;
+let _cmTickInterval = null;
+let _cmLastReading = null;
+
+function committeeStopwatchStart() {
+  if (_cmRunning) return;
+  _cmRunning = true;
+  _cmStartTs = Date.now();
+  document.getElementById("cm-time")?.classList.add("running");
+  document.getElementById("cm-btn-use").disabled = true;
+  if (_cmTickInterval) clearInterval(_cmTickInterval);
+  _cmTickInterval = setInterval(updateCommitteeStopwatchDisplay, 47);
+  const startBtn = document.getElementById("cm-btn-start");
+  if (startBtn) { startBtn.querySelector(".pl").textContent = "Stop"; startBtn.onclick = committeeStopwatchStop; }
+}
+
+function committeeStopwatchStop() {
+  if (!_cmRunning) return;
+  _cmRunning = false;
+  _cmLastReading = (Date.now() - _cmStartTs) / 1000;
+  if (_cmTickInterval) { clearInterval(_cmTickInterval); _cmTickInterval = null; }
+  document.getElementById("cm-time")?.classList.remove("running");
+  document.getElementById("cm-btn-use").disabled = false;
+  const startBtn = document.getElementById("cm-btn-start");
+  if (startBtn) { startBtn.querySelector(".pl").textContent = "Start"; startBtn.onclick = committeeStopwatchStart; }
+}
+
+function committeeStopwatchReset() {
+  _cmRunning = false;
+  _cmStartTs = 0;
+  _cmLastReading = null;
+  if (_cmTickInterval) { clearInterval(_cmTickInterval); _cmTickInterval = null; }
+  const timeEl = document.getElementById("cm-time");
+  if (timeEl) { timeEl.textContent = "00:00.00"; timeEl.classList.remove("running"); }
+  document.getElementById("cm-btn-use").disabled = true;
+  const startBtn = document.getElementById("cm-btn-start");
+  if (startBtn) { startBtn.querySelector(".pl").textContent = "Start"; startBtn.onclick = committeeStopwatchStart; }
+}
+
+function updateCommitteeStopwatchDisplay() {
+  if (!_cmRunning) return;
+  const elapsed = (Date.now() - _cmStartTs) / 1000;
+  const timeEl = document.getElementById("cm-time");
+  if (timeEl) timeEl.textContent = formatStopwatchTime(elapsed);
+}
+
+function useCommitteeStopwatchTime() {
+  if (_cmLastReading === null) return;
+  document.getElementById("committee-time-input").value = formatStopwatchTime(_cmLastReading);
+  document.getElementById("committee-driver-input")?.focus();
 }
 
 function renderCommitteeRecent() {
@@ -5622,7 +5691,7 @@ function renderCommitteeRecent() {
   }
   list.innerHTML = _committeeRecent.map((r, i) =>
     `<div class="notif-log-row">
-       <span class="nl-msg">R${r.race} — ${r.name} ${r.emoji || ""}: ${r.time}</span>
+       <span class="nl-msg">R${r.race} — ${r.name} ${r.emoji || ""}: ${r.time} <span class="text-muted">(logged by ${r.by})</span></span>
        <span class="flex-row-gap-6">
          <button class="btn-compact" onclick="loadCommitteeRecentEntry(${i})" title="Load into form to edit">✏️</button>
          <button class="btn-danger btn-compact" onclick="removeCommitteeTime('${r.race}', '${r.name.replace(/'/g, "\\'")}')" title="Remove">✕</button>
@@ -5666,7 +5735,7 @@ async function submitCommitteeTime() {
     const res = await fetch(`${apiUrl}/committee/log-time`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-      body: JSON.stringify({ raceNumber: race, username: name, time, emoji, league: _committeeLeague })
+      body: JSON.stringify({ raceNumber: race, username: name, time, emoji, league: "main" })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -5678,7 +5747,7 @@ async function submitCommitteeTime() {
     status.textContent = `✓ Logged ${name} ${emoji || ""} — ${time} (R${race})`;
     showAppNotification(`⏱️ Logged ${name}'s time for R${race}`, "ok");
     _committeeRecent = _committeeRecent.filter(r => !(r.race === race && r.name === name));
-    _committeeRecent.unshift({ race, name, time, emoji });
+    _committeeRecent.unshift({ race, name, time, emoji, by: user.username });
     if (_committeeRecent.length > 20) _committeeRecent.length = 20;
     renderCommitteeRecent();
     timeInput.value = "";
@@ -5710,7 +5779,7 @@ async function removeCommitteeTime(raceArg, nameArg) {
     const res = await fetch(`${apiUrl}/committee/log-time`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-      body: JSON.stringify({ raceNumber: race, username: name, league: _committeeLeague })
+      body: JSON.stringify({ raceNumber: race, username: name, league: "main" })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
