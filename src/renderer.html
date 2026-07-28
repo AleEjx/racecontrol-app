@@ -824,6 +824,10 @@
           <span class="pi">↺</span><span class="pl">Reset</span>
         </button>
       </div>
+      <div class="pm-block-title">
+        <span>Laps</span>
+        <button class="pm-clear-btn" onclick="clearCommitteeLaps()">✕ Clear Session</button>
+      </div>
       <div id="cm-laps-list">
         <div class="placeholder-text">No laps yet — hit Start, then Lap after each lap.</div>
       </div>
@@ -5662,13 +5666,18 @@ function committeeStopwatchLap() {
 function committeeStopwatchReset() {
   _cmRunning = false;
   _cmLastLapTs = 0;
-  _cmLaps = [];
   if (_cmTickInterval) { clearInterval(_cmTickInterval); _cmTickInterval = null; }
   const timeEl = document.getElementById("cm-time");
   if (timeEl) { timeEl.textContent = "00:00.00"; timeEl.classList.remove("running"); }
   document.getElementById("cm-btn-start").disabled = false;
   document.getElementById("cm-btn-lap").disabled = true;
+}
+
+function clearCommitteeLaps() {
+  if (_cmLaps.length && !confirm("Clear all timed laps? This can't be undone.")) return;
+  _cmLaps = [];
   renderCommitteeLaps();
+  showToast("✓ Committee laps cleared", "ok");
 }
 
 function updateCommitteeStopwatchDisplay() {
