@@ -3822,9 +3822,10 @@ window.api.onKeybindFired(action => {
         }
         if (!_canFire(action)) return;
         playKeybindSound(action);
-        if (action === 'practice_start') practiceStart();
-        else if (action === 'practice_lap') practiceLap();
-        else if (action === 'practice_reset') practiceReset();
+        const onCommitteeScreen = currentPanel === "committee";
+        if (action === 'practice_start') onCommitteeScreen ? committeeStopwatchStart() : practiceStart();
+        else if (action === 'practice_lap') onCommitteeScreen ? committeeStopwatchLap() : practiceLap();
+        else if (action === 'practice_reset') onCommitteeScreen ? committeeStopwatchReset() : practiceReset();
       });
 
       window.api.onUpdateAvailable(v => {
@@ -4978,6 +4979,8 @@ function goBack() {
 }
 
 function updateSwitcher() {
+  window.api?.setCommitteeScreenActive?.(currentPanel === "committee");
+
   if (_practiceModeEnabled) {
     document.getElementById("panel-switcher").style.display = "none";
     const badge = document.getElementById("mode-badge");
