@@ -287,16 +287,33 @@ function registerHotkeys(keybinds) {
 
   let needsMouseHook = false;
 
+  // Group by physical key instead of registering one-handler-per-key directly —
+  // two actions can share the same key (e.g. F2 for both Next Lap and Practice
+  // Lap) since they're mode-gated and mutually exclusive. Registering them
+  // separately would just have the last one silently overwrite the first;
+  // grouping means both run, and each one's own gate decides whether it acts.
+  const keyGroups = {};   // accelerator -> [handler, ...]
+  const mouseGroups = {}; // mouse code -> [handler, ...]
+
   Object.entries(actionHandlers).forEach(([action, handler]) => {
     const key = keybinds[action];
     if (!key) return;
 
     if (isMouseBind(key)) {
-      mouseBindings[MOUSE_BUTTON_CODES[key]] = handler;
+      const code = MOUSE_BUTTON_CODES[key];
+      (mouseGroups[code] ||= []).push(handler);
       needsMouseHook = true;
     } else {
-      globalShortcut.register(toElectronAccelerator(key), handler);
+      const accel = toElectronAccelerator(key);
+      (keyGroups[accel] ||= []).push(handler);
     }
+  });
+
+  Object.entries(keyGroups).forEach(([accel, handlers]) => {
+    globalShortcut.register(accel, () => handlers.forEach(h => h()));
+  });
+  Object.entries(mouseGroups).forEach(([code, handlers]) => {
+    mouseBindings[code] = () => handlers.forEach(h => h());
   });
 
   if (needsMouseHook) ensureUiohookStarted();
