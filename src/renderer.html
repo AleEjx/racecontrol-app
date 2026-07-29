@@ -815,13 +815,13 @@
       <div class="cm-time" id="cm-time">00:00.00</div>
       <div class="flex-row-gap-6">
         <button class="pm-btn start" id="cm-btn-start" onclick="committeeStopwatchStart()" style="flex:1;">
-          <span class="pi">▶</span><span class="pl">Start</span>
+          <span class="pi">▶</span><span class="pl">Start</span><span class="pk" id="cm-key-start">F9</span>
         </button>
         <button class="pm-btn lap" id="cm-btn-lap" onclick="committeeStopwatchLap()" style="flex:1;" disabled>
-          <span class="pi">🏁</span><span class="pl">Lap</span>
+          <span class="pi">🏁</span><span class="pl">Lap</span><span class="pk" id="cm-key-lap">F10</span>
         </button>
         <button class="pm-btn reset" id="cm-btn-reset" onclick="committeeStopwatchReset()" style="flex:1;">
-          <span class="pi">↺</span><span class="pl">Reset</span>
+          <span class="pi">↺</span><span class="pl">Reset</span><span class="pk" id="cm-key-reset">F11</span>
         </button>
       </div>
       <div class="pm-block-title">
@@ -6294,6 +6294,11 @@ function updatePracticeKeyLabels() {
   const s = document.getElementById("pm-key-start"); if (s) s.textContent = kb.practice_start || "F9";
   const l = document.getElementById("pm-key-lap");   if (l) l.textContent = kb.practice_lap   || "F10";
   const r = document.getElementById("pm-key-reset"); if (r) r.textContent = kb.practice_reset || "F11";
+  // Committee Mode's stopwatch is driven by the same keybinds while that
+  // screen is active — mirror the same labels onto its buttons.
+  const cs = document.getElementById("cm-key-start"); if (cs) cs.textContent = kb.practice_start || "F9";
+  const cl = document.getElementById("cm-key-lap");   if (cl) cl.textContent = kb.practice_lap   || "F10";
+  const cr = document.getElementById("cm-key-reset"); if (cr) cr.textContent = kb.practice_reset || "F11";
 }
     
       function toggleToolboxSection(id) {
