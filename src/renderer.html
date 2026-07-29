@@ -5561,6 +5561,7 @@ function clearPracticeLaps() {
 function loadPracticeModePref() {
   _practiceModeEnabled = localStorage.getItem("rc_practice_mode_enabled") === "1";
   updatePracticeModeToggleBtn();
+  window.api?.setPracticeModeActive?.(_practiceModeEnabled);
 }
 function updatePracticeModeToggleBtn() {
   const btn = document.getElementById("practice-mode-toggle-btn");
@@ -5829,6 +5830,7 @@ function togglePracticeModePref() {
   localStorage.setItem("rc_practice_mode_enabled", _practiceModeEnabled ? "1" : "0");
   updatePracticeModeToggleBtn();
   updateSwitcher();
+  window.api?.setPracticeModeActive?.(_practiceModeEnabled);
   showToast(_practiceModeEnabled ? "✓ Practice Mode ON" : "✓ Practice Mode OFF", "ok");
   if (_practiceModeEnabled) {
     launchPracticePanel();
