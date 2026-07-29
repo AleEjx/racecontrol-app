@@ -49,6 +49,7 @@ let inPits     = false;
 let inPits2 = false;
 let onCooldown = false;
 let onCooldown2 = false;
+let practiceModeActive = false; // synced from renderer via set-practice-mode-active
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -249,24 +250,39 @@ function registerHotkeys(keybinds) {
   // or the uiohook mousedown listener (mouse side buttons).
   const actionHandlers = {
     blue_flag: () => {
+      if (practiceModeActive) return; // race keybinds are disabled while Practice Mode is on
       if (onCooldown) return;
       mainWindow?.webContents.send("keybind-fired", "blue_flag");
       sendDriverAction("blue_flag");
     },
     next_lap: () => {
+      if (practiceModeActive) return;
       if (onCooldown) return;
       mainWindow?.webContents.send("keybind-fired", "next_lap");
       sendDriverAction("next_lap");
     },
     pitting: () => {
+      if (practiceModeActive) return;
       if (onCooldown || inPits) return;
       mainWindow?.webContents.send("keybind-fired", "pitting");
       enterPits(1);
     },
-    dnf: () => { mainWindow?.webContents.send("keybind-fired", "dnf"); },
-    practice_start: () => { mainWindow?.webContents.send("keybind-fired", "practice_start"); },
-    practice_lap: () => { mainWindow?.webContents.send("keybind-fired", "practice_lap"); },
-    practice_reset: () => { mainWindow?.webContents.send("keybind-fired", "practice_reset"); },
+    dnf: () => {
+      if (practiceModeActive) return;
+      mainWindow?.webContents.send("keybind-fired", "dnf");
+    },
+    practice_start: () => {
+      if (!practiceModeActive) return; // practice keybinds only work once Practice Mode is toggled on
+      mainWindow?.webContents.send("keybind-fired", "practice_start");
+    },
+    practice_lap: () => {
+      if (!practiceModeActive) return;
+      mainWindow?.webContents.send("keybind-fired", "practice_lap");
+    },
+    practice_reset: () => {
+      if (!practiceModeActive) return;
+      mainWindow?.webContents.send("keybind-fired", "practice_reset");
+    },
   };
 
   let needsMouseHook = false;
@@ -733,6 +749,7 @@ ipcMain.handle("install-update", () => autoUpdater.quitAndInstall());
 ipcMain.handle("check-version",  () => app.getVersion());
 ipcMain.handle("flag-broadcast", (_, data) => mainWindow?.webContents.send("flag-event", data));
 ipcMain.handle("register-hotkeys",  (_, keybinds) => { registerHotkeys(keybinds); return true; });
+ipcMain.handle("set-practice-mode-active", (_, active) => { practiceModeActive = !!active; return true; });
 ipcMain.handle("suspend-hotkeys",   () => { stopAllHotkeys(); return true; });
 ipcMain.handle("send-action2",    (_, action) => sendDriverAction2(action));
 ipcMain.handle("toggle-pitting2", () => {
