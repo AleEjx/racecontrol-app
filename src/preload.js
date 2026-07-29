@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("api", {
   minimize:         ()       => ipcRenderer.invoke("minimize-app"),
   overlayFitHeight: (h) => ipcRenderer.invoke("overlay:fit-height", h),
   close:            ()       => ipcRenderer.invoke("close-app"),
+  setPracticeModeActive: (active) => ipcRenderer.invoke("set-practice-mode-active", active),
   toggleTop:        ()       => ipcRenderer.invoke("toggle-top"),
   openDevTools:     ()       => ipcRenderer.invoke("open-devtools"),
   openOAuth:        (url)    => ipcRenderer.invoke("open-oauth", url),
