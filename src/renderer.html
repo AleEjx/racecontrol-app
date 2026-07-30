@@ -136,6 +136,67 @@
     }
     .cm-time.running { color: var(--green, #00e676); }
 
+    #cm-laps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .cm-lap-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border, #2a2a2a);
+    }
+    .cm-lap-info {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+    }
+    .cm-lap-num {
+      font-family: 'Oxanium', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted, #999);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .cm-lap-time {
+      font-family: 'Oxanium', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--fg, #e8e8f0);
+      font-variant-numeric: tabular-nums;
+    }
+    .cm-lap-use-btn {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--border, #333);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted, #999);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+    .cm-lap-use-btn:hover {
+      background: rgba(41,121,255,0.18);
+      border-color: var(--blue, #4fc3f7);
+      color: var(--blue, #4fc3f7);
+    }
+
     /* --- Scrollable settings tab row --- */
     #settings-tabs-row {
       overflow-x: auto;
@@ -5699,9 +5760,12 @@ function renderCommitteeLaps() {
     return;
   }
   list.innerHTML = _cmLaps.map((l, i) =>
-    `<div class="notif-log-row">
-       <span class="nl-msg">Lap ${l.lap} — ${formatStopwatchTime(l.time)}</span>
-       <button class="btn-compact" onclick="useCommitteeLapTime(${i})" title="Use this time">➡️</button>
+    `<div class="cm-lap-row">
+       <div class="cm-lap-info">
+         <span class="cm-lap-num">Lap ${l.lap}</span>
+         <span class="cm-lap-time">${formatStopwatchTime(l.time)}</span>
+       </div>
+       <button class="cm-lap-use-btn" onclick="useCommitteeLapTime(${i})" title="Use this time">➡️</button>
      </div>`
   ).join("");
 }
