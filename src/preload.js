@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("api", {
   sendAction2:      (a)      => ipcRenderer.invoke("send-action2", a),
   togglePitting:    ()       => ipcRenderer.invoke("toggle-pitting"),
   togglePitting2:   ()       => ipcRenderer.invoke("toggle-pitting2"),
+  setCommitteeScreenActive: (active) => ipcRenderer.invoke("set-committee-screen-active", active),
   minimize:         ()       => ipcRenderer.invoke("minimize-app"),
   overlayFitHeight: (h) => ipcRenderer.invoke("overlay:fit-height", h),
   close:            ()       => ipcRenderer.invoke("close-app"),
