@@ -197,6 +197,36 @@
       color: var(--blue, #4fc3f7);
     }
 
+    /* --- Settings unsaved-changes bar --- */
+    .settings-unsaved-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background: rgba(20, 18, 10, 0.97);
+      border-top: 1px solid rgba(255, 193, 7, 0.35);
+      font-family: 'Oxanium', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffca66;
+      box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.35);
+    }
+    .settings-unsaved-bar.hidden { display: none; }
+    .settings-unsaved-bar.shake { animation: settings-bar-shake 0.4s ease; }
+    @keyframes settings-bar-shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
     /* --- Scrollable settings tab row --- */
     #settings-tabs-row {
       overflow-x: auto;
@@ -1565,6 +1595,13 @@
   </div>
 </div>
   <div id="toast"></div>
+  <div id="settings-unsaved-bar" class="settings-unsaved-bar hidden">
+    <span>⚠️ You have some unsaved changes</span>
+    <div class="flex-row-gap-6">
+      <button class="secondary-btn" onclick="revertSettingsChanges()">↩ Revert Changes</button>
+      <button class="save-btn" onclick="saveSettingsChanges()">✅ Save Settings</button>
+    </div>
+  </div>
 
   <div id="fuel-source-modal" class="fuel-source-modal">
   <div class="fsm-panel">
@@ -4919,6 +4956,11 @@ function practiceReset() {
     }
 
 function switchPanel(panel) {
+      if (currentPanel === "settings" && panel !== "settings" && _settingsDirty) {
+        _flashSettingsUnsavedBar();
+        showToast("⚠️ Save or revert your changes first", "err");
+        return;
+      }
       if (panel === "driver" && engineerPending && !config.driver) {
         showRoleSelectScreen(!!DRIVER_IDS[user.id]);
         currentPanel = "login";
@@ -4948,6 +4990,7 @@ function switchPanel(panel) {
       else if (panel === "settings") {
         document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
         document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "none");
+        if (currentPanel !== "settings") _captureSettingsSnapshot();
         prevPanel = (currentPanel && currentPanel !== "settings") ? currentPanel : (hasDriver ? "driver" : hasMarshal ? "marshal" : "login");
         document.getElementById("s-api").value = config.apiUrl || "";
         document.getElementById("kb-blue_flag").value = config.keybinds?.blue_flag || "F1";
@@ -5354,11 +5397,115 @@ function launchDriverPanel(startPoll = true) {
       }
     }
 
-    function openSettingsTab(tab) {
-      document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-      document.querySelectorAll('.stab-panel').forEach(p => p.classList.toggle('active', p.id === 'stab-' + tab));
-      requestAnimationFrame(syncSettingsTabsScrollSlider);
-    }
+    // --- Settings: unsaved-changes tracking ---
+let _settingsDirty = false;
+let _settingsSnapshot = null;
+
+function _captureSettingsSnapshot() {
+  const ls = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    ls[k] = localStorage.getItem(k);
+  }
+  _settingsSnapshot = {
+    localStorage: ls,
+    config: JSON.parse(JSON.stringify(config || {})),
+  };
+  _settingsDirty = false;
+  _hideSettingsUnsavedBar();
+}
+
+function _markSettingsDirty(e) {
+  if (currentPanel !== "settings") return;
+  const t = e.target;
+  if (t.closest && (t.closest(".stab") || t.id === "settings-tabs-scroll-slider" || t.closest("#settings-unsaved-bar"))) return;
+  if (!_settingsDirty) {
+    _settingsDirty = true;
+    _showSettingsUnsavedBar();
+  }
+}
+(function _initSettingsDirtyTracking() {
+  const el = document.getElementById("screen-settings");
+  if (!el) return;
+  el.addEventListener("click", _markSettingsDirty, true);
+  el.addEventListener("input", _markSettingsDirty, true);
+  el.addEventListener("change", _markSettingsDirty, true);
+})();
+
+function _showSettingsUnsavedBar() { document.getElementById("settings-unsaved-bar")?.classList.remove("hidden"); }
+function _hideSettingsUnsavedBar() { document.getElementById("settings-unsaved-bar")?.classList.add("hidden"); }
+function _flashSettingsUnsavedBar() {
+  const bar = document.getElementById("settings-unsaved-bar");
+  if (!bar) return;
+  bar.classList.add("shake");
+  setTimeout(() => bar.classList.remove("shake"), 400);
+}
+
+async function saveSettingsChanges() {
+  await window.api?.saveConfig?.(config);
+  _settingsDirty = false;
+  _hideSettingsUnsavedBar();
+  showToast("✅ Settings saved", "ok");
+}
+
+async function revertSettingsChanges() {
+  if (!_settingsSnapshot) { _settingsDirty = false; _hideSettingsUnsavedBar(); return; }
+  if (!confirm("Revert all changes made since you opened Settings?")) return;
+
+  localStorage.clear();
+  Object.entries(_settingsSnapshot.localStorage).forEach(([k, v]) => localStorage.setItem(k, v));
+  config = JSON.parse(JSON.stringify(_settingsSnapshot.config));
+  await window.api?.saveConfig?.(config);
+
+  // Re-run the same pref loaders used on app start, so the UI reflects the reverted values.
+  loadFlagSounds?.();
+  loadToolboxPrefs?.();
+  loadKeybindSounds?.();
+  loadFontSizePrefs?.();
+  loadTesterMode?.();
+  loadThemePrefs?.();
+  loadGlassOpacityPref?.();
+  loadPanelStylePref?.();
+  loadVolumePrefs?.();
+  loadRaceSummaryPref?.();
+  loadLapGraphPref?.();
+  loadPracticeModePref?.();
+  loadFuelTrackingPref?.();
+  loadLiveSplitPref?.();
+  loadTimerOverlayOpacityPref?.();
+  loadNotifPrefs?.();
+  loadCommitteeModePref?.();
+  window.api?.setPracticeModeActive?.(_practiceModeEnabled);
+  await window.api?.registerHotkeys?.(getActiveKeybinds(config.keybinds));
+
+  // Re-populate the on-screen fields that switchPanel('settings') fills in directly.
+  const s = document.getElementById("s-api"); if (s) s.value = config.apiUrl || "";
+  const kb1 = document.getElementById("kb-blue_flag"); if (kb1) kb1.value = config.keybinds?.blue_flag || "F1";
+  const kb2 = document.getElementById("kb-next_lap"); if (kb2) kb2.value = config.keybinds?.next_lap || "F2";
+  const kb3 = document.getElementById("kb-pitting"); if (kb3) kb3.value = config.keybinds?.pitting || "F3";
+  const kb4 = document.getElementById("kb-practice_start"); if (kb4) kb4.value = config.keybinds?.practice_start || "F9";
+  const kb5 = document.getElementById("kb-practice_lap"); if (kb5) kb5.value = config.keybinds?.practice_lap || "F10";
+  const kb6 = document.getElementById("kb-practice_reset"); if (kb6) kb6.value = config.keybinds?.practice_reset || "F11";
+  const kb7 = document.getElementById("kb-dnf"); if (kb7) kb7.value = config.keybinds?.dnf || "F8";
+  updateThemeBtns?.();
+  updateUserTabToggleBtns?.();
+  updateRaceSummaryToggleBtn?.();
+  updateLapGraphToggleBtn?.();
+  updatePracticeModeToggleBtn?.();
+  updateBetaVisibility?.();
+  updateSplitViewBtn?.();
+  updateOverlayPrefBtns?.();
+
+  _settingsDirty = false;
+  _hideSettingsUnsavedBar();
+  showToast("↩ Changes reverted", "ok");
+}
+
+function openSettingsTab(tab) {
+  document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.stab-panel').forEach(p => p.classList.toggle('active', p.id === 'stab-' + tab));
+  requestAnimationFrame(syncSettingsTabsScrollSlider);
+}
 
     // --- Settings tab row scroll slider ---
     // The tab row can overflow the window width (e.g. Account getting cut
