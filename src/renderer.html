@@ -5417,8 +5417,9 @@ function _captureSettingsSnapshot() {
 
 function _markSettingsDirty(e) {
   if (currentPanel !== "settings") return;
-  const t = e.target;
-  if (t.closest && (t.closest(".stab") || t.id === "settings-tabs-scroll-slider" || t.closest("#settings-unsaved-bar"))) return;
+  const control = e.target.closest && e.target.closest("button, input, select, textarea");
+  if (!control) return; // ignore clicks on cards, labels, whitespace, scrolling, etc. — only real controls count
+  if (control.closest(".stab") || control.id === "settings-tabs-scroll-slider" || control.closest("#settings-unsaved-bar")) return;
   if (!_settingsDirty) {
     _settingsDirty = true;
     _showSettingsUnsavedBar();
