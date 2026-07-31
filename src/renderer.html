@@ -5443,7 +5443,12 @@ function _flashSettingsUnsavedBar() {
 }
 
 async function saveSettingsChanges() {
-  await window.api?.saveConfig?.(config);
+  try {
+    await window.api?.saveConfig?.(config);
+  } catch (err) {
+    console.error("saveSettingsChanges: saveConfig failed", err);
+    showToast("⚠️ Settings saved locally, but syncing to disk failed", "err");
+  }
   _settingsDirty = false;
   _hideSettingsUnsavedBar();
   showToast("✅ Settings saved", "ok");
