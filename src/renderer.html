@@ -4957,6 +4957,7 @@ function practiceReset() {
 
 function switchPanel(panel) {
       if (currentPanel === "settings" && panel !== "settings" && _settingsDirty) {
+        _showSettingsUnsavedBar();
         _flashSettingsUnsavedBar();
         showToast("⚠️ Save or revert your changes first", "err");
         return;
@@ -5420,10 +5421,7 @@ function _markSettingsDirty(e) {
   const control = e.target.closest && e.target.closest("button, input, select, textarea");
   if (!control) return; // ignore clicks on cards, labels, whitespace, scrolling, etc. — only real controls count
   if (control.closest(".stab") || control.id === "settings-tabs-scroll-slider" || control.closest("#settings-unsaved-bar") || control.classList.contains("settings-nav-btn")) return;
-  if (!_settingsDirty) {
-    _settingsDirty = true;
-    _showSettingsUnsavedBar();
-  }
+  _settingsDirty = true; // stays quiet until they actually try to leave — see switchPanel's guard
 }
 (function _initSettingsDirtyTracking() {
   const el = document.getElementById("screen-settings");
