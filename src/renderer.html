@@ -1538,8 +1538,8 @@
       </div>
 
       <div class="flex-row-gap-6" style="padding-top:6px;border-top:1px solid var(--border);margin-top:4px;flex-shrink:0;">
-        <button onclick="saveSettings()" class="save-btn flex-2">✓ Save Settings</button>
-        <button class="save-btn btn-ghost-muted flex-1" onclick="goBack()">← Back</button>
+        <button onclick="saveSettings()" class="save-btn flex-2 settings-nav-btn">✓ Save Settings</button>
+        <button class="save-btn btn-ghost-muted flex-1 settings-nav-btn" onclick="goBack()">← Back</button>
       </div>
 
     </div>
@@ -5419,7 +5419,7 @@ function _markSettingsDirty(e) {
   if (currentPanel !== "settings") return;
   const control = e.target.closest && e.target.closest("button, input, select, textarea");
   if (!control) return; // ignore clicks on cards, labels, whitespace, scrolling, etc. — only real controls count
-  if (control.closest(".stab") || control.id === "settings-tabs-scroll-slider" || control.closest("#settings-unsaved-bar")) return;
+  if (control.closest(".stab") || control.id === "settings-tabs-scroll-slider" || control.closest("#settings-unsaved-bar") || control.classList.contains("settings-nav-btn")) return;
   if (!_settingsDirty) {
     _settingsDirty = true;
     _showSettingsUnsavedBar();
@@ -7624,7 +7624,9 @@ const keybinds = {
         const newConfig = { ...config, apiUrl: newApi, keybinds: cleanKeybinds };
         await window.api.saveConfig(newConfig); await window.api.registerHotkeys(getActiveKeybinds(cleanKeybinds));
         localStorage.setItem("rc_flag_volume", Math.round(_flagVolume * 100));
-        config = newConfig; updateKeybindLabels(); showToast("✓ Settings saved", "ok"); goBack();
+        config = newConfig; updateKeybindLabels(); showToast("✓ Settings saved", "ok");
+        _settingsDirty = false; _hideSettingsUnsavedBar();
+        goBack();
       }
 
 function updateKeybindLabels() {
