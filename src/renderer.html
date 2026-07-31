@@ -5440,6 +5440,24 @@ function _flashSettingsUnsavedBar() {
   setTimeout(() => bar.classList.remove("shake"), 400);
 }
 
+// Applies the practice-mode toggle's real consequence — only called at the
+// moment settings are actually saved, never on the toggle click itself.
+// Returns true if it navigated to Practice Mode (so callers can skip their
+// own default post-save navigation in that case).
+function _applyPracticeModeSaveConsequence() {
+  const wasEnabled = _settingsSnapshot?.localStorage?.rc_practice_mode_enabled === "1";
+  updateSwitcher();
+  window.api?.setPracticeModeActive?.(_practiceModeEnabled);
+  if (_practiceModeEnabled && !wasEnabled) {
+    launchPracticePanel();
+    return true;
+  }
+  // Turned off (or unchanged) — no special navigation; caller decides what
+  // happens next (the new bar stays put, the old Save button's goBack() is
+  // skipped by the caller when practice mode was just turned off).
+  return false;
+}
+
 async function saveSettingsChanges() {
   try {
     await window.api?.saveConfig?.(config);
@@ -5450,6 +5468,7 @@ async function saveSettingsChanges() {
   _settingsDirty = false;
   _hideSettingsUnsavedBar();
   showToast("✅ Settings saved", "ok");
+  _applyPracticeModeSaveConsequence();
 }
 
 async function revertSettingsChanges() {
@@ -6047,15 +6066,7 @@ function togglePracticeModePref() {
   _practiceModeEnabled = !_practiceModeEnabled;
   localStorage.setItem("rc_practice_mode_enabled", _practiceModeEnabled ? "1" : "0");
   updatePracticeModeToggleBtn();
-  updateSwitcher();
-  window.api?.setPracticeModeActive?.(_practiceModeEnabled);
-  showToast(_practiceModeEnabled ? "✓ Practice Mode ON" : "✓ Practice Mode OFF", "ok");
-  if (_practiceModeEnabled) {
-    launchPracticePanel();
-  } else if (user) {
-    if (config.driver) launchDriverPanel();
-    else showRoleSelectScreen(!!DRIVER_IDS[user.id]);
-  }
+  showToast(_practiceModeEnabled ? "✓ Practice Mode will turn on when you save" : "✓ Practice Mode will turn off when you save", "ok");
 }
 
 // --- Live Split (timer-only) view ---
@@ -7624,7 +7635,11 @@ const keybinds = {
         localStorage.setItem("rc_flag_volume", Math.round(_flagVolume * 100));
         config = newConfig; updateKeybindLabels(); showToast("✓ Settings saved", "ok");
         _settingsDirty = false; _hideSettingsUnsavedBar();
-        goBack();
+        const wasPracticeEnabled = _settingsSnapshot?.localStorage?.rc_practice_mode_enabled === "1";
+        const navigatedToPractice = _applyPracticeModeSaveConsequence();
+        if (!navigatedToPractice && !(wasPracticeEnabled && !_practiceModeEnabled)) {
+          goBack(); // normal case — but skip this if practice mode was just turned off (stay in Settings instead)
+        }
       }
 
 function updateKeybindLabels() {
