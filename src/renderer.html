@@ -3961,6 +3961,9 @@ window.api.onKeybindFired(action => {
         if (apiDisplay) apiDisplay.textContent = apiUrl;
       }
 
+loadPracticeModePref();
+loadPracticeLaps();
+
 const saved = sessionStorage.getItem("rc_user") || localStorage.getItem("rc_user");
 if (saved && apiUrl) {
   user = JSON.parse(saved);
@@ -4280,8 +4283,6 @@ function _renderFuelStats() {
       loadVolumePrefs();
       loadRaceSummaryPref();
       loadLapGraphPref();
-      loadPracticeModePref();
-      loadPracticeLaps();
       loadFuelTrackingPref();
       loadLiveSplitPref();
       loadTimerOverlayOpacityPref();
