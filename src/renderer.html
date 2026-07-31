@@ -4522,12 +4522,16 @@ async function afterLogin() {
   isEngineer = false;
 const driverName = DRIVER_IDS[user.id];
   hasDriver = true;
+  const racerEligible = !!driverName;
+  const engineerEligible = canEngineerForActiveLeague();
   if (_practiceModeEnabled) {
+    // Skips the role-select screen (and its engineerPending=true side effect)
+    // while practice mode is active, but the Driver tab still needs that
+    // flag set so it's correctly enabled once the user leaves Practice Mode.
+    if (racerEligible || engineerEligible) engineerPending = true;
     launchPracticePanel();
     return;
   }
-  const racerEligible = !!driverName;
-  const engineerEligible = canEngineerForActiveLeague();
   if (!racerEligible && !engineerEligible) {
     enterSpectatorMode();
     return;
