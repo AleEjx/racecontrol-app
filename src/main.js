@@ -159,15 +159,29 @@ function setupAutoUpdater() {
 
 let updateAvailable = false;
 
+  // electron-updater surfaces the GitHub release's description as info.releaseNotes
+  // (a string, or an array of {version, note} for multi-version updates). If the
+  // release description mentions "bug fix", flag it so the renderer can show a
+  // lighter-weight "bug fix" banner instead of the standard update banner.
+  function isBugfixRelease(info) {
+    const notes = info?.releaseNotes;
+    const text = typeof notes === "string"
+      ? notes
+      : Array.isArray(notes)
+        ? notes.map(n => n?.note || "").join(" ")
+        : "";
+    return /bug fix/i.test(text);
+  }
+
   autoUpdater.on("checking-for-update", () => console.log("[Updater] Checking..."));
   autoUpdater.on("update-not-available", () => console.log("[Updater] Up to date."));
   autoUpdater.on("update-available",  (info) => {
     updateAvailable = true;
-    mainWindow?.webContents.send("update-available",  info.version);
+    mainWindow?.webContents.send("update-available",  info.version, isBugfixRelease(info));
     console.log(`[Updater] Available: v${info.version}`);
   });
   autoUpdater.on("update-downloaded", (info) => {
-    mainWindow?.webContents.send("update-downloaded", info.version);
+    mainWindow?.webContents.send("update-downloaded", info.version, isBugfixRelease(info));
     console.log(`[Updater] Downloaded: v${info.version}`);
   });
   autoUpdater.on("error", (err) => {
