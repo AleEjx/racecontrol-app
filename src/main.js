@@ -5,20 +5,44 @@ const os   = require("os");
 const https = require("https");
 const { exec, execFile } = require('child_process');
 const { autoUpdater } = require("electron-updater");
-const { uIOhook } = require("uiohook-napi");
+const { uIOhook, UiohookKey } = require("uiohook-napi");
 const CONFIG_FILE = path.join(app.getPath("userData"), "config.json");
 
 // libuiohook mouse button codes: 1=left 2=right 3=middle 4=side-back 5=side-forward
 const MOUSE_BUTTON_CODES = { Mouse4: 4, Mouse5: 5 };
 function isMouseBind(key) { return typeof key === "string" && Object.prototype.hasOwnProperty.call(MOUSE_BUTTON_CODES, key); }
 
+// Map our keybind label format -> uiohook-napi keycode. uiohook's keydown hook is
+// a *passive* low-level hook: it observes the key without consuming it, so the
+// keystroke still reaches whatever's focused (game chat, Discord, a text field in
+// our own app). globalShortcut, by contrast, grabs the key exclusively at the OS
+// level — that's what was eating "E" everywhere once it was bound as a hotkey.
+const NUM_KEY_MAP = {
+  "Num0": "Numpad0", "Num1": "Numpad1", "Num2": "Numpad2", "Num3": "Numpad3",
+  "Num4": "Numpad4", "Num5": "Numpad5", "Num6": "Numpad6", "Num7": "Numpad7",
+  "Num8": "Numpad8", "Num9": "Numpad9",
+  "Num+": "NumpadAdd", "Num-": "NumpadSubtract",
+  "Num*": "NumpadMultiply", "Num/": "NumpadDivide",
+  "Num.": "NumpadDecimal", "NumEnter": "NumpadEnter",
+};
+function toUiohookKeycode(key) {
+  if (typeof key !== "string") return null;
+  const name = NUM_KEY_MAP[key] || key; // letters/digits/F-keys pass through as-is
+  return Object.prototype.hasOwnProperty.call(UiohookKey, name) ? UiohookKey[name] : null;
+}
+
 let mouseBindings = {};   // { [buttonCode]: actionHandlerFn }
+let keyBindings   = {};   // { [uiohookKeycode]: actionHandlerFn }
 let uiohookStarted = false;
 
 function ensureUiohookStarted() {
   if (uiohookStarted) return;
   uIOhook.on("mousedown", (e) => {
     const handler = mouseBindings[e.button];
+    if (handler) handler();
+  });
+  uIOhook.on("keydown", (e) => {
+    const handler = keyBindings[e.keycode];
     if (handler) handler();
   });
   uIOhook.start();
@@ -28,6 +52,7 @@ function ensureUiohookStarted() {
 function stopAllHotkeys() {
   globalShortcut.unregisterAll();
   mouseBindings = {};
+  keyBindings   = {};
 }
 
 function shutdownUiohook() {
@@ -117,18 +142,6 @@ app.whenReady().then(() => {
 
 
 app.on("window-all-closed", () => app.quit());
-
-function toElectronAccelerator(key) {
-  const map = {
-    "Num0": "num0", "Num1": "num1", "Num2": "num2", "Num3": "num3",
-    "Num4": "num4", "Num5": "num5", "Num6": "num6", "Num7": "num7",
-    "Num8": "num8", "Num9": "num9",
-    "Num+": "numadd", "Num-": "numsub",
-    "Num*": "nummult", "Num/": "numdiv",
-    "Num.": "numdec", "NumEnter": "num enter",
-  };
-  return map[key] || key;
-}
 
 function setupAutoUpdater() {
   if (!app.isPackaged) {
@@ -247,8 +260,8 @@ function registerHotkeys(keybinds) {
   mouseBindings = {};
   keybinds = keybinds || {};
 
-  // Shared per-action handlers, called from either globalShortcut (keyboard)
-  // or the uiohook mousedown listener (mouse side buttons).
+  // Shared per-action handlers, called from either the uiohook keydown listener
+  // (keyboard) or the uiohook mousedown listener (mouse side buttons).
   const actionHandlers = {
     blue_flag: () => {
       if (practiceModeActive) return; // race keybinds are disabled while Practice Mode is on
@@ -286,14 +299,14 @@ function registerHotkeys(keybinds) {
     },
   };
 
-  let needsMouseHook = false;
+  let needsHook = false;
 
   // Group by physical key instead of registering one-handler-per-key directly —
   // two actions can share the same key (e.g. F2 for both Next Lap and Practice
   // Lap) since they're mode-gated and mutually exclusive. Registering them
   // separately would just have the last one silently overwrite the first;
   // grouping means both run, and each one's own gate decides whether it acts.
-  const keyGroups = {};   // accelerator -> [handler, ...]
+  const keyGroups = {};   // uiohook keycode -> [handler, ...]
   const mouseGroups = {}; // mouse code -> [handler, ...]
 
   Object.entries(actionHandlers).forEach(([action, handler]) => {
@@ -303,21 +316,31 @@ function registerHotkeys(keybinds) {
     if (isMouseBind(key)) {
       const code = MOUSE_BUTTON_CODES[key];
       (mouseGroups[code] ||= []).push(handler);
-      needsMouseHook = true;
+      needsHook = true;
     } else {
-      const accel = toElectronAccelerator(key);
-      (keyGroups[accel] ||= []).push(handler);
+      const code = toUiohookKeycode(key);
+      if (code == null) {
+        console.warn(`[Hotkeys] Unrecognized key "${key}" for action "${action}" — skipping.`);
+        return;
+      }
+      (keyGroups[code] ||= []).push(handler);
+      needsHook = true;
     }
   });
 
-  Object.entries(keyGroups).forEach(([accel, handlers]) => {
-    globalShortcut.register(accel, () => handlers.forEach(h => h()));
+  // Keyboard binds go through uiohook's passive keydown hook, not globalShortcut —
+  // globalShortcut grabs the key exclusively at the OS level, which stops it from
+  // reaching any other focused window (chat, Discord, our own text fields). uiohook
+  // just observes the keypress, so the keystroke still types normally everywhere
+  // while also firing the bound action.
+  Object.entries(keyGroups).forEach(([code, handlers]) => {
+    keyBindings[code] = () => handlers.forEach(h => h());
   });
   Object.entries(mouseGroups).forEach(([code, handlers]) => {
     mouseBindings[code] = () => handlers.forEach(h => h());
   });
 
-  if (needsMouseHook) ensureUiohookStarted();
+  if (needsHook) ensureUiohookStarted();
 }
 
 function pickAssetForPlatform(assets) {
