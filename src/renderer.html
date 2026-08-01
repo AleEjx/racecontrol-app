@@ -1545,12 +1545,40 @@
     </div>
   </div>
 
+<style>
+  @keyframes bugfixGradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  #update-banner.update-banner-bugfix {
+    background: linear-gradient(115deg, #4c1d95, #7e22ce, #a855f7, #6d28d9);
+    background-size: 300% 300%;
+    animation: bugfixGradientShift 6s ease infinite;
+    border-color: rgba(216,180,254,0.5) !important;
+    box-shadow: 0 0 18px rgba(168,85,247,0.35);
+  }
+  #update-banner.update-banner-bugfix #update-icon {
+    background: rgba(255,255,255,0.18) !important;
+    border-color: rgba(255,255,255,0.5) !important;
+  }
+  #update-banner.update-banner-bugfix #update-text {
+    color: #fff !important;
+  }
+  #update-banner.update-banner-bugfix #update-subtext {
+    color: rgba(255,255,255,0.75) !important;
+  }
+  #update-banner.update-banner-bugfix #update-install-btn:not(:disabled) {
+    background: linear-gradient(135deg, #7c3aed, #c026d3) !important;
+    color: #fff;
+  }
+</style>
 <div id="update-banner" class="update-banner">
   <div style="display:flex;align-items:center;gap:10px;">
-    <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.4);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">⬆️</div>
+    <div id="update-icon" style="width:32px;height:32px;border-radius:50%;background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.4);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">⬆️</div>
     <div>
       <div class="font-11 fw-700 text-green" id="update-text">🔄 Downloading update...</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:1px;">RaceControl Desktop</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:1px;" id="update-subtext">RaceControl Desktop</div>
     </div>
   </div>
   <div class="flex-row-gap-6">
@@ -3926,21 +3954,40 @@ window.api.onKeybindFired(action => {
         else if (action === 'practice_reset') onCommitteeScreen ? committeeStopwatchReset() : practiceReset();
       });
 
-      window.api.onUpdateAvailable(v => {
-        document.getElementById("update-text").textContent = `🔄 Downloading v${v}...`;
+      // Regular feature update = default dark banner with a green rocket icon.
+      // Bug-fix release (flagged by main.js when the GitHub release description
+      // contains "bug fix") gets the animated purple gradient banner instead —
+      // styling lives in the update-banner-bugfix CSS class above.
+      function setUpdateBannerStyle(isBugfix) {
+        const banner = document.getElementById("update-banner");
+        const icon = document.getElementById("update-icon");
+        if (banner) banner.classList.toggle("update-banner-bugfix", isBugfix);
+        if (icon) icon.textContent = isBugfix ? "🐛" : "⬆️";
+      }
+
+      window.api.onUpdateAvailable((v, isBugfix) => {
+        setUpdateBannerStyle(isBugfix);
+        document.getElementById("update-text").textContent = isBugfix
+          ? `🔄 Downloading bug fix v${v}...`
+          : `🔄 Downloading v${v}...`;
         const btn = document.getElementById("update-install-btn");
         btn.disabled = true; btn.style.cursor = "not-allowed"; btn.style.opacity = "0.5"; btn.style.background = "var(--muted)";
         document.getElementById("update-banner").style.display = "flex";
       });
 
-      window.api.onUpdateDownloaded(v => {
-        document.getElementById("update-text").textContent = `✅ v${v} ready — click to install!`;
+      window.api.onUpdateDownloaded((v, isBugfix) => {
+        setUpdateBannerStyle(isBugfix);
+        document.getElementById("update-text").textContent = isBugfix
+          ? `🐛 Bug fix v${v} ready — click to install!`
+          : `✅ v${v} ready — click to install!`;
         const btn = document.getElementById("update-install-btn");
-        btn.disabled = false; btn.style.cursor = "pointer"; btn.style.opacity = "1"; btn.style.background = "var(--green)";
+        btn.disabled = false; btn.style.cursor = "pointer"; btn.style.opacity = "1";
+        btn.style.background = isBugfix ? "" : "var(--green)"; // bugfix gradient comes from CSS class
         document.getElementById("update-banner").style.display = "flex";
       });
 
       window.api.onUpdateError(() => {
+        setUpdateBannerStyle(false);
         document.getElementById("update-text").textContent = "⬆️ Update available on GitHub";
         const btn = document.getElementById("update-install-btn");
         btn.textContent = "Open Releases"; btn.disabled = false; btn.style.cursor = "pointer";
