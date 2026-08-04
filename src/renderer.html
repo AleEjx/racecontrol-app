@@ -1360,6 +1360,15 @@
           <div class="s-kb-row"><span class="settings-label">🏁 Lap</span><input type="text" class="kb-input" id="kb-practice_lap" readonly onclick="listenKey('practice_lap')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('practice_lap')" title="Remove this keybind">Set No Keybind</button></div>
           <div class="s-kb-row no-border-bottom"><span class="settings-label">↺ Reset</span><input type="text" class="kb-input" id="kb-practice_reset" readonly onclick="listenKey('practice_reset')" /><button type="button" class="kb-clear-btn" onclick="clearKeybind('practice_reset')" title="Remove this keybind">Set No Keybind</button></div>
         </div>
+
+        <div class="s-section-title mt-4">Advanced</div>
+        <div class="s-card gap-8">
+          <div class="card-row-between">
+            <span class="font-11">⚠️ Override Game</span>
+            <button id="kb-override-game-toggle-btn" onclick="toggleKeybindOverrideGame()" class="toggle-button"></button>
+          </div>
+          <div class="small-note">Allows plain letter/number keys (like a bare "E") to be set as a keybind. This brings back the old behavior where that key stops working everywhere else on your PC while assigned — including normal typing. Leave this off unless you specifically need it.</div>
+        </div>
       </div>
 
       <div class="stab-panel" id="stab-connection">
@@ -4322,6 +4331,7 @@ function _renderFuelStats() {
       loadFlagSounds();
       loadToolboxPrefs();
       loadKeybindSounds();
+      loadKeybindOverrideGame();
       loadFontSizePrefs();
       loadTesterMode();
       loadThemePrefs();
@@ -6606,6 +6616,32 @@ function updatePracticeKeyLabels() {
           if (saved) { _keybindSounds = JSON.parse(saved); updateSoundBtnLabels(); }
         } catch { }
       }
+
+      // --- "Override Game" — reintroduces the old behavior where a bare
+      // letter/number key can be set as a keybind (and stops working
+      // everywhere else on the PC while assigned). Off by default. ---
+      let _keybindOverrideGame = false;
+      function loadKeybindOverrideGame() {
+        _keybindOverrideGame = localStorage.getItem("rc_keybind_override_game") === "1";
+        updateKeybindOverrideGameBtn();
+      }
+      function updateKeybindOverrideGameBtn() {
+        const btn = document.getElementById("kb-override-game-toggle-btn");
+        if (!btn) return;
+        const on = _keybindOverrideGame;
+        btn.textContent = on ? "ON" : "OFF";
+        btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+        btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+        btn.style.color = on ? "var(--green)" : "var(--red)";
+      }
+      function toggleKeybindOverrideGame() {
+        _keybindOverrideGame = !_keybindOverrideGame;
+        localStorage.setItem("rc_keybind_override_game", _keybindOverrideGame ? "1" : "0");
+        updateKeybindOverrideGameBtn();
+        showToast(_keybindOverrideGame
+          ? "⚠️ Override Game ON — plain letter/number keys can be set as keybinds again"
+          : "✓ Override Game OFF", _keybindOverrideGame ? "err" : "ok");
+      }
       function updateSoundBtnLabels() {
         ["blue_flag", "next_lap", "pitting"].forEach(k => {
           const btn = document.getElementById(`snd-${k}-btn`);
@@ -7738,6 +7774,17 @@ document.addEventListener("keydown", e => {
         const kbInput = document.getElementById(`kb-${listeningKey}`);
         if (INVALID_KEYBIND_VALUES.has(key)) {
           showToast(`❌ "${key}" can't be used as a hotkey — try another key`, "err");
+          kbInput.value = config.keybinds?.[listeningKey] || KEYBIND_DEFAULTS[listeningKey] || "";
+          kbInput.classList.remove("listening");
+          listeningKey = null;
+          return;
+        }
+        // A single printable character with no Ctrl/Alt/Meta held is basically
+        // "just typing" — registering it as a global hotkey swallows that
+        // character everywhere on your PC, not just in this app. Blocked
+        // unless "Override Game" is on.
+        if (!_keybindOverrideGame && key.length === 1 && !(e.ctrlKey || e.altKey || e.metaKey)) {
+          showToast(`❌ "${key}" would stop working everywhere while typing — turn on Override Game in Settings if you really want this`, "err");
           kbInput.value = config.keybinds?.[listeningKey] || KEYBIND_DEFAULTS[listeningKey] || "";
           kbInput.classList.remove("listening");
           listeningKey = null;
