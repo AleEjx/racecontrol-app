@@ -6624,6 +6624,7 @@ function updatePracticeKeyLabels() {
       function loadKeybindOverrideGame() {
         _keybindOverrideGame = localStorage.getItem("rc_keybind_override_game") === "1";
         updateKeybindOverrideGameBtn();
+        window.api?.setKeybindOverrideGame?.(_keybindOverrideGame);
       }
       function updateKeybindOverrideGameBtn() {
         const btn = document.getElementById("kb-override-game-toggle-btn");
@@ -6638,6 +6639,10 @@ function updatePracticeKeyLabels() {
         _keybindOverrideGame = !_keybindOverrideGame;
         localStorage.setItem("rc_keybind_override_game", _keybindOverrideGame ? "1" : "0");
         updateKeybindOverrideGameBtn();
+        window.api?.setKeybindOverrideGame?.(_keybindOverrideGame);
+        // Re-register immediately so a bare key that was previously skipped
+        // (or now should be) takes effect without needing a restart.
+        if (config.keybinds) window.api?.registerHotkeys?.(getActiveKeybinds(config.keybinds));
         showToast(_keybindOverrideGame
           ? "⚠️ Override Game ON — plain letter/number keys can be set as keybinds again"
           : "✓ Override Game OFF", _keybindOverrideGame ? "err" : "ok");
