@@ -12,11 +12,6 @@ const CONFIG_FILE = path.join(app.getPath("userData"), "config.json");
 const MOUSE_BUTTON_CODES = { Mouse4: 4, Mouse5: 5 };
 function isMouseBind(key) { return typeof key === "string" && Object.prototype.hasOwnProperty.call(MOUSE_BUTTON_CODES, key); }
 
-// Map our keybind label format -> uiohook-napi keycode. uiohook's keydown hook is
-// a *passive* low-level hook: it observes the key without consuming it, so the
-// keystroke still reaches whatever's focused (game chat, Discord, a text field in
-// our own app). globalShortcut, by contrast, grabs the key exclusively at the OS
-// level — that's what was eating "E" everywhere once it was bound as a hotkey.
 const NUM_KEY_MAP = {
   "Num0": "Numpad0", "Num1": "Numpad1", "Num2": "Numpad2", "Num3": "Numpad3",
   "Num4": "Numpad4", "Num5": "Numpad5", "Num6": "Numpad6", "Num7": "Numpad7",
