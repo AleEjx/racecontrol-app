@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("api", {
   close:            ()       => ipcRenderer.invoke("close-app"),
   setPracticeModeActive: (active) => ipcRenderer.invoke("set-practice-mode-active", active),
   toggleTop:        ()       => ipcRenderer.invoke("toggle-top"),
+  setKeybindOverrideGame: (active) => ipcRenderer.invoke("set-keybind-override-game", active),
   openDevTools:     ()       => ipcRenderer.invoke("open-devtools"),
   openOAuth:        (url)    => ipcRenderer.invoke("open-oauth", url),
   toggleTimerOverlay: () => ipcRenderer.invoke("overlay:toggle-timer"),
