@@ -321,8 +321,9 @@ function registerHotkeys(keybinds) {
   // Lap) since they're mode-gated and mutually exclusive. Registering them
   // separately would just have the last one silently overwrite the first;
   // grouping means both run, and each one's own gate decides whether it acts.
-  const keyGroups = {};   // uiohook keycode -> [handler, ...]
-  const mouseGroups = {}; // mouse code -> [handler, ...]
+  const keyGroups = {};      // uiohook keycode -> [handler, ...]
+  const mouseGroups = {};    // mouse code -> [handler, ...]
+  const exclusiveGroups = {}; // Electron accelerator -> [handler, ...] — bare keys, Override Game only
 
   Object.entries(actionHandlers).forEach(([action, handler]) => {
     const key = keybinds[action];
@@ -332,16 +333,19 @@ function registerHotkeys(keybinds) {
       const code = MOUSE_BUTTON_CODES[key];
       (mouseGroups[code] ||= []).push(handler);
       needsHook = true;
-    } else {
-      // A bare single printable character (e.g. "E") — uiohook doesn't
-      // suppress the keystroke, so typing still works either way, but this
-      // still gates whether the *action* fires on it at all, honoring the
-      // Override Game preference regardless of what's already saved in
-      // config (covers keybinds set before the toggle existed, too).
-      if (!keybindOverrideGame && key.length === 1) {
+    } else if (key.length === 1) {
+      // A bare single printable character (e.g. "E"). By default this is
+      // skipped entirely — safe, but the action just won't fire on it.
+      // With Override Game on, it's registered via globalShortcut instead
+      // of uiohook: an exclusive OS-level grab that reliably fires the
+      // action, at the cost of that key no longer typing anywhere on the
+      // PC while it's bound — the original behavior, brought back on purpose.
+      if (keybindOverrideGame) {
+        (exclusiveGroups[key] ||= []).push(handler);
+      } else {
         console.warn(`[Hotkeys] "${key}" for action "${action}" is a bare key and Override Game is off — skipping registration.`);
-        return;
       }
+    } else {
       const code = toUiohookKeycode(key);
       if (code == null) {
         console.warn(`[Hotkeys] Unrecognized key "${key}" for action "${action}" — skipping.`);
@@ -356,12 +360,17 @@ function registerHotkeys(keybinds) {
   // globalShortcut grabs the key exclusively at the OS level, which stops it from
   // reaching any other focused window (chat, Discord, our own text fields). uiohook
   // just observes the keypress, so the keystroke still types normally everywhere
-  // while also firing the bound action.
+  // while also firing the bound action. Bare keys under Override Game are the
+  // deliberate exception — see exclusiveGroups above.
   Object.entries(keyGroups).forEach(([code, handlers]) => {
     keyBindings[code] = () => handlers.forEach(h => h());
   });
   Object.entries(mouseGroups).forEach(([code, handlers]) => {
     mouseBindings[code] = () => handlers.forEach(h => h());
+  });
+  Object.entries(exclusiveGroups).forEach(([accel, handlers]) => {
+    const ok = globalShortcut.register(accel, () => handlers.forEach(h => h()));
+    if (!ok) console.warn(`[Hotkeys] Failed to register exclusive key "${accel}" — it may already be in use by another app.`);
   });
 
   if (needsHook) ensureUiohookStarted();
