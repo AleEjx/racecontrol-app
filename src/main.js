@@ -76,6 +76,7 @@ let onCooldown = false;
 let onCooldown2 = false;
 let practiceModeActive = false; // synced from renderer via set-practice-mode-active
 let committeeScreenActive = false; // synced from renderer via set-committee-screen-active — true while the Committee tab is the visible screen
+let keybindOverrideGame = false; // synced from renderer via set-keybind-override-game — when off, bare single-character keys are refused at registration time
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -332,6 +333,15 @@ function registerHotkeys(keybinds) {
       (mouseGroups[code] ||= []).push(handler);
       needsHook = true;
     } else {
+      // A bare single printable character (e.g. "E") — uiohook doesn't
+      // suppress the keystroke, so typing still works either way, but this
+      // still gates whether the *action* fires on it at all, honoring the
+      // Override Game preference regardless of what's already saved in
+      // config (covers keybinds set before the toggle existed, too).
+      if (!keybindOverrideGame && key.length === 1) {
+        console.warn(`[Hotkeys] "${key}" for action "${action}" is a bare key and Override Game is off — skipping registration.`);
+        return;
+      }
       const code = toUiohookKeycode(key);
       if (code == null) {
         console.warn(`[Hotkeys] Unrecognized key "${key}" for action "${action}" — skipping.`);
@@ -806,6 +816,7 @@ ipcMain.handle("flag-broadcast", (_, data) => mainWindow?.webContents.send("flag
 ipcMain.handle("register-hotkeys",  (_, keybinds) => { registerHotkeys(keybinds); return true; });
 ipcMain.handle("set-practice-mode-active", (_, active) => { practiceModeActive = !!active; return true; });
 ipcMain.handle("set-committee-screen-active", (_, active) => { committeeScreenActive = !!active; return true; });
+ipcMain.handle("set-keybind-override-game", (_, active) => { keybindOverrideGame = !!active; return true; });
 ipcMain.handle("suspend-hotkeys",   () => { stopAllHotkeys(); return true; });
 ipcMain.handle("send-action2",    (_, action) => sendDriverAction2(action));
 ipcMain.handle("toggle-pitting2", () => {
