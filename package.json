@@ -6,8 +6,9 @@
   "author": "AleEjx",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --publish never",
-    "dist": "electron-builder --win --publish always"
+    "rebuild-native": "electron-builder install-app-deps",
+    "build": "npm run rebuild-native && electron-builder --win --publish never",
+    "dist": "npm run rebuild-native && electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.raceleague.driver",
@@ -27,8 +28,7 @@
     },
     "files": [
       "src/**/*",
-      "assets/**/*",
-      "node_modules/**/*"
+      "assets/**/*"
     ],
     "asarUnpack": [
       "node_modules/uiohook-napi/**/*"
