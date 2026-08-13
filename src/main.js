@@ -5,7 +5,28 @@ const os   = require("os");
 const https = require("https");
 const { exec, execFile } = require('child_process');
 const { autoUpdater } = require("electron-updater");
-const { uIOhook, UiohookKey } = require("uiohook-napi");
+let uIOhook = null;
+let UiohookKey = null;
+let uiohookUnavailable = false;
+
+// uiohook-napi is a native module. Load it only when hotkeys are needed so a
+// damaged/outdated install can still open the app and show an actionable error.
+function loadUiohook() {
+  if (uIOhook && UiohookKey) return true;
+  if (uiohookUnavailable) return false;
+  try {
+    ({ uIOhook, UiohookKey } = require("uiohook-napi"));
+    return true;
+  } catch (err) {
+    uiohookUnavailable = true;
+    console.error("[Hotkeys] Unable to load uiohook-napi:", err.message);
+    mainWindow?.webContents.send("toast", {
+      msg: "Global hotkeys unavailable — reinstall or update RaceLeague Driver.",
+      type: "err",
+    });
+    return false;
+  }
+}
 const CONFIG_FILE = path.join(app.getPath("userData"), "config.json");
 
 // libuiohook mouse button codes: 1=left 2=right 3=middle 4=side-back 5=side-forward
@@ -22,6 +43,7 @@ const NUM_KEY_MAP = {
 };
 function toUiohookKeycode(key) {
   if (typeof key !== "string") return null;
+  if (!loadUiohook()) return null;
   const name = NUM_KEY_MAP[key] || key; // letters/digits/F-keys pass through as-is
   return Object.prototype.hasOwnProperty.call(UiohookKey, name) ? UiohookKey[name] : null;
 }
@@ -32,6 +54,7 @@ let uiohookStarted = false;
 
 function ensureUiohookStarted() {
   if (uiohookStarted) return;
+  if (!loadUiohook()) return;
   uIOhook.on("mousedown", (e) => {
     const handler = mouseBindings[e.button];
     if (handler) handler();
