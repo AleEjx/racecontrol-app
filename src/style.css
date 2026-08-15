@@ -1226,6 +1226,21 @@ select:hover:not(:focus) {
 .flag-card.orange { background: rgba(255,138,30,0.09); border-color: rgba(255,138,30,0.5);  color: var(--orange); box-shadow: 0 0 18px rgba(255,138,30,0.12); }
 .flag-card.white  { background: rgba(255,255,255,0.05);border-color: rgba(255,255,255,0.3); color: #fff; }
 
+.flag-card-onlap {
+  animation: slideIn 0.35s var(--ease-spring), alertPulse 1s ease-in-out infinite;
+}
+@keyframes alertPulse {
+  0%, 100% { box-shadow: 0 0 18px rgba(255,45,85,0.18); border-color: rgba(255,45,85,0.5); }
+  50%      { box-shadow: 0 0 30px rgba(255,45,85,0.4);  border-color: rgba(255,45,85,0.9); }
+}
+
+.on-track-btn {
+  margin-top: 4px;
+  animation: alertPulse 1.6s ease-in-out infinite;
+}
+.btn-danger.on-track-btn        { background: rgba(255,45,85,0.14); border: 1px solid rgba(255,45,85,0.4); }
+.btn-danger.on-track-btn:hover  { background: rgba(255,45,85,0.22); }
+
 .fc-emoji { font-size: 24px; flex-shrink: 0; filter: drop-shadow(0 0 6px currentColor); }
 .fc-title { font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
 .fc-sub   { opacity: 0.75; margin-top: 2px; }
