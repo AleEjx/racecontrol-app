@@ -1608,6 +1608,8 @@
         <button onclick="closeDNFModal()" class="secondary-btn flex-1">No</button>
         <button onclick="submitDNF()" class="btn-danger flex-1">Yes, DNF</button>
       </div>
+      <button onclick="submitDNF(true)" class="btn-danger w-full on-track-btn">🚨 I'm On Track</button>
+      <div class="text-muted font-9">Use this if your car is stopped on the circuit — it DNFs you and warns other drivers for 5 seconds.</div>
     </div>
   </div>
 
@@ -2303,6 +2305,7 @@ function sanitizeKeybinds(keybinds) {
     let _lastFlagTimestamp = null;
     let _lastRaceState = null;
     let _lastBlueFlagDriver = null;
+    let _onTrackAlertToken = 0;
     let isEngineer = false;
     let _driverPollInterval = null;
     let _marshalPollInterval = null;
@@ -6814,6 +6817,24 @@ if (flag === "__driver_db_update__") {
       return;
     }
 
+if (flag === "__on_track_alert__" && customData) {
+  const html = customData.html || `<div class="flag-card red flag-card-onlap"><span class="fc-emoji">⚠️</span><div><div class="fc-title">${customData.driver} is ON TRACK</div><div class="fc-sub">#${customData.number} · ${customData.callsign} — caution advised.</div></div></div>`;
+  document.getElementById("flag-notif-driver").innerHTML = html;
+  document.getElementById("flag-notif-marshal").innerHTML = html;
+  document.getElementById("flag-notif-marshal").style.display = "block";
+  const token = ++_onTrackAlertToken;
+  setTimeout(() => {
+    if (token !== _onTrackAlertToken) return; // a newer flag/alert has already taken over
+    document.getElementById("flag-notif-driver").innerHTML = "";
+    const marshalNotif = document.getElementById("flag-notif-marshal");
+    if (marshalNotif && marshalNotif.innerHTML === html) {
+      marshalNotif.innerHTML = "";
+      marshalNotif.style.display = "none";
+    }
+  }, customData.autoHideMs || 5000);
+  return;
+}
+
         if (flag === "__custom__" && customData) {
           if (customData.audioCheckId) {
             showAudioCheckPrompt(customData.audioCheckId, customData.text || "Radio Check, Radio Check");
@@ -7049,7 +7070,7 @@ function confirmDNF2() {
         if (_dnfCountdown) { clearInterval(_dnfCountdown); _dnfCountdown = null; }
       }
 
-async function submitDNF() {
+async function submitDNF(onTrack = false) {
         closeDNFModal();
         if (!_lastRaceState?.raceStarted) {
           showToast("⏳ Race not started", "err");
@@ -7064,14 +7085,14 @@ async function submitDNF() {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-discord-id": config.discordId, "x-discord-token": config.driverToken },
             body: JSON.stringify({
-              action: "dnf", driver, number, callsign,
+              action: onTrack ? "dnf_on_track" : "dnf", driver, number, callsign,
               username: config.username || driver,
               engineer: config.engineer || false,
             }),
           });
           if (res.ok) {
-            showToast(`🚫 ${driver} DNF`, "err", true);
-            showAppNotification("⛔ Your dnf has been logged", "err");
+            showToast(onTrack ? `🚨 ${driver} DNF — On Track alert sent` : `🚫 ${driver} DNF`, "err", true);
+            showAppNotification(onTrack ? "⛔ DNF logged — other drivers warned you're on track" : "⛔ Your dnf has been logged", "err");
             const btns = _dnfSlot === 1
               ? ["btn-blue_flag", "btn-next_lap", "btn-pitting", "btn-dnf"]
               : ["btn2-blue_flag", "btn2-next_lap", "btn2-pitting", "btn2-dnf"];
