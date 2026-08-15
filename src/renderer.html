@@ -5766,11 +5766,21 @@ function _rcUpdatePlate(suffix, driverName, number, callsign, driverState, allDr
   _rcRenderLapGraph(suffix, laps, _rcRaceFastest(allDrivers));
 }
 
+function updateNextLapLabel(suffix, driverState, totalLaps) {
+  const btn = document.getElementById(`btn${suffix}-next_lap`);
+  if (!btn) return;
+  const onFinalLap = !!totalLaps && (driverState?.lap || 1) === totalLaps && !driverState?.finished && !driverState?.dnf;
+  const nameEl = btn.querySelector(".a-name") || btn.querySelector(".al");
+  if (nameEl) nameEl.textContent = onFinalLap ? "Finish Race" : "Next Lap";
+}
+
 function updatePlate(driverState, data) {
   _rcUpdatePlate("", config.driver, config.number, config.callsign, driverState, data.drivers);
+  updateNextLapLabel("", driverState, data.totalLaps);
 }
 function updatePlate2(driverState, data) {
   _rcUpdatePlate("2", config.driver2, config.number2, config.callsign2, driverState, data.drivers);
+  updateNextLapLabel("2", driverState, data.totalLaps);
 }
 
 function _rcRenderLapGraph(suffix, laps, raceFastest) {
