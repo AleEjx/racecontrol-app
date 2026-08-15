@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <title>RaceLeague Control</title>
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css" id="main-stylesheet" />
   <style>
     .s-kb-row { display: flex; align-items: center; gap: 8px; }
     .s-kb-row .settings-label { flex: 1; }
@@ -1204,10 +1204,11 @@
 </div>
 <div class="s-card gap-8 mb-4">
   <select id="panel-style-select" onchange="setPanelStyle(this.value)">
+    <option value="cosmetic">🌠 Cosmetic</option>
     <option value="modern">✨ Modern</option>
     <option value="legacy">🗂️ Legacy</option>
   </select>
-  <div class="small-note">Switches the Driver and Marshal panel layouts.</div>
+  <div class="small-note">Cosmetic and Modern share the tabbed layout — Cosmetic adds the glow theme, Modern uses the classic look. Legacy brings back the old driver panel.</div>
 </div>
 
 <div class="s-section-title">Driver Plate</div>
@@ -2786,11 +2787,12 @@ function testerGoto(panel) {
   }
 }
 
-    let _panelStyle = "modern";
+    let _panelStyle = "cosmetic";
 
 function loadPanelStylePref() {
-  _panelStyle = localStorage.getItem("rc_panel_style") || "modern";
+  _panelStyle = localStorage.getItem("rc_panel_style") || "cosmetic";
   updatePanelStyleBtns();
+  applyCosmeticTheme(_panelStyle);
   applyDriverPanelStyle();
   applyMarshalPanelStyle();
 }
@@ -2804,8 +2806,10 @@ async function setPanelStyle(style) {
   _panelStyle = style;
   localStorage.setItem("rc_panel_style", style);
   updatePanelStyleBtns();
+  applyCosmeticTheme(style);
   applyDriverPanelStyle();
   applyMarshalPanelStyle();
+  const labels = { cosmetic: "Cosmetic", modern: "Modern", legacy: "Legacy" };
   if (style === "legacy" && config.splitViewEnabled) {
     config.splitViewEnabled = false;
     await window.api.saveConfig(config);
@@ -2814,18 +2818,26 @@ async function setPanelStyle(style) {
     showToast("✓ Panel style set to Legacy — overlay windows turned off", "ok");
     return;
   }
-  showToast(`✓ Panel style set to ${style === "legacy" ? "Legacy" : "Modern"}`, "ok");
+  showToast(`✓ Panel style set to ${labels[style] || "Modern"}`, "ok");
+}
+
+function applyCosmeticTheme(style) {
+  const link = document.getElementById("main-stylesheet");
+  if (!link) return;
+  const wanted = style === "modern" ? "style-classic.css" : "style.css";
+  if (!link.getAttribute("href").endsWith(wanted)) link.setAttribute("href", wanted);
 }
 
 function applyDriverPanelStyle() {
   const container = document.getElementById("driver-scroll-body");
-  const tpl = document.getElementById(_panelStyle === "legacy" ? "tpl-driver-legacy" : "tpl-driver-modern");
+  const isLegacy = _panelStyle === "legacy";
+  const tpl = document.getElementById(isLegacy ? "tpl-driver-legacy" : "tpl-driver-modern");
   if (!container || !tpl) return;
 
   container.innerHTML = "";
   container.appendChild(tpl.content.cloneNode(true));
 
-  if (_panelStyle === "modern") {
+  if (!isLegacy) {
     setDriverTab("overview");
     document.getElementById("rc-car-strip"); // no-op guard, chips reset naturally on next poll
   }
@@ -2837,7 +2849,7 @@ function applyDriverPanelStyle() {
   const actSection2 = document.getElementById("d-actions-section2");
   if (isEngineer) {
     if (kbSection) kbSection.style.display = "none";
-    if (actSection) actSection.style.display = config.driver2 && _panelStyle === "modern" ? "none" : "block";
+    if (actSection) actSection.style.display = config.driver2 && !isLegacy ? "none" : "block";
     if (actSection2 && config.driver2) actSection2.style.display = "block";
   } else {
     if (actSection) actSection.style.display = "none";
@@ -2855,13 +2867,14 @@ function applyDriverPanelStyle() {
 
     function applyMarshalPanelStyle() {
   const container = document.getElementById("marshal-scroll-body");
-  const tpl = document.getElementById(_panelStyle === "legacy" ? "tpl-marshal-legacy" : "tpl-marshal-modern");
+  const isLegacy = _panelStyle === "legacy";
+  const tpl = document.getElementById(isLegacy ? "tpl-marshal-legacy" : "tpl-marshal-modern");
   if (!container || !tpl) return;
 
   container.innerHTML = "";
   container.appendChild(tpl.content.cloneNode(true));
 
-  if (_panelStyle === "modern") setMarshalTab("flags");
+  if (!isLegacy) setMarshalTab("flags");
 
   if (user?.roles?.includes(MARSHAL_ROLE) || DIRECTOR_ROLES.some(r => user?.roles?.includes(r)) || user?.isAdmin || hasDev) {
     const rs = document.getElementById("m-race-setup");
