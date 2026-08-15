@@ -574,18 +574,6 @@ async function sendDriverAction(action) {
   }
     onCooldown = true;
   try {
-    const stateRes = await fetch(`${config.apiUrl}/driver/state`, {
-      headers: { "x-discord-id": config.discordId || "" }
-    });
-    const stateData = await stateRes.json();
-if (!stateData.raceStarted) {
-      onCooldown = false;
-      mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
-      return;
-    }
-  } catch {
-  }
-  try {
     if (!config.driverToken) {
       onCooldown = false;
       mainWindow?.webContents.send("toast", { msg: "⚠️ Driver session expired — re-login in Settings", type: "err" });
@@ -611,7 +599,11 @@ if (res.ok) {
     } else {
       onCooldown = false;
       const data = await res.json().catch(() => ({}));
-      mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"}`, type: "err" });
+      if (res.status === 403 && /hasn.t started/i.test(data.error || "")) {
+        mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
+      } else {
+        mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"}`, type: "err" });
+      }
     }
   } catch {
     onCooldown = false;
@@ -626,17 +618,6 @@ async function sendDriverAction2(action) {
     return;
   }
   onCooldown2 = true;
-  try {
-    const stateRes = await fetch(`${config.apiUrl}/driver/state`, {
-      headers: { "x-discord-id": config.discordId || "" }
-    });
-    const stateData = await stateRes.json();
-if (!stateData.raceStarted) {
-      onCooldown2 = false;
-      mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
-      return;
-    }
-  } catch {}
   if (!config.driverToken) {
     onCooldown2 = false;
     mainWindow?.webContents.send("toast", { msg: "⚠️ Driver session expired — re-login in Settings", type: "err" });
@@ -663,7 +644,11 @@ if (!stateData.raceStarted) {
     } else {
       onCooldown2 = false;
       const data = await res.json().catch(() => ({}));
-      mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"} (D2)`, type: "err" });
+      if (res.status === 403 && /hasn.t started/i.test(data.error || "")) {
+        mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
+      } else {
+        mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"} (D2)`, type: "err" });
+      }
     }
   } catch {
     onCooldown2 = false;
