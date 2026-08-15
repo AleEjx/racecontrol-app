@@ -90,8 +90,10 @@ let mainWindow = null;
 let tray       = null;
 let inPits     = false;
 let inPits2 = false;
-let onCooldown = false;
-let onCooldown2 = false;
+// Per-action cooldowns — each action button/keybind locks out only itself,
+// not the whole panel. Replaces the old single onCooldown/onCooldown2 gate.
+const actionCooldowns  = { blue_flag: false, next_lap: false, pitting: false };
+const actionCooldowns2 = { blue_flag: false, next_lap: false, pitting: false };
 let practiceModeActive = false; // synced from renderer via set-practice-mode-active
 let committeeScreenActive = false; // synced from renderer via set-committee-screen-active — true while the Committee tab is the visible screen
 let keybindOverrideGame = false; // synced from renderer via set-keybind-override-game — when off, bare single-character keys are refused at registration time
@@ -298,19 +300,19 @@ function registerHotkeys(keybinds) {
   const actionHandlers = {
     blue_flag: () => {
       if (practiceModeActive) return; // race keybinds are disabled while Practice Mode is on
-      if (onCooldown) return;
+      if (actionCooldowns.blue_flag) return;
       mainWindow?.webContents.send("keybind-fired", "blue_flag");
       sendDriverAction("blue_flag");
     },
     next_lap: () => {
       if (practiceModeActive) return;
-      if (onCooldown) return;
+      if (actionCooldowns.next_lap) return;
       mainWindow?.webContents.send("keybind-fired", "next_lap");
       sendDriverAction("next_lap");
     },
     pitting: () => {
       if (practiceModeActive) return;
-      if (onCooldown || inPits) return;
+      if (actionCooldowns.pitting || inPits) return;
       mainWindow?.webContents.send("keybind-fired", "pitting");
       enterPits(1);
     },
@@ -568,14 +570,14 @@ async function sendDriverAction(action) {
     mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" });
     return;
   }
-  if (onCooldown) {
+  if (actionCooldowns[action]) {
     mainWindow?.webContents.send("toast", { msg: "⏳ Cooldown active", type: "err" });
     return;
   }
-    onCooldown = true;
+    actionCooldowns[action] = true;
   try {
     if (!config.driverToken) {
-      onCooldown = false;
+      actionCooldowns[action] = false;
       mainWindow?.webContents.send("toast", { msg: "⚠️ Driver session expired — re-login in Settings", type: "err" });
       return;
     }
@@ -594,10 +596,10 @@ body: JSON.stringify({
 if (res.ok) {
       const labels = { blue_flag:"🔵 Blue Flag", next_lap:"🏁 Next Lap", pitting:"🔧 Pitting", in_race:"🏎️ Back on Track" };
       mainWindow?.webContents.send("toast", { msg: `✓ ${labels[action]}`, type: "ok" });
-      mainWindow?.webContents.send("cooldown-start", 7, 1);
-      setTimeout(() => { onCooldown = false; mainWindow?.webContents.send("cooldown-end", 1); }, 7000);
+      mainWindow?.webContents.send("cooldown-start", 7, 1, action);
+      setTimeout(() => { actionCooldowns[action] = false; mainWindow?.webContents.send("cooldown-end", 1, action); }, 7000);
     } else {
-      onCooldown = false;
+      actionCooldowns[action] = false;
       const data = await res.json().catch(() => ({}));
       if (res.status === 403 && /hasn.t started/i.test(data.error || "")) {
         mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
@@ -606,20 +608,20 @@ if (res.ok) {
       }
     }
   } catch {
-    onCooldown = false;
+    actionCooldowns[action] = false;
     mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" });
   }
 }
 
 async function sendDriverAction2(action) {
   if (!config.apiUrl || !config.driver2) return;
-  if (onCooldown2) {
+  if (actionCooldowns2[action]) {
     mainWindow?.webContents.send("toast", { msg: "⏳ Cooldown active (D2)", type: "err" });
     return;
   }
-  onCooldown2 = true;
+  actionCooldowns2[action] = true;
   if (!config.driverToken) {
-    onCooldown2 = false;
+    actionCooldowns2[action] = false;
     mainWindow?.webContents.send("toast", { msg: "⚠️ Driver session expired — re-login in Settings", type: "err" });
     return;
   }
@@ -639,10 +641,10 @@ async function sendDriverAction2(action) {
     if (res.ok) {
       const labels = { blue_flag:"🔵 Blue Flag", next_lap:"🏁 Next Lap", pitting:"🔧 Pitting", in_race:"🏎️ Back on Track" };
       mainWindow?.webContents.send("toast", { msg: `✓ ${labels[action]} (D2)`, type: "ok" });
-      mainWindow?.webContents.send("cooldown-start", 7, 2);
-      setTimeout(() => { onCooldown2 = false; mainWindow?.webContents.send("cooldown-end", 2); }, 7000);
+      mainWindow?.webContents.send("cooldown-start", 7, 2, action);
+      setTimeout(() => { actionCooldowns2[action] = false; mainWindow?.webContents.send("cooldown-end", 2, action); }, 7000);
     } else {
-      onCooldown2 = false;
+      actionCooldowns2[action] = false;
       const data = await res.json().catch(() => ({}));
       if (res.status === 403 && /hasn.t started/i.test(data.error || "")) {
         mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
@@ -651,7 +653,7 @@ async function sendDriverAction2(action) {
       }
     }
   } catch {
-    onCooldown2 = false;
+    actionCooldowns2[action] = false;
     mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" });
   }
 }
@@ -668,13 +670,13 @@ async function enterPits(slot) {
   const driver       = isSlot1 ? config.driver   : config.driver2;
   const callsign     = isSlot1 ? config.callsign : config.callsign2;
   const number       = isSlot1 ? config.number   : config.number2;
-  const isOnCooldown = isSlot1 ? onCooldown      : onCooldown2;
+  const cooldowns    = isSlot1 ? actionCooldowns : actionCooldowns2;
 
   if (!config.apiUrl || !driver) {
     mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" });
     return;
   }
-  if (isOnCooldown) {
+  if (cooldowns.pitting) {
     mainWindow?.webContents.send("toast", { msg: "⏳ Cooldown active", type: "err" });
     return;
   }
@@ -683,17 +685,7 @@ async function enterPits(slot) {
     return;
   }
 
-  try {
-    const stateRes  = await fetch(`${config.apiUrl}/driver/state`, {
-      headers: { "x-discord-id": config.discordId || "" }
-    });
-    const stateData = await stateRes.json();
-    if (!stateData.raceStarted) {
-      mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
-      return;
-    }
-  } catch {}
-
+  cooldowns.pitting = true;
   try {
     const res = await fetch(`${config.apiUrl}/driver/action`, {
       method: "POST",
@@ -715,6 +707,8 @@ async function enterPits(slot) {
         mainWindow?.webContents.send("pit-state-changed-2", true);
       }
       mainWindow?.webContents.send("toast", { msg: `✓ 🔧 Pitting${isSlot1 ? "" : " (D2)"}`, type: "ok" });
+      mainWindow?.webContents.send("cooldown-start", 7, slot, "pitting");
+      setTimeout(() => { cooldowns.pitting = false; mainWindow?.webContents.send("cooldown-end", slot, "pitting"); }, 7000);
 
       // Mirrors the backend's 15s auto-clear of inPits
       setTimeout(() => {
@@ -727,10 +721,16 @@ async function enterPits(slot) {
         }
       }, 15_000);
     } else {
+      cooldowns.pitting = false;
       const data = await res.json().catch(() => ({}));
-      mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"}`, type: "err" });
+      if (res.status === 403 && /hasn.t started/i.test(data.error || "")) {
+        mainWindow?.webContents.send("toast", { msg: "⏳ Race not started", type: "err" });
+      } else {
+        mainWindow?.webContents.send("toast", { msg: `✗ ${data.error || "Action rejected"}`, type: "err" });
+      }
     }
   } catch {
+    cooldowns.pitting = false;
     mainWindow?.webContents.send("toast", { msg: "✗ Bot unreachable", type: "err" });
   }
 }
