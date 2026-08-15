@@ -3949,8 +3949,8 @@ setInterval(async () => {
       document.getElementById("btn-discord-login")?.addEventListener("click", loginWithDiscord);
 
       window.api.onToast(({ msg, type }) => showToast(msg, type));
-      window.api.onCooldownStart((s, slot) => startCooldown(s, slot));
-      window.api.onCooldownEnd((slot) => stopCooldown(slot));
+      window.api.onCooldownStart((s, slot, action) => startCooldown(s, slot, action));
+      window.api.onCooldownEnd((slot, action) => stopCooldown(slot, action));
       window.api.onPitStateChanged(v => updatePitBtn(v));
       window.api.onVersionInstallProgress?.(pct => {
   const el = document.getElementById("version-install-status");
@@ -6993,7 +6993,7 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
       }
 
       function doAction(action) {
-        if (_cooldownActive || !_canFire(action)) return;
+        if (!_canFire(action)) return;
         playKeybindSound(action);
         const btn = document.getElementById(`btn-${action}`);
         if (!btn || btn.disabled) return;
@@ -7003,7 +7003,9 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         if (msg) showAppNotification(msg, "ok");
       }
       function doTogglePitting() {
-        if (_cooldownActive || !_canFire('pitting')) return;
+        if (!_canFire('pitting')) return;
+        const btn = document.getElementById("btn-pitting");
+        if (btn && btn.disabled) return;
         playKeybindSound("pitting");
         window.api.togglePitting().then(v => updatePitBtn(v));
         showAppNotification("🔧 Your pit has been logged", "ok");
@@ -7015,7 +7017,7 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
       }
 
       function doAction2(action) {
-        if (_cooldownActive2 || !_canFire(action + '_2')) return;
+        if (!_canFire(action + '_2')) return;
         playKeybindSound(action + "2");
         const btn = document.getElementById(`btn2-${action}`);
         if (!btn || btn.disabled) return;
@@ -7025,7 +7027,9 @@ document.documentElement.style.setProperty("--flag", colors[def.color] || "#fff"
         if (msg) showAppNotification(msg, "ok");
       }
       function doTogglePitting2() {
-        if (_cooldownActive2 || !_canFire('pitting_2')) return;
+        if (!_canFire('pitting_2')) return;
+        const btn2 = document.getElementById("btn2-pitting");
+        if (btn2 && btn2.disabled) return;
         playKeybindSound("pitting2");
         window.api.togglePitting2().then(v => updatePitBtn2(v));
         showAppNotification("🔧 Your pit has been logged", "ok");
@@ -7712,45 +7716,19 @@ async function submitDNF(onTrack = false) {
         } catch { showToast("✗ Bot unreachable", "err"); }
       }
 
-      function startCooldown(secs, slot = 1) {
-        if (slot === 1) {
-          const bar = document.getElementById("cooldown-bar"), fill = document.getElementById("cooldown-fill");
-          bar.style.display = "block"; fill.style.transition = "none"; fill.style.width = "100%";
-          void fill.offsetWidth; fill.style.transition = `width ${secs}s linear`; fill.style.width = "0%";
-          _cooldownActive = true;
-          ["blue_flag", "next_lap", "pitting"].forEach(a => {
-            const b = document.getElementById(`btn-${a}`);
-            if (b) { b.disabled = true; b.style.opacity = "0.35"; }
-          });
-          _suspendHotkeys();
-        } else {
-          _cooldownActive2 = true;
-          ["blue_flag", "next_lap", "pitting"].forEach(a => {
-            const b2 = document.getElementById(`btn2-${a}`);
-            if (b2) { b2.disabled = true; b2.style.opacity = "0.35"; }
-          });
-        }
+      function startCooldown(secs, slot = 1, action) {
+        if (!action) return;
+        const prefix = slot === 1 ? "btn" : "btn2";
+        const b = document.getElementById(`${prefix}-${action}`);
+        if (b) { b.disabled = true; b.style.opacity = "0.35"; }
+        if (slot === 1) _cooldownActive = true; else _cooldownActive2 = true;
       }
-      function stopCooldown(slot = 1) {
-        if (slot === 1) {
-          document.getElementById("cooldown-bar").style.display = "none";
-          _cooldownActive = false;
-          if (_lastRaceState?.raceStarted !== false) {
-            ["blue_flag", "next_lap", "pitting"].forEach(a => {
-              const b = document.getElementById(`btn-${a}`);
-              if (b) { b.disabled = false; b.style.opacity = ""; }
-            });
-          }
-          _resumeHotkeys();
-        } else {
-          _cooldownActive2 = false;
-          if (_lastRaceState?.raceStarted !== false) {
-            ["blue_flag", "next_lap", "pitting"].forEach(a => {
-              const b2 = document.getElementById(`btn2-${a}`);
-              if (b2) { b2.disabled = false; b2.style.opacity = ""; }
-            });
-          }
-        }
+      function stopCooldown(slot = 1, action) {
+        if (!action) return;
+        const prefix = slot === 1 ? "btn" : "btn2";
+        const b = document.getElementById(`${prefix}-${action}`);
+        if (b && _lastRaceState?.raceStarted !== false) { b.disabled = false; b.style.opacity = ""; }
+        if (slot === 1) _cooldownActive = false; else _cooldownActive2 = false;
       }
 
       async function saveSettings() {
