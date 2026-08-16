@@ -1630,6 +1630,18 @@
       </div>
       <button onclick="submitDNF(true)" class="btn-danger w-full on-track-btn">🚨 I'm On Track</button>
       <div class="text-muted font-9">Use this if your car is stopped on the circuit — it DNFs you and warns other drivers for 5 seconds.</div>
+
+      <button onclick="toggleDnfLookPreview()" class="secondary-btn w-full" id="dnf-look-preview-btn">👀 Preview DNF Look</button>
+      <div id="dnf-look-preview" class="dnf-look-preview" style="display:none;">
+        <svg viewBox="0 0 90 30" class="dnf-look-preview-svg">
+          <g class="track-map-dot is-dnf" transform="translate(20,15)">
+            <circle r="9" class="track-map-dot-circle" fill="#3d8bff"></circle>
+            <text class="track-map-dot-label" text-anchor="middle" dy="3.5">7</text>
+            <text class="track-map-dot-tag" x="14" y="3.5" text-anchor="start" fill="#3d8bff">DEV</text>
+          </g>
+        </svg>
+        <div class="text-muted font-9">This is how a DNF'd car will look on the Track Map — greyed out and dimmed.</div>
+      </div>
     </div>
   </div>
 
@@ -5722,8 +5734,8 @@ let _trackMapCars = []; // [{ id, name, number, color, progress, speed }]
 const TRACK_MAP_COLORS = ["#3d8bff", "#ff2d55", "#10e58a", "#ffcc00", "#ff8a1e", "#a855f7", "#22d3ee", "#f472b6"];
 
 function _trackMapBuildCarList() {
-  // Uses real driver names/numbers when a race is loaded, purely so the
-  // preview looks realistic — the positions themselves are still simulated.
+  // Uses real driver names/numbers/callsigns when a race is loaded, purely
+  // so the preview looks realistic — the positions themselves are still simulated.
   const drivers = (_lastRaceState?.drivers || []).filter(d => !d.dnf);
   const count = Math.min(8, Math.max(drivers.length, 5));
   const cars = [];
@@ -5732,6 +5744,7 @@ function _trackMapBuildCarList() {
     cars.push({
       id: i,
       name: d?.name || `Car ${i + 1}`,
+      callsign: d?.callsign || `CAR${i + 1}`,
       number: d?.number || (i + 1),
       color: TRACK_MAP_COLORS[i % TRACK_MAP_COLORS.length],
       progress: Math.random(),
@@ -5771,7 +5784,10 @@ function renderTrackMapDots() {
   while (g.children.length < _trackMapCars.length) {
     const dot = document.createElementNS("http://www.w3.org/2000/svg", "g");
     dot.setAttribute("class", "track-map-dot");
-    dot.innerHTML = `<circle r="9" class="track-map-dot-circle"/><text class="track-map-dot-label" text-anchor="middle" dy="3.5"></text>`;
+    dot.innerHTML = `
+      <circle r="9" class="track-map-dot-circle"/>
+      <text class="track-map-dot-label" text-anchor="middle" dy="3.5"></text>
+      <text class="track-map-dot-tag" x="14" y="3.5" text-anchor="start"></text>`;
     g.appendChild(dot);
   }
 
@@ -5780,7 +5796,10 @@ function renderTrackMapDots() {
     const dot = g.children[i];
     dot.setAttribute("transform", `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`);
     dot.querySelector("circle").setAttribute("fill", car.color);
-    dot.querySelector("text").textContent = car.number;
+    dot.querySelector(".track-map-dot-label").textContent = car.number;
+    const tag = dot.querySelector(".track-map-dot-tag");
+    tag.textContent = car.callsign;
+    tag.setAttribute("fill", car.color);
   });
 }
 
@@ -5790,7 +5809,7 @@ function renderTrackMapLegend() {
   el.innerHTML = _trackMapCars.map(car => `
     <div class="track-map-legend-row">
       <span class="track-map-legend-dot" style="background:${car.color}"></span>
-      <span class="track-map-legend-name">${car.name}</span>
+      <span class="track-map-legend-name">#${car.number} ${car.callsign}</span>
     </div>`).join("");
 }
 
@@ -7209,6 +7228,14 @@ function confirmDNF2() {
       function closeDNFModal() {
         document.getElementById("dnf-modal").style.display = "none";
         _clearDNFTimer();
+        const preview = document.getElementById("dnf-look-preview");
+        if (preview) preview.style.display = "none";
+      }
+
+      function toggleDnfLookPreview() {
+        const preview = document.getElementById("dnf-look-preview");
+        if (!preview) return;
+        preview.style.display = preview.style.display === "none" ? "flex" : "none";
       }
 
       function _startDNFTimer() {
