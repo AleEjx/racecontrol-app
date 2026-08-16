@@ -96,6 +96,9 @@
     body.livesplit-mode .pm-time {
       font-size: 64px !important;
     }
+    body.livesplit-mode .pm-recent-laps {
+      display: flex !important;
+    }
     body.livesplit-mode .pm-livesplit-btn {
       opacity: 0;
     }
@@ -837,6 +840,7 @@
       </button>
       <div class="pm-time" id="pm-time">00:00.00</div>
       <div class="pm-time-sub" id="pm-time-sub">Ready</div>
+      <div class="pm-recent-laps" id="pm-recent-laps"></div>
       <div class="pm-controls">
         <button class="pm-btn start" id="pm-btn-start" onclick="practiceStart()">
           <span class="pi">▶</span><span class="pl">Start</span><span class="pk" id="pm-key-start">F9</span>
@@ -4917,6 +4921,7 @@ function practiceLap() {
   _practiceLaps.push({ lap: lapNum, time: lapTimeSec });
   savePracticeLaps();
   renderPracticeLeaderboard();
+  renderRecentLaps();
   renderPracticeGraph();
   _fuelSnapshotOnLap(lapNum);    
   showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok", true);
@@ -5876,6 +5881,7 @@ function clearPracticeLaps() {
   _practiceLaps = [];
   savePracticeLaps();
   renderPracticeLeaderboard();
+  renderRecentLaps();
   renderPracticeGraph();
   showToast("✓ Practice laps cleared", "ok");
 }
@@ -6170,6 +6176,7 @@ function applyLiveSplitMode() {
   const btn = document.getElementById("pm-livesplit-btn");
   if (btn) btn.title = _liveSplitModeEnabled ? "Exit Live Split view" : "Show just the timer, LiveSplit-style";
   setLiveSplitOpacityRowVisible(_liveSplitModeEnabled);
+  if (_liveSplitModeEnabled) renderRecentLaps();
 }
 function setLiveSplitOpacityRowVisible(visible) {
   const row = document.getElementById("pm-livesplit-opacity-row");
@@ -6497,6 +6504,7 @@ function practiceLap() {
   _practiceLaps.push({ lap: lapNum, time: lapTimeSec });
   savePracticeLaps();
   renderPracticeLeaderboard();
+  renderRecentLaps();
   renderPracticeGraph();
   showToast(`🏁 Lap ${lapNum} — ${formatLapTime(lapTimeSec)}`, "ok", true);
   showAppNotification("🏁 Lap has been logged", "ok");
@@ -6554,12 +6562,34 @@ function renderPracticeLeaderboard() {
   }).reverse().join("");
 }
 
+function renderRecentLaps() {
+  const el = document.getElementById("pm-recent-laps");
+  if (!el) return;
+  if (!_practiceLaps.length) { el.innerHTML = ""; return; }
+  const times = _practiceLaps.map(l => l.time);
+  const best = Math.min(...times);
+  const worst = Math.max(...times);
+  const hasSpread = times.length > 1;
+  const recent = _practiceLaps.slice(-2).reverse(); // most recent lap first
+  el.innerHTML = recent.map(l => {
+    const isBest = l.time === best;
+    const isWorst = hasSpread && l.time === worst && !isBest;
+    const cls = isBest ? "faster" : isWorst ? "slower" : "";
+    return `
+      <div class="pm-recent-lap ${cls}">
+        <span class="prl-num">L${l.lap}</span>
+        <span class="prl-time">${formatLapTime(l.time)}</span>
+      </div>`;
+  }).join("");
+}
+
 function removePracticeLap(idx) {
   if (idx < 0 || idx >= _practiceLaps.length) return;
   _practiceLaps.splice(idx, 1);
   _practiceLaps.forEach((l, i) => { l.lap = i + 1; });
   savePracticeLaps();
   renderPracticeLeaderboard();
+  renderRecentLaps();
   renderPracticeGraph();
 }
 
@@ -6599,6 +6629,7 @@ function launchPracticePanel() {
   updateSwitcher();
   updatePracticeKeyLabels();
   renderPracticeLeaderboard();
+  renderRecentLaps();
   renderPracticeGraph();
   updatePmFuelVisibility(); 
 }
