@@ -2592,6 +2592,57 @@ input.fixed-square {
 .d-tab-panel { display:none; }
 .d-tab-panel.active { display:block; }
 
+/* Live Track Map (F1-style) */
+.track-map-wrap {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+.track-map-svg { width: 100%; height: auto; max-height: 420px; display: block; }
+.track-map-path {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
+}
+.track-map-startfinish { stroke: #fff; stroke-width: 5; }
+.track-map-dot { transition: transform 0.05s linear; }
+.track-map-dot-circle { stroke: #0a0a0f; stroke-width: 2; }
+.track-map-dot-label {
+  font-family: 'Oxanium', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  fill: #0a0a0f;
+  pointer-events: none;
+}
+.track-map-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(255,214,0,0.12);
+  border: 1px solid rgba(255,214,0,0.35);
+  color: var(--yellow);
+}
+.track-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 10px;
+  padding: 0 2px;
+}
+.track-map-legend-row { display: flex; align-items: center; gap: 5px; }
+.track-map-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.track-map-legend-name { font-size: 10px; color: var(--muted); font-weight: 600; }
+
 
 #m-tab-flags.active,
 #m-tab-setup.active,
