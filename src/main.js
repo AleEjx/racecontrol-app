@@ -154,7 +154,7 @@ app.whenReady().then(() => {
     fieldWin = createOverlayWindow("field", { width: 300, height: 420, x: 40, y: 400 });
   }
   if (config.timerOverlayEnabled) {
-    timerWin = createOverlayWindow("timer", { width: 260, height: 90, x: 40, y: 760 });
+    timerWin = createOverlayWindow("timer", { width: 260, height: 170, x: 40, y: 760 });
   }
   if (config.notifOverlayEnabled) {
     notifWin = createOverlayWindow("notif", notifBoundsForPosition(config.notifPosition || "right"));
@@ -504,7 +504,7 @@ ipcMain.handle("overlay:toggle-timer", () => {
     saveConfig(config);
     return false;
   } else {
-    timerWin = createOverlayWindow("timer", { width: 260, height: 90, x: 40, y: 760 });
+    timerWin = createOverlayWindow("timer", { width: 260, height: 170, x: 40, y: 760 });
     config.timerOverlayEnabled = true;
     saveConfig(config);
     return true;
@@ -528,7 +528,7 @@ ipcMain.handle("overlay:reset-positions", () => {
   saveConfig(config);
   if (plateWin) plateWin.setBounds({ width: 260, height: 330, x: 40, y: 40 });
   if (fieldWin) fieldWin.setBounds({ width: 300, height: 420, x: 40, y: 400 });
-  if (timerWin) timerWin.setBounds({ width: 260, height: 90, x: 40, y: 760 });
+  if (timerWin) timerWin.setBounds({ width: 260, height: 170, x: 40, y: 760 });
   if (notifWin) notifWin.setBounds(notifBoundsForPosition(config.notifPosition || "right"));
   return true;
 });
