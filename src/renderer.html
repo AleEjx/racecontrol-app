@@ -529,6 +529,7 @@
       <div class="rc-chev-nav">
         <button class="active" id="d-tab-btn-overview" onclick="setDriverTab('overview')">Overview</button>
         <button id="d-tab-btn-field" onclick="setDriverTab('field')">Field</button>
+        <button id="d-tab-btn-track" onclick="setDriverTab('track')">Track</button>
       </div>
 
       <div class="d-tab-panel active" id="d-tab-overview">
@@ -596,6 +597,21 @@
           <div class="placeholder-text">Waiting for race...</div>
         </div>
       </div>
+
+<div class="d-tab-panel" id="d-tab-track">
+  <div class="rc-block-title">Live Track Map</div>
+  <div class="track-map-wrap">
+    <svg viewBox="0 0 460 802" class="track-map-svg" id="track-map-svg" preserveAspectRatio="xMidYMid meet">
+      <path id="track-map-path" class="track-map-path"
+        d="M 374.5 79.9 L 319.0 42.3 Q 300.8 30.0 278.8 30.3 L 121.9 32.6 Q 99.9 32.9 91.8 41.5 L 79.2 54.9 Q 71.1 63.5 71.1 85.5 L 71.1 147.7 Q 71.1 169.7 75.1 170.0 L 81.5 170.4 Q 85.5 170.7 85.5 177.9 L 85.5 189.3 Q 85.5 196.5 103.2 199.7 L 131.0 204.8 Q 148.7 208.0 149.8 213.6 L 151.4 222.5 Q 152.5 228.1 156.0 224.1 L 161.4 217.7 Q 164.9 213.7 186.8 215.4 L 229.2 218.7 Q 251.1 220.4 251.4 231.4 L 251.7 248.7 Q 252.0 259.7 243.2 279.9 L 225.4 320.8 Q 216.6 341.0 194.6 341.0 L 90.3 341.0 Q 68.3 341.0 68.1 363.0 L 67.5 447.2 Q 67.3 469.2 56.9 484.2 L 40.4 507.8 Q 30.0 522.8 42.9 531.9 L 63.0 546.3 Q 75.9 555.4 75.0 577.4 L 68.2 742.9 Q 67.3 764.9 89.3 765.3 L 388.9 771.2 Q 410.9 771.6 411.6 749.6 L 429.3 208.0 Q 430.0 186.0 421.9 165.6 L 400.8 112.6 Q 392.7 92.2 374.5 79.9 Z" />
+      <line x1="46" y1="660" x2="90" y2="655" class="track-map-startfinish" />
+      <g id="track-map-dots"></g>
+    </svg>
+    <div class="track-map-badge">🧪 Test data</div>
+  </div>
+  <div class="track-map-legend" id="track-map-legend"></div>
+</div>
+
 </template>
   </div>
 
@@ -2836,6 +2852,7 @@ function applyCosmeticTheme(style) {
 }
 
 function applyDriverPanelStyle() {
+  stopTrackMapSim();
   const container = document.getElementById("driver-scroll-body");
   const isLegacy = _panelStyle === "legacy";
   const tpl = document.getElementById(isLegacy ? "tpl-driver-legacy" : "tpl-driver-modern");
@@ -5678,8 +5695,103 @@ function launchSpectatePanel(startPoll = true) {
 function setDriverTab(tab) {
   document.getElementById("d-tab-btn-overview")?.classList.toggle("active", tab === "overview");
   document.getElementById("d-tab-btn-field")?.classList.toggle("active", tab === "field");
+  document.getElementById("d-tab-btn-track")?.classList.toggle("active", tab === "track");
   document.getElementById("d-tab-overview")?.classList.toggle("active", tab === "overview");
   document.getElementById("d-tab-field")?.classList.toggle("active", tab === "field");
+  document.getElementById("d-tab-track")?.classList.toggle("active", tab === "track");
+  if (tab === "track") startTrackMapSim(); else stopTrackMapSim();
+}
+
+// ─── Live Track Map (F1-style) ───────────────────────────────────────────
+// Scaffold only — dot positions are simulated so the widget can be seen
+// and iterated on before a real PRC API key exists. To go live later:
+//   1. Replace _trackMapBuildCarList()'s progress/speed simulation with
+//      real per-driver world coordinates from PRC.
+//   2. Add a function that maps a PRC world (x,y) to a point on/along
+//      TRACK_MAP_PATH (either by projecting onto the path, or — better —
+//      by re-deriving the path's control points directly from real
+//      trackside reference coordinates so PRC (x,y) maps 1:1 to SVG (x,y)
+//      via a simple affine transform instead of a "progress %" fake-out).
+//   3. Feed real positions into renderTrackMapDots() on each PRC poll/SSE
+//      tick instead of _trackMapTick()'s simulated interval.
+
+let _trackMapInterval = null;
+let _trackMapPathLen = 0;
+let _trackMapCars = []; // [{ id, name, number, color, progress, speed }]
+
+const TRACK_MAP_COLORS = ["#3d8bff", "#ff2d55", "#10e58a", "#ffcc00", "#ff8a1e", "#a855f7", "#22d3ee", "#f472b6"];
+
+function _trackMapBuildCarList() {
+  // Uses real driver names/numbers when a race is loaded, purely so the
+  // preview looks realistic — the positions themselves are still simulated.
+  const drivers = (_lastRaceState?.drivers || []).filter(d => !d.dnf);
+  const count = Math.min(8, Math.max(drivers.length, 5));
+  const cars = [];
+  for (let i = 0; i < count; i++) {
+    const d = drivers[i];
+    cars.push({
+      id: i,
+      name: d?.name || `Car ${i + 1}`,
+      number: d?.number || (i + 1),
+      color: TRACK_MAP_COLORS[i % TRACK_MAP_COLORS.length],
+      progress: Math.random(),
+      speed: 0.00035 + Math.random() * 0.00025,
+    });
+  }
+  return cars;
+}
+
+function startTrackMapSim() {
+  const path = document.getElementById("track-map-path");
+  if (!path) return;
+  _trackMapPathLen = path.getTotalLength();
+  _trackMapCars = _trackMapBuildCarList();
+  renderTrackMapLegend();
+  if (_trackMapInterval) clearInterval(_trackMapInterval);
+  _trackMapInterval = setInterval(_trackMapTick, 50);
+  _trackMapTick();
+}
+
+function stopTrackMapSim() {
+  if (_trackMapInterval) { clearInterval(_trackMapInterval); _trackMapInterval = null; }
+}
+
+function _trackMapTick() {
+  if (!_trackMapPathLen) return;
+  _trackMapCars.forEach(car => { car.progress = (car.progress + car.speed) % 1; });
+  renderTrackMapDots();
+}
+
+function renderTrackMapDots() {
+  const path = document.getElementById("track-map-path");
+  const g = document.getElementById("track-map-dots");
+  if (!path || !g || !_trackMapPathLen) return;
+
+  while (g.children.length > _trackMapCars.length) g.removeChild(g.lastChild);
+  while (g.children.length < _trackMapCars.length) {
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    dot.setAttribute("class", "track-map-dot");
+    dot.innerHTML = `<circle r="9" class="track-map-dot-circle"/><text class="track-map-dot-label" text-anchor="middle" dy="3.5"></text>`;
+    g.appendChild(dot);
+  }
+
+  _trackMapCars.forEach((car, i) => {
+    const pt = path.getPointAtLength(car.progress * _trackMapPathLen);
+    const dot = g.children[i];
+    dot.setAttribute("transform", `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`);
+    dot.querySelector("circle").setAttribute("fill", car.color);
+    dot.querySelector("text").textContent = car.number;
+  });
+}
+
+function renderTrackMapLegend() {
+  const el = document.getElementById("track-map-legend");
+  if (!el) return;
+  el.innerHTML = _trackMapCars.map(car => `
+    <div class="track-map-legend-row">
+      <span class="track-map-legend-dot" style="background:${car.color}"></span>
+      <span class="track-map-legend-name">${car.name}</span>
+    </div>`).join("");
 }
 
 function renderNearby(data) {
