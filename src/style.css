@@ -1241,6 +1241,19 @@ select:hover:not(:focus) {
 .btn-danger.on-track-btn        { background: rgba(255,45,85,0.14); border: 1px solid rgba(255,45,85,0.4); }
 .btn-danger.on-track-btn:hover  { background: rgba(255,45,85,0.22); }
 
+.dnf-look-preview {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  animation: fadeInUp 0.2s var(--ease-out);
+}
+.dnf-look-preview-svg { width: 100%; max-width: 160px; height: auto; }
+
 .fc-emoji { font-size: 24px; flex-shrink: 0; filter: drop-shadow(0 0 6px currentColor); }
 .fc-title { font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
 .fc-sub   { opacity: 0.75; margin-top: 2px; }
@@ -2876,6 +2889,19 @@ input.fixed-square {
 .track-map-legend-row { display: flex; align-items: center; gap: 5px; }
 .track-map-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .track-map-legend-name { font-size: 10px; color: var(--muted); font-weight: 600; }
+
+.track-map-dot-tag {
+  font-family: 'Oxanium', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #0a0a0f;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.track-map-dot.is-dnf .track-map-dot-circle { fill: var(--muted) !important; opacity: 0.55; }
+.track-map-dot.is-dnf .track-map-dot-tag   { fill: var(--muted) !important; opacity: 0.75; }
+.track-map-dot.is-dnf .track-map-dot-label { fill: #0a0a0f; }
 
 
 #m-tab-flags.active,
