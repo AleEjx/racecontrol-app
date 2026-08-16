@@ -97,6 +97,25 @@
       transition: color 0.15s ease;
     }
     .rc-timer-plate.running .rc-timer-time { color: var(--green, #00e676); }
+
+    .ov-recent-laps { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; width: 100%; }
+    .ov-recent-lap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 3px 10px;
+      border-radius: 8px;
+      background: rgb(10 10 14 / var(--timer-overlay-opacity, 0.55));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'Oxanium', sans-serif;
+    }
+    .ov-recent-lap .orl-num  { font-size: 9px; color: rgba(232,232,240,0.55); font-weight: 700; }
+    .ov-recent-lap .orl-time { font-size: 15px; font-weight: 800; color: #e8e8f0; font-variant-numeric: tabular-nums; }
+    .ov-recent-lap.faster { border-color: rgba(0,230,118,0.5); }
+    .ov-recent-lap.faster .orl-time { color: var(--green, #00e676); }
+    .ov-recent-lap.slower { border-color: rgba(255,23,68,0.5); }
+    .ov-recent-lap.slower .orl-time { color: var(--red, #ff1744); }
   </style>
 </head>
 <body>
@@ -109,6 +128,7 @@
       <div class="rc-timer-plate" id="rc-timer-plate">
         <div class="rc-timer-time" id="rc-timer-time">00:00.00</div>
       </div>
+      <div class="ov-recent-laps" id="ov-recent-laps"></div>
     </div>
   </div>
 
@@ -121,6 +141,13 @@
       const mins = Math.floor(seconds / 60);
       const secs = (seconds % 60).toFixed(2);
       return `${String(mins).padStart(2, "0")}:${secs.padStart(5, "0")}`;
+    }
+
+    function formatLapTime(seconds) {
+      if (typeof seconds !== "number" || isNaN(seconds)) return "–";
+      const mins = Math.floor(seconds / 60);
+      const secs = (seconds % 60).toFixed(2);
+      return mins > 0 ? `${mins}:${secs.padStart(5, "0")}` : `${secs}s`;
     }
 
     function applyOverlayScale(scale) {
@@ -178,9 +205,43 @@
     window.addEventListener("storage", (e) => {
       if (e.key === "rc_practice_running" || e.key === "rc_practice_last_lap_ts") tickTimer();
       if (e.key === "rc_timer_overlay_opacity") applyTimerOverlayOpacity();
+      if (e.key === "rc_practice_laps") renderRecentLaps();
     });
     // ...and keep ticking smoothly while running.
     setInterval(tickTimer, 47);
+
+    let _lastLapsRaw = null;
+    function renderRecentLaps() {
+      const raw = localStorage.getItem("rc_practice_laps");
+      if (raw === _lastLapsRaw) return; // avoid needless re-renders on the poll tick
+      _lastLapsRaw = raw;
+
+      const el = document.getElementById("ov-recent-laps");
+      if (!el) return;
+      let laps = [];
+      try { laps = raw ? JSON.parse(raw) : []; } catch { laps = []; }
+      if (!laps.length) { el.innerHTML = ""; requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight)); return; }
+
+      const times = laps.map(l => l.time);
+      const best = Math.min(...times);
+      const worst = Math.max(...times);
+      const hasSpread = times.length > 1;
+      const recent = laps.slice(-2).reverse();
+      el.innerHTML = recent.map(l => {
+        const isBest = l.time === best;
+        const isWorst = hasSpread && l.time === worst && !isBest;
+        const cls = isBest ? "faster" : isWorst ? "slower" : "";
+        return `
+          <div class="ov-recent-lap ${cls}">
+            <span class="orl-num">L${l.lap}</span>
+            <span class="orl-time">${formatLapTime(l.time)}</span>
+          </div>`;
+      }).join("");
+      requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
+    }
+    // Poll too, in case the OS/Electron doesn't fire cross-window storage
+    // events reliably — cheap no-op re-render when nothing changed.
+    setInterval(renderRecentLaps, 500);
 
     function applyTimerOverlayOpacity() {
       const saved = localStorage.getItem("rc_timer_overlay_opacity");
@@ -192,6 +253,7 @@
       config = await window.api.getConfig();
       applyOverlayScale(config.timerOverlayScale || 1);
       applyTimerOverlayOpacity();
+      renderRecentLaps();
       requestAnimationFrame(() => requestAnimationFrame(fitWindowHeight));
       tickTimer();
     });
