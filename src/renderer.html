@@ -1835,6 +1835,11 @@
           Discord ID</div>
         <input type="text" id="dm-discord" placeholder="884223249939050507" />
       </div>
+      <div>
+        <div class="label-muted">
+          Roblox Username <span class="text-muted font-9">(for live track map)</span></div>
+        <input type="text" id="dm-roblox" placeholder="ExampleRobloxUser" />
+      </div>
       <div id="dm-error" class="text-error-sm"></div>
       <div class="flex-row-gap-6">
         <button onclick="closeDriverModal()" class="secondary-btn flex-1">Cancel</button>
@@ -3460,6 +3465,7 @@ function canEngineerForActiveLeague() {
       document.getElementById("dm-number").value = "";
       document.getElementById("dm-callsign").value = "";
       document.getElementById("dm-discord").value = "";
+      document.getElementById("dm-roblox").value = "";
       document.getElementById("dm-error").textContent = "";
       document.getElementById("driver-modal-title").textContent = "Add Driver";
       document.getElementById("driver-modal").style.display = "flex";
@@ -3475,6 +3481,7 @@ function canEngineerForActiveLeague() {
       document.getElementById("dm-number").value = d.number;
       document.getElementById("dm-callsign").value = d.callsign;
       document.getElementById("dm-discord").value = d.discordId;
+      document.getElementById("dm-roblox").value = d.robloxUsername || "";
       document.getElementById("dm-error").textContent = "";
       document.getElementById("driver-modal-title").textContent = "Edit Driver";
       document.getElementById("driver-modal").style.display = "flex";
@@ -3490,6 +3497,7 @@ function canEngineerForActiveLeague() {
       const number = document.getElementById("dm-number").value.trim();
       const callsign = document.getElementById("dm-callsign").value.trim().toUpperCase();
       const discord = document.getElementById("dm-discord").value.trim();
+      const robloxUsername = document.getElementById("dm-roblox").value.trim();
       const errEl = document.getElementById("dm-error");
 
       if (!name) { errEl.textContent = "Name is required."; return; }
@@ -3506,9 +3514,9 @@ function canEngineerForActiveLeague() {
 
       if (editId) {
         const idx = drivers.findIndex(d => d.name === editId);
-        if (idx >= 0) drivers[idx] = { name, number, callsign, discordId: discord };
+        if (idx >= 0) drivers[idx] = { name, number, callsign, discordId: discord, robloxUsername };
       } else {
-        drivers.push({ name, number, callsign, discordId: discord });
+        drivers.push({ name, number, callsign, discordId: discord, robloxUsername });
       }
 
       saveDriverDB(drivers);
@@ -5729,9 +5737,43 @@ function setDriverTab(tab) {
 
 let _trackMapInterval = null;
 let _trackMapPathLen = 0;
-let _trackMapCars = []; // [{ id, name, number, color, progress, speed }]
+let _trackMapCars = []; // [{ id, name, number, callsign, color, progress, speed }] (sim) or [{ name, number, callsign, color, x, y }] (live)
+let _trackMapLive = false;
+let _trackMapLiveWatchdog = null;
 
 const TRACK_MAP_COLORS = ["#3d8bff", "#ff2d55", "#10e58a", "#ffcc00", "#ff8a1e", "#a855f7", "#22d3ee", "#f472b6"];
+
+// Called when a real __track_positions__ SSE broadcast arrives from
+// flagApi.js (PRC v2 polling). Switches the map out of simulated mode and
+// renders drivers at their real coordinates. If no further update arrives
+// within 20s (race not running, bot offline, etc.) it falls back to the
+// simulator so the widget never just freezes/goes blank.
+function applyLiveTrackPositions(positions) {
+  if (!document.getElementById("d-tab-track")?.classList.contains("active")) return;
+
+  _trackMapLive = true;
+  const badge = document.querySelector(".track-map-badge");
+  if (badge) { badge.textContent = "🟢 Live"; badge.classList.add("is-live"); }
+  if (_trackMapInterval) { clearInterval(_trackMapInterval); _trackMapInterval = null; }
+
+  _trackMapCars = positions.map((p, i) => ({
+    name: p.name,
+    number: p.number,
+    callsign: p.callsign,
+    color: TRACK_MAP_COLORS[i % TRACK_MAP_COLORS.length],
+    x: p.x,
+    y: p.y,
+  }));
+  renderTrackMapLegend();
+  renderTrackMapDots();
+
+  clearTimeout(_trackMapLiveWatchdog);
+  _trackMapLiveWatchdog = setTimeout(() => {
+    _trackMapLive = false;
+    if (badge) { badge.textContent = "🧪 Test data"; badge.classList.remove("is-live"); }
+    if (document.getElementById("d-tab-track")?.classList.contains("active")) startTrackMapSim();
+  }, 20000);
+}
 
 function _trackMapBuildCarList() {
   // Uses real driver names/numbers/callsigns when a race is loaded, purely
@@ -5755,6 +5797,7 @@ function _trackMapBuildCarList() {
 }
 
 function startTrackMapSim() {
+  if (_trackMapLive) return; // real data is flowing — don't override it with fake data
   const path = document.getElementById("track-map-path");
   if (!path) return;
   _trackMapPathLen = path.getTotalLength();
@@ -5778,7 +5821,7 @@ function _trackMapTick() {
 function renderTrackMapDots() {
   const path = document.getElementById("track-map-path");
   const g = document.getElementById("track-map-dots");
-  if (!path || !g || !_trackMapPathLen) return;
+  if (!g || (!_trackMapLive && (!path || !_trackMapPathLen))) return;
 
   while (g.children.length > _trackMapCars.length) g.removeChild(g.lastChild);
   while (g.children.length < _trackMapCars.length) {
@@ -5792,7 +5835,7 @@ function renderTrackMapDots() {
   }
 
   _trackMapCars.forEach((car, i) => {
-    const pt = path.getPointAtLength(car.progress * _trackMapPathLen);
+    const pt = _trackMapLive ? { x: car.x, y: car.y } : path.getPointAtLength(car.progress * _trackMapPathLen);
     const dot = g.children[i];
     dot.setAttribute("transform", `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`);
     dot.querySelector("circle").setAttribute("fill", car.color);
@@ -6988,6 +7031,11 @@ if (flag === "__driver_db_update__") {
       showDbUpdateBanner();
       return;
     }
+
+if (flag === "__track_positions__" && customData?.positions) {
+  applyLiveTrackPositions(customData.positions);
+  return;
+}
 
 if (flag === "__on_track_alert__" && customData) {
   const html = customData.html || `<div class="flag-card red flag-card-onlap"><span class="fc-emoji">⚠️</span><div><div class="fc-title">${customData.driver} is ON TRACK</div><div class="fc-sub">#${customData.number} · ${customData.callsign} — caution advised.</div></div></div>`;
