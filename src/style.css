@@ -2834,6 +2834,29 @@ input.fixed-square {
 .d-tab-panel { display:none; }
 .d-tab-panel.active { display:block; animation: fadeInUp 0.22s var(--ease-out); }
 
+.track-map-coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--surface-grad);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), var(--inset-hi);
+}
+.track-map-coming-soon-icon { font-size: 34px; opacity: 0.6; filter: grayscale(0.4); }
+.track-map-coming-soon-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.track-map-coming-soon-sub { font-size: 11px; color: var(--muted); max-width: 280px; line-height: 1.5; }
+
 /* Live Track Map (F1-style) */
 .track-map-wrap {
   position: relative;
