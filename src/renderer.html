@@ -5749,11 +5749,10 @@ const TRACK_MAP_COLORS = ["#3d8bff", "#ff2d55", "#10e58a", "#ffcc00", "#ff8a1e",
 // within 20s (race not running, bot offline, etc.) it falls back to the
 // simulator so the widget never just freezes/goes blank.
 function applyLiveTrackPositions(positions) {
-  if (!document.getElementById("d-tab-track")?.classList.contains("active")) return;
-
+  // Always accept the broadcast, even if the Track tab isn't open right
+  // now — otherwise a race that starts before you click over to the tab
+  // gets silently dropped and you're stuck watching test data forever.
   _trackMapLive = true;
-  const badge = document.querySelector(".track-map-badge");
-  if (badge) { badge.textContent = "🟢 Live"; badge.classList.add("is-live"); }
   if (_trackMapInterval) { clearInterval(_trackMapInterval); _trackMapInterval = null; }
 
   _trackMapCars = positions.map((p, i) => ({
@@ -5764,12 +5763,19 @@ function applyLiveTrackPositions(positions) {
     x: p.x,
     y: p.y,
   }));
-  renderTrackMapLegend();
-  renderTrackMapDots();
+
+  const tabOpen = document.getElementById("d-tab-track")?.classList.contains("active");
+  if (tabOpen) {
+    const badge = document.querySelector(".track-map-badge");
+    if (badge) { badge.textContent = "🟢 Live"; badge.classList.add("is-live"); }
+    renderTrackMapLegend();
+    renderTrackMapDots();
+  }
 
   clearTimeout(_trackMapLiveWatchdog);
   _trackMapLiveWatchdog = setTimeout(() => {
     _trackMapLive = false;
+    const badge = document.querySelector(".track-map-badge");
     if (badge) { badge.textContent = "🧪 Test data"; badge.classList.remove("is-live"); }
     if (document.getElementById("d-tab-track")?.classList.contains("active")) startTrackMapSim();
   }, 20000);
@@ -5797,7 +5803,15 @@ function _trackMapBuildCarList() {
 }
 
 function startTrackMapSim() {
-  if (_trackMapLive) return; // real data is flowing — don't override it with fake data
+  if (_trackMapLive) {
+    // Real data already arrived (possibly while this tab was closed) —
+    // just paint the latest known positions instead of faking new ones.
+    const badge = document.querySelector(".track-map-badge");
+    if (badge) { badge.textContent = "🟢 Live"; badge.classList.add("is-live"); }
+    renderTrackMapLegend();
+    renderTrackMapDots();
+    return;
+  }
   const path = document.getElementById("track-map-path");
   if (!path) return;
   _trackMapPathLen = path.getTotalLength();
