@@ -2878,6 +2878,13 @@ input.fixed-square {
   background: rgba(255,204,0,0.14);
   border: 1px solid rgba(255,204,0,0.4);
   color: var(--yellow);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.track-map-badge.is-live {
+  background: rgba(16,229,138,0.14);
+  border-color: rgba(16,229,138,0.45);
+  color: var(--green);
+  animation: dotPulse 1.8s ease-in-out infinite;
 }
 .track-map-legend {
   display: flex;
