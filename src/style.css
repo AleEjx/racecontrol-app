@@ -1815,6 +1815,40 @@ select:hover:not(:focus) {
 }
 .kb-input.listening { border-color: var(--blue); color: var(--yellow); box-shadow: var(--ring-blue); animation: dotPulse 1.2s ease-in-out infinite; }
 
+/* Keybind Test Mode */
+.kbtest-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.kbtest-row.kbtest-waiting  { border-color: var(--blue); box-shadow: var(--ring-blue); animation: dotPulse 1.2s ease-in-out infinite; }
+.kbtest-row.kbtest-pass     { border-color: rgba(16,229,138,0.5); }
+.kbtest-row.kbtest-fail     { border-color: rgba(255,45,85,0.5); }
+.kbtest-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kbtest-label { font-size: 11px; display: flex; align-items: center; gap: 6px; }
+.kbtest-key   { font-size: 9px; color: var(--muted); font-weight: 700; }
+.kbtest-status { font-size: 9px; color: var(--muted); }
+.kbtest-btn {
+  font-size: 9px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Oxanium', sans-serif;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.kbtest-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--text); }
+.kbtest-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.kbtest-overlay-panel { max-width: 420px; width: 100%; }
+
 /* Sound pick / reset buttons */
 .snd-pick-btn {
   font-size: 9px;
