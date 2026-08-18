@@ -1171,6 +1171,17 @@
   </div>
 </div>
 
+<div id="keybind-test-overlay" class="js-overlay" style="display:none;">
+  <div class="modal-panel modal-panel-scroll kbtest-overlay-panel">
+    <div class="flex-row-between">
+      <div class="modal-heading">🧪 Keybind Test Mode</div>
+    </div>
+    <div class="info-panel">Click "Test" next to a keybind, then press the key or mouse side button you've assigned for it. This checks that the input is recognized — it won't trigger the real flag, lap, or pit action.</div>
+    <div id="kb-test-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <button class="save-btn btn-ghost-muted settings-nav-btn" onclick="closeKeybindTestMode()" style="margin-top:2px;">✕ Exit Test Mode</button>
+  </div>
+</div>
+
   <div class="screen" id="screen-settings">
     <div
       class="toolbar-row" id="settings-tabs-row">
@@ -1392,12 +1403,21 @@
         </div>
 
         <div class="s-section-title mt-4">Advanced</div>
-        <div class="s-card gap-8">
+        <div class="s-card gap-8 mb-4">
           <div class="card-row-between">
             <span class="font-11">⚠️ Override Game</span>
             <button id="kb-override-game-toggle-btn" onclick="toggleKeybindOverrideGame()" class="toggle-button"></button>
           </div>
           <div class="small-note">Allows plain letter/number keys (like a bare "E") to be set as a keybind. This brings back the old behavior where that key stops working everywhere else on your PC while assigned — including normal typing. Leave this off unless you specifically need it.</div>
+        </div>
+
+        <div class="s-section-title">Test</div>
+        <div class="s-card gap-8">
+          <div class="card-row-between">
+            <span class="font-11">🧪 Keybind Test Mode</span>
+            <button class="kbtest-btn" onclick="openKeybindTestMode()">▶ Start</button>
+          </div>
+          <div class="small-note">Step through your keybinds one at a time and confirm each one is actually recognized — without triggering the real action.</div>
         </div>
       </div>
 
@@ -8077,6 +8097,140 @@ document.addEventListener("keydown", e => {
         kbInput.value = key;
         kbInput.classList.remove("listening");
         listeningKey = null;
+      });
+
+      // ===================== KEYBIND TEST MODE =====================
+      // A locked-down, distraction-free way to confirm each configured
+      // keybind is actually recognized. Doesn't touch the real global
+      // hotkey pipeline (window.api.registerHotkeys / onKeybindFired) —
+      // global hotkeys are suspended for the duration so pressing e.g.
+      // the Blue Flag key here can't actually flag a driver. Instead it
+      // listens locally, the same way the rebind UI does.
+      const KBTEST_GROUPS = [
+        { title: "Driver 1", actions: [
+          { action: "blue_flag", label: "🔵 Blue Flag" },
+          { action: "next_lap",  label: "🏁 Next Lap" },
+          { action: "pitting",   label: "🔧 Pitting" },
+          { action: "dnf",       label: "🚫 DNF" },
+        ]},
+        { title: "Practice Stopwatch", actions: [
+          { action: "practice_start", label: "▶ Start" },
+          { action: "practice_lap",   label: "🏁 Lap" },
+          { action: "practice_reset", label: "↺ Reset" },
+        ]},
+      ];
+
+      let _kbTestActive = false;
+      let _kbTestWaitingFor = null;
+
+      function _kbTestNormalizeKey(e) {
+        const numpadMap = {
+          Numpad0: "Num0", Numpad1: "Num1", Numpad2: "Num2", Numpad3: "Num3",
+          Numpad4: "Num4", Numpad5: "Num5", Numpad6: "Num6", Numpad7: "Num7",
+          Numpad8: "Num8", Numpad9: "Num9", NumpadAdd: "Num+", NumpadSubtract: "Num-",
+          NumpadMultiply: "Num*", NumpadDivide: "Num/", NumpadDecimal: "Num.",
+          NumpadEnter: "NumEnter",
+        };
+        return e.code in numpadMap ? numpadMap[e.code]
+          : e.key === " " ? "Space"
+            : e.key.length === 1 ? e.key.toUpperCase()
+              : e.key;
+      }
+
+      function openKeybindTestMode() {
+        const list = document.getElementById("kb-test-list");
+        list.innerHTML = "";
+        const kb = config.keybinds || {};
+
+        KBTEST_GROUPS.forEach(group => {
+          const heading = document.createElement("div");
+          heading.className = "s-section-title mt-2";
+          heading.textContent = group.title;
+          list.appendChild(heading);
+
+          group.actions.forEach(({ action, label }) => {
+            const bound = kb[action] && kb[action] !== NO_KEYBIND
+              ? kb[action] : (KEYBIND_DEFAULTS[action] || null);
+            const isSet = !!(kb[action] && kb[action] !== NO_KEYBIND);
+
+            const row = document.createElement("div");
+            row.className = "kbtest-row";
+            row.id = `kbtest-row-${action}`;
+            row.innerHTML = `
+              <div class="kbtest-top">
+                <span class="kbtest-label">${label} <span class="kbtest-key">${bound ? `[${bound}]` : "not set"}</span></span>
+                <button type="button" class="kbtest-btn" id="kbtest-btn-${action}"
+                  onclick="kbTestListen('${action}')" ${isSet ? "" : "disabled"}>▶ Test</button>
+              </div>
+              <div class="kbtest-status" id="kbtest-status-${action}">${isSet ? "Not tested yet" : "No keybind set for this action"}</div>
+            `;
+            list.appendChild(row);
+          });
+        });
+
+        _kbTestActive = true;
+        _kbTestWaitingFor = null;
+        _suspendHotkeys(); // real actions must not fire while testing
+        document.getElementById("keybind-test-overlay").style.display = "flex";
+      }
+
+      function closeKeybindTestMode() {
+        _kbTestActive = false;
+        _kbTestWaitingFor = null;
+        document.getElementById("keybind-test-overlay").style.display = "none";
+        _resumeHotkeys();
+      }
+
+      function kbTestListen(action) {
+        if (!_kbTestActive) return;
+        if (_kbTestWaitingFor) {
+          const prevRow = document.getElementById(`kbtest-row-${_kbTestWaitingFor}`);
+          prevRow?.classList.remove("kbtest-waiting");
+        }
+        _kbTestWaitingFor = action;
+        const row = document.getElementById(`kbtest-row-${action}`);
+        const status = document.getElementById(`kbtest-status-${action}`);
+        row.classList.remove("kbtest-pass", "kbtest-fail");
+        row.classList.add("kbtest-waiting");
+        status.className = "kbtest-status";
+        status.textContent = "Press the key or mouse button now...";
+      }
+
+      function _kbTestResolve(action, gotKey) {
+        const expected = config.keybinds?.[action] || KEYBIND_DEFAULTS[action];
+        const row = document.getElementById(`kbtest-row-${action}`);
+        const status = document.getElementById(`kbtest-status-${action}`);
+        row.classList.remove("kbtest-waiting");
+
+        if (gotKey === expected) {
+          row.classList.add("kbtest-pass");
+          row.classList.remove("kbtest-fail");
+          status.className = "kbtest-status text-green";
+          status.textContent = `✓ Recognized "${gotKey}"`;
+          _kbTestWaitingFor = null;
+        } else {
+          row.classList.add("kbtest-fail");
+          row.classList.remove("kbtest-pass");
+          status.className = "kbtest-status text-red";
+          status.textContent = `❌ Not recognized — got "${gotKey}", expected "${expected}". Press Test to try again.`;
+          _kbTestWaitingFor = null;
+        }
+      }
+
+      document.addEventListener("keydown", e => {
+        if (!_kbTestWaitingFor) return;
+        e.preventDefault();
+        const key = _kbTestNormalizeKey(e);
+        if (INVALID_KEYBIND_VALUES.has(key)) return; // modifier taps alone aren't a real attempt
+        _kbTestResolve(_kbTestWaitingFor, key);
+      });
+
+      document.addEventListener("mousedown", e => {
+        if (!_kbTestWaitingFor) return;
+        if (e.button !== 3 && e.button !== 4) return;
+        e.preventDefault();
+        const key = e.button === 3 ? "Mouse4" : "Mouse5";
+        _kbTestResolve(_kbTestWaitingFor, key);
       });
 
       function showScreen(id) { document.querySelectorAll(".screen").forEach(s => s.classList.remove("active")); document.getElementById(id)?.classList.add("active"); }
