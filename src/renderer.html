@@ -1028,6 +1028,13 @@
         <div id="action-log-status" class="text-muted-sm mt-4"></div>
       </div>
 
+        <div class="card-row-between mt-6" style="border-top:1px solid var(--border);padding-top:8px;">
+          <span class="font-11">🎉 Party Mode</span>
+          <button id="party-mode-gate-toggle-btn" onclick="togglePartyModeGate()" class="toggle-button"></button>
+        </div>
+        <div id="party-mode-gate-status" class="text-muted-sm mt-4"></div>
+      </div>
+
       <div class="dev-card">
         <div class="dev-title">Engineering Assignments</div>
         <div id="dev-engineers" class="flex-col-gap-4 mt-4 font-10 text-muted">
@@ -2373,6 +2380,7 @@ function sanitizeKeybinds(keybinds) {
     let _currentFlagAudio = null;
     let _actionLoggingEnabled = false;
     let _watchMarshalEnabled = true;
+    let _partyModeGateEnabled = false; // dev-panel gate — mirrors backend's _partyModeEnabled
     let _lastPlayedSound = null;
     let _attendance = {};
     let _lastPlayedTime = 0;
@@ -3824,6 +3832,54 @@ async function toggleActionLogging() {
       }
     }
 
+    // ── Party Mode gate — reads/writes the backend's _partyModeEnabled
+    // flag. loadPartyModeGateState() runs for every user at startup (not
+    // just admins) so party-mode.js can check _partyModeGateEnabled
+    // before letting anyone turn Party Mode on. togglePartyModeGate() is
+    // the admin-only flip, mirroring toggleWatchMarshal() above.
+    async function loadPartyModeGateState() {
+      if (!apiUrl) return;
+      try {
+        const res = await fetch(`${apiUrl}/panel-status`);
+        const data = await res.json();
+        _partyModeGateEnabled = !!data.partyMode;
+        updatePartyModeGateBtn();
+      } catch {}
+    }
+
+    function updatePartyModeGateBtn() {
+      const btn = document.getElementById("party-mode-gate-toggle-btn");
+      const st = document.getElementById("party-mode-gate-status");
+      if (!btn) return;
+      const on = _partyModeGateEnabled;
+      btn.textContent = on ? "ON" : "OFF";
+      btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
+      btn.style.borderColor = on ? "var(--green)" : "var(--red)";
+      btn.style.color = on ? "var(--green)" : "var(--red)";
+      if (st) st.textContent = on ? "✓ Drivers can turn Party Mode on" : "Party Mode is locked for everyone";
+    }
+
+    async function togglePartyModeGate() {
+      if (!user?.token) { const ok = await devAutoAuth(); if (!ok) return showToast("❌ Dev auth failed", "err"); }
+      _partyModeGateEnabled = !_partyModeGateEnabled;
+      updatePartyModeGateBtn();
+      try {
+        const res = await fetch(`${apiUrl}/admin/party-mode`, { method: "POST", headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token }, body: JSON.stringify({ enabled: _partyModeGateEnabled }) });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(_partyModeGateEnabled ? "✓ Party Mode unlocked" : "✓ Party Mode locked", "ok");
+        } else {
+          _partyModeGateEnabled = !_partyModeGateEnabled;
+          updatePartyModeGateBtn();
+          showToast(`✗ ${data.error || "Failed"}`, "err");
+        }
+      } catch {
+        _partyModeGateEnabled = !_partyModeGateEnabled;
+        updatePartyModeGateBtn();
+        showToast("✗ Bot unreachable", "err");
+      }
+    }
+
     async function syncDriverDBFromServer() {
       if (!apiUrl) return;
       try {
@@ -4017,6 +4073,7 @@ setInterval(async () => {
   }
 }
       loadUserTabPrefs();
+      loadPartyModeGateState();
 
       document.getElementById("s-api").value = config.apiUrl || "";
       document.getElementById("kb-blue_flag").value = config.keybinds?.blue_flag || "F1";
@@ -7686,6 +7743,7 @@ async function submitDNF(onTrack = false) {
         try {
           await loadActionLoggingState();
           await loadWatchMarshalState();
+          await loadPartyModeGateState();
           await fetchActiveLeague();
           const headers = { "x-discord-id": user.id, "x-discord-token": user.token };
           const [ai, si, li, dl] = await Promise.all([
