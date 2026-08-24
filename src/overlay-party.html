@@ -229,6 +229,53 @@
     background: rgba(0,0,0,0.55);
     color: #fff; border: 1px solid rgba(255,255,255,0.25);
   }
+
+  /* Rave build-up countdown — a black box, top-left, that gets more
+     ominous as it approaches zero. Glow pulse stays slow/smooth
+     (ambient tension), only speeding up in the final seconds — never
+     past ~1Hz, so it stays well clear of flash-safety thresholds
+     (same rule as the rest of this file: no discrete strobing). */
+  @keyframes rc-rave-glow {
+    0%, 100% { box-shadow: 0 0 18px 4px rgba(255,45,85,0.35), inset 0 0 16px rgba(255,45,85,0.12); }
+    50%      { box-shadow: 0 0 30px 8px rgba(255,45,85,0.55), inset 0 0 24px rgba(255,45,85,0.22); }
+  }
+  .rc-rave-timer {
+    position: fixed;
+    top: 14px; left: 14px;
+    z-index: 1000000;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    min-width: 110px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    background: #000;
+    border: 2px solid #ff2d55;
+    animation: rc-rave-glow 2.4s ease-in-out infinite;
+  }
+  .rc-rave-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    color: #ff2d55;
+    opacity: 0.85;
+  }
+  .rc-rave-num {
+    font-size: 34px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.03em;
+    text-shadow: 0 0 10px rgba(255,45,85,0.85);
+  }
+  /* Final 10 seconds — glow speeds up and the box gets a slight
+     nervous shake (reuses the existing rc-shake-h keyframe). */
+  .rc-rave-timer.rc-rave-critical {
+    animation: rc-rave-glow 0.9s ease-in-out infinite, rc-shake-h 0.4s ease-in-out infinite;
+  }
+  .rc-rave-timer.rc-rave-critical .rc-rave-num { color: #ff2d55; }
+  /* Rave live — box stays up as a "we're in it now" marker. */
+  .rc-rave-timer.rc-rave-live {
+    animation: rc-rave-glow 0.9s ease-in-out infinite;
+  }
 </style>
 </head>
 <body>
