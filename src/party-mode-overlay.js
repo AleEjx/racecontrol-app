@@ -183,7 +183,7 @@ if (isPrimary) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 750);
   }
-  schedule(keyflashTick, 1500, 4000);
+  schedule(keyflashTick, 90000, 90000); // cooldown: once every 1.5 minutes
 
   function altTabTick() {
     const el = document.createElement("div");
@@ -199,7 +199,7 @@ if (isPrimary) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 1150);
   }
-  schedule(altTabTick, 4500, 10500);
+  schedule(altTabTick, 90000, 90000); // cooldown: once every 1.5 minutes
 }
 
 // Every display gets popups. Randomly picks between a text line and a
