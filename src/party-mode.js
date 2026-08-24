@@ -20,8 +20,30 @@ const RC_PARTY_POPUP_LINES = [
   "🔥 CONGRATULATIONS, PIT CREW",
   "💾 SYSTEM NEEDS MORE CONFETTI",
   "🎉 PARTY MODE APPROVES OF YOU",
-  "🚨 SUSPICIOUSLY FAST LAP DETECTED"
+  "🚨 SUSPICIOUSLY FAST LAP DETECTED",
+  "📉 YOUR APEX HAS LEFT THE CHAT",
+  "🍕 PIT CREW ORDERED PIZZA, BRB",
+  "🎯 BRAKE CHECK IN 3... 2...",
+  "🛞 ONE OF YOUR TIRES IS A DECOY",
+  "📡 SIGNAL LOST, VIBES FOUND",
+  "🐢 TURTLE MODE UNLOCKED",
+  "🎪 WELCOME TO THE CIRCUS TRACK",
+  "🧭 STEERING WHEEL IS NOW SUGGESTIVE"
 ];
+// Local image/gif popups — drop files at these paths (relative to
+// renderer.html's folder, e.g. assets/party/party-1.gif) to have them
+// rotate in with the text popups. Missing files fail silently.
+const RC_PARTY_IMAGE_FILES = [
+  "assets/party/party-1.gif",
+  "assets/party/party-2.gif",
+  "assets/party/party-3.gif",
+  "assets/party/party-4.gif",
+  "assets/party/party-5.gif",
+  "assets/party/party-6.gif",
+  "assets/party/party-7.gif"
+];
+const RC_PARTY_EDGE_LINES = ["👀 INCOMING", "🚧 CAUTION", "🎉 SURPRISE", "📣 HEADS UP", "🌀 CHAOS"];
+let _rcPartyDecoyCursor = null;
 
 /* ---------------- Settings toggle wiring ---------------- */
 
@@ -80,12 +102,21 @@ function startPartyMode() {
 
   _rcPartyFloatify(document.querySelector(".tl-logo"));
 
-  _rcPartySchedule(_rcPartyMotionTick, 900, 2200);
-  _rcPartySchedule(_rcPartyGlitchTick, 2500, 6000);
-  _rcPartySchedule(_rcPartySoundTick, 1500, 4000);
-  _rcPartySchedule(_rcPartyKeyflashTick, 3000, 8000);
-  _rcPartySchedule(_rcPartyPopupTick, 4000, 10000);
-  _rcPartySchedule(_rcPartyAltTabTick, 9000, 20000);
+  _rcPartySchedule(_rcPartyMotionTick, 600, 1500);
+  _rcPartySchedule(_rcPartyGlitchTick, 1500, 3800);
+  _rcPartySchedule(_rcPartySoundTick, 1100, 3000);
+  _rcPartySchedule(_rcPartyKeyflashTick, 2000, 5500);
+  _rcPartySchedule(_rcPartyPopupTick, 2200, 6000);
+  _rcPartySchedule(_rcPartyAltTabTick, 6000, 14000);
+  _rcPartySchedule(_rcPartyEdgeTick, 2200, 5200);
+
+  _rcPartyDecoyCursor = document.createElement("div");
+  _rcPartyDecoyCursor.className = "rc-party-decoy-cursor";
+  _rcPartyDecoyCursor.textContent = "🖱️";
+  _rcPartyDecoyCursor.style.left = "50%";
+  _rcPartyDecoyCursor.style.top = "50%";
+  document.body.appendChild(_rcPartyDecoyCursor);
+  _rcPartySchedule(_rcPartyDecoyCursorTick, 1100, 2800);
 }
 
 function stopPartyMode() {
@@ -102,13 +133,14 @@ function stopPartyMode() {
   _rcPartyTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
   _rcPartyTimers = [];
 
-  document.querySelectorAll(".rc-party-keyflash, .rc-party-alttab, .rc-party-popup")
+  document.querySelectorAll(".rc-party-keyflash, .rc-party-alttab, .rc-party-popup, .rc-party-edge, .rc-party-surge")
     .forEach(el => el.remove());
 
   _rcPartyFloatTargets.forEach(({ el, original }) => { if (el) el.innerHTML = original; });
   _rcPartyFloatTargets = [];
 
   if (_rcPartyLiveBadge) { _rcPartyLiveBadge.remove(); _rcPartyLiveBadge = null; }
+  if (_rcPartyDecoyCursor) { _rcPartyDecoyCursor.remove(); _rcPartyDecoyCursor = null; }
 
   showToast?.("Party Mode off", "");
 }
@@ -158,9 +190,53 @@ function _rcPartyMotionTick() {
 }
 
 function _rcPartyGlitchTick() {
-  document.body.style.animation = "rc-party-glitch 0.35s linear";
+  // Occasionally go big: bigger displacement plus a brief full-screen
+  // color surge, for the "more coverage" chaos beats. Each is a single
+  // smooth animation — no repeating strobe.
+  const big = Math.random() < 0.35;
+  document.body.style.animation = (big ? "rc-party-glitch-big" : "rc-party-glitch") + " 0.35s linear";
   const onEnd = () => { document.body.style.animation = ""; document.body.removeEventListener("animationend", onEnd); };
   document.body.addEventListener("animationend", onEnd);
+
+  if (big) {
+    const surge = document.createElement("div");
+    surge.className = "rc-party-surge";
+    document.body.appendChild(surge);
+    const id = setTimeout(() => surge.remove(), 1350);
+    _rcPartyTimers.push(id);
+  }
+}
+
+// Slides a short banner in from a random screen edge and back out.
+function _rcPartyEdgeTick() {
+  const edges = ["top", "bottom", "left", "right"];
+  const edge = edges[Math.floor(Math.random() * edges.length)];
+  const el = document.createElement("div");
+  el.className = "rc-party-edge";
+  el.textContent = RC_PARTY_EDGE_LINES[Math.floor(Math.random() * RC_PARTY_EDGE_LINES.length)];
+  const offsets = {
+    top:    { ex: "0", ey: "-120px", css: "top:0; left:" + (10 + Math.random() * 70) + "%;" },
+    bottom: { ex: "0", ey: "120px",  css: "bottom:0; left:" + (10 + Math.random() * 70) + "%;" },
+    left:   { ex: "-160px", ey: "0", css: "left:0; top:" + (10 + Math.random() * 70) + "%;" },
+    right:  { ex: "160px", ey: "0",  css: "right:0; top:" + (10 + Math.random() * 70) + "%;" },
+  }[edge];
+  el.style.cssText = offsets.css;
+  el.style.setProperty("--rc-ex", offsets.ex);
+  el.style.setProperty("--rc-ey", offsets.ey);
+  document.body.appendChild(el);
+  const id = setTimeout(() => el.remove(), 1850);
+  _rcPartyTimers.push(id);
+}
+
+// Cosmetic decoy cursor — drifts to random spots. Never moves the
+// real OS cursor and has pointer-events disabled, so it can't
+// intercept clicks; it's purely a visual "which one is real?" gag.
+function _rcPartyDecoyCursorTick() {
+  if (!_rcPartyDecoyCursor) return;
+  const x = 5 + Math.random() * 90;
+  const y = 5 + Math.random() * 90;
+  _rcPartyDecoyCursor.style.left = x + "%";
+  _rcPartyDecoyCursor.style.top = y + "%";
 }
 
 // Short synthesized blips via WebAudio — no external audio assets needed.
@@ -220,7 +296,18 @@ function _rcPartyPopupTick() {
   const maxTop = Math.max(20, window.innerHeight - 160);
   el.style.left = (20 + Math.random() * maxLeft) + "px";
   el.style.top = (60 + Math.random() * maxTop) + "px";
-  el.textContent = RC_PARTY_POPUP_LINES[Math.floor(Math.random() * RC_PARTY_POPUP_LINES.length)];
+
+  const label = document.createElement("div");
+  label.textContent = RC_PARTY_POPUP_LINES[Math.floor(Math.random() * RC_PARTY_POPUP_LINES.length)];
+  el.appendChild(label);
+
+  if (RC_PARTY_IMAGE_FILES.length && Math.random() < 0.4) {
+    const img = document.createElement("img");
+    img.src = RC_PARTY_IMAGE_FILES[Math.floor(Math.random() * RC_PARTY_IMAGE_FILES.length)];
+    img.alt = "";
+    img.onerror = () => el.remove();
+    el.appendChild(img);
+  }
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "rc-party-popup-close";
