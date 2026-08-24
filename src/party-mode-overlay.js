@@ -202,7 +202,17 @@ if (isPrimary) {
 // Every display gets popups. Randomly picks between a text line and a
 // local image/gif (if any RC_IMAGE_FILES exist) — missing image files
 // just fail their <img> silently and the popup closes itself.
+// Popups stay on screen until closed by hand; MAX_POPUPS caps how many
+// can pile up at once so a long session doesn't flood the DOM.
+const MAX_POPUPS = 14;
+let activePopups = [];
+
 function popupTick() {
+  if (activePopups.length >= MAX_POPUPS) {
+    const oldest = activePopups.shift();
+    oldest?.remove();
+  }
+
   const el = document.createElement("div");
   const variant = ["", "rc-alt2", "rc-alt3"][Math.floor(Math.random() * 3)];
   el.className = "rc-popup " + variant;
@@ -216,11 +226,17 @@ function popupTick() {
   label.textContent = RC_POPUP_LINES[Math.floor(Math.random() * RC_POPUP_LINES.length)];
   el.appendChild(label);
 
+  const removePopup = () => {
+    el.remove();
+    activePopups = activePopups.filter(p => p !== el);
+    window.api?.setClickThrough?.(true);
+  };
+
   if (useImage) {
     const img = document.createElement("img");
     img.src = RC_IMAGE_FILES[Math.floor(Math.random() * RC_IMAGE_FILES.length)];
     img.alt = "";
-    img.onerror = () => { el.remove(); window.api?.setClickThrough?.(true); };
+    img.onerror = removePopup;
     el.appendChild(img);
   }
 
@@ -236,12 +252,12 @@ function popupTick() {
     closeBtn.style.top = (2 + Math.random() * 22) + "px";
     closeBtn.style.right = (2 + Math.random() * 22) + "px";
   });
-  closeBtn.addEventListener("click", () => { el.remove(); window.api?.setClickThrough?.(true); });
+  closeBtn.addEventListener("click", removePopup);
   el.appendChild(closeBtn);
 
   document.body.appendChild(el);
+  activePopups.push(el);
   el.addEventListener("mouseenter", () => window.api?.setClickThrough?.(false));
   el.addEventListener("mouseleave", () => window.api?.setClickThrough?.(true));
-  setTimeout(() => { el.remove(); window.api?.setClickThrough?.(true); }, 6000);
 }
 schedule(popupTick, 2200, 6000);
