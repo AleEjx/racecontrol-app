@@ -110,12 +110,13 @@ function startPartyMode() {
   _rcPartySchedule(_rcPartyGlitchTick, 1200, 3000);
   _rcPartySchedule(_rcPartySoundTick, 850, 2200);
   _rcPartySchedule(_rcPartyKeyflashTick, 1500, 4000);
-  _rcPartySchedule(_rcPartyPopupTick, 1700, 4500);
+  _rcPartySchedule(_rcPartyPopupBurstTick, 150000, 150000); // every 2.5 minutes
   _rcPartySchedule(_rcPartyAltTabTick, 4500, 10500);
   _rcPartySchedule(_rcPartyEdgeTick, 1700, 4000);
   _rcPartySchedule(_rcPartyBlackoutTick, 175000, 185000); // ~once every 3 minutes
   _rcPartySchedule(_rcPartyCountdownTick, 2800, 6500);
-  _rcPartySchedule(_rcPartyBombTick, 13000, 24000);
+  _rcPartySchedule(_rcPartyBombTick, 300000, 300000); // cooldown: once every 5 minutes
+  _rcPartySchedule(_rcPartySongTick, 180000, 420000); // random meme song, every 3–7 minutes
 
   _rcPartyDecoyCursor = document.createElement("div");
   _rcPartyDecoyCursor.className = "rc-party-decoy-cursor";
@@ -155,6 +156,12 @@ function stopPartyMode() {
     _rcPartyBombAudio = null;
   }
   _rcPartyBombActive = false;
+
+  if (_rcPartySongAudio) {
+    try { _rcPartySongAudio.pause(); _rcPartySongAudio.currentTime = 0; } catch {}
+    _rcPartySongAudio = null;
+  }
+  _rcPartySongActive = false;
 
   showToast?.("Party Mode off", "");
 }
@@ -332,6 +339,35 @@ function _rcPartyBombTick() {
   _rcPartyTimers.push(interval);
 }
 
+// Random meme songs, independent of the bomb cooldown — one plays
+// every 3–7 minutes. Escape/stop pauses it via _rcPartySongAudio.
+const RC_PARTY_SONGS = [
+  "../assets/party/tacos.m4a",
+  "../assets/party/yara.mp3",
+  "../assets/party/maxverstappen.mp3",
+  "../assets/party/mercedesmeme.mp3",
+  "../assets/party/skibidi.mp3"
+];
+let _rcPartySongActive = false;
+let _rcPartySongAudio = null;
+function _rcPartySongTick() {
+  if (_rcPartySongActive) return;
+  _rcPartySongActive = true;
+  const src = RC_PARTY_SONGS[Math.floor(Math.random() * RC_PARTY_SONGS.length)];
+  const reset = () => { _rcPartySongActive = false; _rcPartySongAudio = null; };
+  try {
+    const audio = new Audio(src);
+    audio.volume = 1.0;
+    audio.addEventListener("ended", reset);
+    audio.addEventListener("error", () => {
+      console.warn("[party-mode] song failed to load:", src, audio.error);
+      reset();
+    });
+    audio.play().catch(err => { console.warn("[party-mode] song play() rejected:", err); reset(); });
+    _rcPartySongAudio = audio;
+  } catch { reset(); }
+}
+
 // Cosmetic decoy cursor — drifts to random spots. Never moves the
 // real OS cursor and has pointer-events disabled, so it can't
 // intercept clicks; it's purely a visual "which one is real?" gag.
@@ -396,6 +432,16 @@ function _rcPartyAltTabTick() {
 // long session doesn't pile up unbounded DOM elements.
 const RC_PARTY_MAX_POPUPS = 14;
 let _rcPartyActivePopups = [];
+
+// Popups now fire in bursts rather than a steady drip: every 2.5
+// minutes, spawn a random batch of 1–5, lightly staggered.
+function _rcPartyPopupBurstTick() {
+  const count = 1 + Math.floor(Math.random() * 5); // 1–5
+  for (let i = 0; i < count; i++) {
+    const id = setTimeout(_rcPartyPopupTick, i * (300 + Math.random() * 400));
+    _rcPartyTimers.push(id);
+  }
+}
 
 function _rcPartyPopupTick() {
   if (_rcPartyActivePopups.length >= RC_PARTY_MAX_POPUPS) {
