@@ -1026,8 +1026,6 @@
           <button id="action-log-toggle-btn" onclick="toggleActionLogging()" class="toggle-button"></button>
         </div>
         <div id="action-log-status" class="text-muted-sm mt-4"></div>
-      </div>
-
         <div class="card-row-between mt-6" style="border-top:1px solid var(--border);padding-top:8px;">
           <span class="font-11">🎉 Party Mode</span>
           <button id="party-mode-gate-toggle-btn" onclick="togglePartyModeGate()" class="toggle-button"></button>
@@ -2380,7 +2378,7 @@ function sanitizeKeybinds(keybinds) {
     let _currentFlagAudio = null;
     let _actionLoggingEnabled = false;
     let _watchMarshalEnabled = true;
-    let _partyModeGateEnabled = false; // dev-panel gate — mirrors backend's _partyModeEnabled
+    window._partyModeGateEnabled = false; // dev-panel gate — mirrors backend's _partyModeEnabled
     let _lastPlayedSound = null;
     let _attendance = {};
     let _lastPlayedTime = 0;
@@ -3842,7 +3840,7 @@ async function toggleActionLogging() {
       try {
         const res = await fetch(`${apiUrl}/panel-status`);
         const data = await res.json();
-        _partyModeGateEnabled = !!data.partyMode;
+        window._partyModeGateEnabled = !!data.partyMode;
         updatePartyModeGateBtn();
       } catch {}
     }
@@ -3851,7 +3849,7 @@ async function toggleActionLogging() {
       const btn = document.getElementById("party-mode-gate-toggle-btn");
       const st = document.getElementById("party-mode-gate-status");
       if (!btn) return;
-      const on = _partyModeGateEnabled;
+      const on = window._partyModeGateEnabled;
       btn.textContent = on ? "ON" : "OFF";
       btn.style.background = on ? "rgba(0,230,118,0.15)" : "rgba(255,23,68,0.15)";
       btn.style.borderColor = on ? "var(--green)" : "var(--red)";
@@ -3861,20 +3859,20 @@ async function toggleActionLogging() {
 
     async function togglePartyModeGate() {
       if (!user?.token) { const ok = await devAutoAuth(); if (!ok) return showToast("❌ Dev auth failed", "err"); }
-      _partyModeGateEnabled = !_partyModeGateEnabled;
+      window._partyModeGateEnabled = !window._partyModeGateEnabled;
       updatePartyModeGateBtn();
       try {
-        const res = await fetch(`${apiUrl}/admin/party-mode`, { method: "POST", headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token }, body: JSON.stringify({ enabled: _partyModeGateEnabled }) });
+        const res = await fetch(`${apiUrl}/admin/party-mode`, { method: "POST", headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token }, body: JSON.stringify({ enabled: window._partyModeGateEnabled }) });
         const data = await res.json();
         if (res.ok) {
-          showToast(_partyModeGateEnabled ? "✓ Party Mode unlocked" : "✓ Party Mode locked", "ok");
+          showToast(window._partyModeGateEnabled ? "✓ Party Mode unlocked" : "✓ Party Mode locked", "ok");
         } else {
-          _partyModeGateEnabled = !_partyModeGateEnabled;
+          window._partyModeGateEnabled = !window._partyModeGateEnabled;
           updatePartyModeGateBtn();
           showToast(`✗ ${data.error || "Failed"}`, "err");
         }
       } catch {
-        _partyModeGateEnabled = !_partyModeGateEnabled;
+        window._partyModeGateEnabled = !window._partyModeGateEnabled;
         updatePartyModeGateBtn();
         showToast("✗ Bot unreachable", "err");
       }
