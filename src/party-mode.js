@@ -109,9 +109,9 @@ function startPartyMode() {
   _rcPartySchedule(_rcPartyMotionTick, 480, 1150);
   _rcPartySchedule(_rcPartyGlitchTick, 1200, 3000);
   _rcPartySchedule(_rcPartySoundTick, 850, 2200);
-  _rcPartySchedule(_rcPartyKeyflashTick, 1500, 4000);
+  _rcPartySchedule(_rcPartyKeyflashTick, 90000, 90000); // cooldown: once every 1.5 minutes
   _rcPartySchedule(_rcPartyPopupBurstTick, 150000, 150000); // every 2.5 minutes
-  _rcPartySchedule(_rcPartyAltTabTick, 4500, 10500);
+  _rcPartySchedule(_rcPartyAltTabTick, 90000, 90000); // cooldown: once every 1.5 minutes
   _rcPartySchedule(_rcPartyEdgeTick, 1700, 4000);
   _rcPartySchedule(_rcPartyBlackoutTick, 175000, 185000); // ~once every 3 minutes
   _rcPartySchedule(_rcPartyCountdownTick, 2800, 6500);
