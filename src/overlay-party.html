@@ -91,12 +91,12 @@
   @keyframes rc-popup-in { 0%{opacity:0;transform:scale(0.85) rotate(-2deg);} 100%{opacity:1;transform:scale(1) rotate(0deg);} }
   .rc-popup {
     position: fixed;
-    width: 230px;
-    padding: 18px 14px 14px;
-    border-radius: 14px;
+    width: 440px;
+    padding: 28px 22px 20px;
+    border-radius: 20px;
     color: #fff;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 21px;
     text-align: center;
     line-height: 1.4;
     font-family: system-ui, sans-serif;
@@ -109,11 +109,11 @@
   .rc-popup.rc-alt3 { background: linear-gradient(135deg, #ffcc00, #ff2d55); color: #1a1a1a; }
   .rc-popup-close {
     position: absolute; top: 6px; right: 6px;
-    width: 24px; height: 24px;
+    width: 20px; height: 20px;
     border-radius: 50%;
     background: rgba(0,0,0,0.35);
     color: #fff; border: none;
-    font-size: 14px; line-height: 24px;
+    font-size: 11px; line-height: 20px;
     cursor: pointer;
     transition: left 0.12s ease, top 0.12s ease;
   }
@@ -161,10 +161,41 @@
   .rc-popup img {
     display: block;
     width: 100%;
-    max-height: 140px;
+    max-height: 280px;
     object-fit: cover;
     border-radius: 8px;
     margin-top: 6px;
+  }
+
+  @keyframes rc-blackout {
+    0%   { opacity: 0; }
+    35%  { opacity: 0.94; }
+    65%  { opacity: 0.94; }
+    100% { opacity: 0; }
+  }
+  .rc-blackout {
+    position: fixed;
+    inset: 0;
+    z-index: 1000003;
+    pointer-events: none;
+    background: #000;
+    opacity: 0;
+    animation: rc-blackout var(--rc-bo-dur, 3s) ease-in-out forwards;
+  }
+
+  .rc-countdown {
+    position: fixed;
+    z-index: 999997;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+    font-weight: 800;
+    font-size: 40px;
+    color: #fff;
+    background: rgba(19,19,25,0.85);
+    border: 2px solid #10e58a;
+    border-radius: 14px;
+    padding: 10px 22px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
   }
 
   .rc-badge {
