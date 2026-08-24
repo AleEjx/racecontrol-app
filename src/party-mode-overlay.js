@@ -40,7 +40,7 @@ const RC_IMAGE_FILES = [
   "assets/party/party-4.gif",
   "assets/party/party-5.gif",
   "assets/party/party-6.gif",
-  "assets/party/party-7.gif"
+  "assets/party/party-7.png"
 ];
 const RC_EDGE_LINES = ["👀 INCOMING", "🚧 CAUTION", "🎉 SURPRISE", "📣 HEADS UP", "🌀 CHAOS"];
 
