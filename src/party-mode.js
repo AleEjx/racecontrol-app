@@ -150,6 +150,12 @@ function stopPartyMode() {
   if (_rcPartyLiveBadge) { _rcPartyLiveBadge.remove(); _rcPartyLiveBadge = null; }
   if (_rcPartyDecoyCursor) { _rcPartyDecoyCursor.remove(); _rcPartyDecoyCursor = null; }
 
+  if (_rcPartyBombAudio) {
+    try { _rcPartyBombAudio.pause(); _rcPartyBombAudio.currentTime = 0; } catch {}
+    _rcPartyBombAudio = null;
+  }
+  _rcPartyBombActive = false;
+
   showToast?.("Party Mode off", "");
 }
 
@@ -270,8 +276,19 @@ function _rcPartyCountdownTick() {
 // "Bomb" countdown box — bigger, tenser, ends with a local sound cue
 // at full in-app volume. Purely cosmetic: no real explosive content,
 // just a joke prop. Sound file is a local asset shipped with the app.
+// "Bomb" countdown box — bigger, tenser, ends with a local sound cue
+// at full in-app volume. Purely cosmetic: no real explosive content,
+// just a joke prop. Sound file is a local asset shipped with the app.
+// Only one active at a time so audio never overlaps with itself, and
+// the audio reference is kept around so Escape/stop can silence it.
 const RC_PARTY_BOMB_SOUND = "../assets/party/bomb.mp3";
+let _rcPartyBombActive = false;
+let _rcPartyBombAudio = null;
+
 function _rcPartyBombTick() {
+  if (_rcPartyBombActive) return;
+  _rcPartyBombActive = true;
+
   let n = 29;
   const el = document.createElement("div");
   el.className = "rc-party-bomb";
@@ -294,6 +311,7 @@ function _rcPartyBombTick() {
       console.warn("[party-mode] bomb.mp3 failed to load:", audio.error);
     });
     audio.play().catch(err => console.warn("[party-mode] bomb.mp3 play() rejected:", err));
+    _rcPartyBombAudio = audio;
   } catch { /* audio not available — skip silently */ }
 
   const interval = setInterval(() => {
@@ -301,7 +319,11 @@ function _rcPartyBombTick() {
     if (n < 0) {
       clearInterval(interval);
       labelEl.textContent = "💥 BOOM";
-      const id = setTimeout(() => el.remove(), 700);
+      const id = setTimeout(() => {
+        el.remove();
+        _rcPartyBombActive = false;
+        _rcPartyBombAudio = null;
+      }, 700);
       _rcPartyTimers.push(id);
       return;
     }
