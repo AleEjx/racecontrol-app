@@ -284,7 +284,7 @@ function blackoutTick() {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), parseFloat(dur) * 1000 + 50);
 }
-schedule(blackoutTick, 7000, 16000);
+schedule(blackoutTick, 175000, 185000); // ~once every 3 minutes
 
 // Countdown that ticks down to nothing and vanishes, for no reason.
 function countdownTick() {
@@ -310,7 +310,7 @@ schedule(countdownTick, 2800, 6500);
 // just a joke prop. Sound file is a local asset shipped with the app.
 const RC_BOMB_SOUND = "assets/party/bomb.mp3";
 function bombTick() {
-  let n = 5 + Math.floor(Math.random() * 6); // 5–10
+  let n = 29;
   const el = document.createElement("div");
   el.className = "rc-bomb";
   const maxLeft = Math.max(20, window.innerWidth - 240);
@@ -324,19 +324,21 @@ function bombTick() {
   document.body.appendChild(el);
   const numEl = el.querySelector(".rc-bomb-num");
   const labelEl = el.querySelector(".rc-bomb-label");
+
+  try {
+    const audio = new Audio(RC_BOMB_SOUND);
+    audio.volume = 1.0;
+    audio.addEventListener("error", () => {
+      console.warn("[party-mode] bomb.mp3 failed to load:", audio.error);
+    });
+    audio.play().catch(err => console.warn("[party-mode] bomb.mp3 play() rejected:", err));
+  } catch { /* audio not available — skip silently */ }
+
   const interval = setInterval(() => {
     n--;
     if (n < 0) {
       clearInterval(interval);
       labelEl.textContent = "💥 BOOM";
-      try {
-        const audio = new Audio(RC_BOMB_SOUND);
-        audio.volume = 1.0;
-        audio.addEventListener("error", () => {
-          console.warn("[party-mode] bomb.mp3 failed to load:", audio.error);
-        });
-        audio.play().catch(err => console.warn("[party-mode] bomb.mp3 play() rejected:", err));
-      } catch { /* audio not available — skip silently */ }
       setTimeout(() => el.remove(), 700);
       return;
     }
