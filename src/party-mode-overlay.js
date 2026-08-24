@@ -394,3 +394,71 @@ function songTick() {
   } catch { reset(); }
 }
 if (isPrimary) schedule(songTick, 180000, 420000); // 3–7 minutes
+
+// Rave build-up: a 5-minute countdown badge (black box, top-left),
+// then a payoff of rapid-fire existing effects for 1 minute before it
+// settles back to normal and the countdown restarts. Only spawns on
+// the primary display — one countdown for the whole session, same
+// reasoning as the badge/audio/keyflash extras above.
+const RC_RAVE_COUNTDOWN = 300; // 5 minutes
+const RC_RAVE_DURATION = 60;   // 1 minute of chaos
+let raveTimerEl = null;
+let raveHueOverride = "";
+
+function formatMMSS(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return m + ":" + (s < 10 ? "0" : "") + s;
+}
+
+function startRaveCountdown() {
+  let remaining = RC_RAVE_COUNTDOWN;
+  raveTimerEl = document.createElement("div");
+  raveTimerEl.className = "rc-rave-timer";
+  raveTimerEl.innerHTML =
+    '<div class="rc-rave-label">☠️ CHAOS IN</div>' +
+    '<div class="rc-rave-num">' + formatMMSS(remaining) + '</div>';
+  document.body.appendChild(raveTimerEl);
+
+  const interval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(interval);
+      triggerRave();
+      return;
+    }
+    const numEl = raveTimerEl?.querySelector(".rc-rave-num");
+    if (numEl) numEl.textContent = formatMMSS(remaining);
+    if (raveTimerEl) raveTimerEl.classList.toggle("rc-rave-critical", remaining <= 10);
+  }, 1000);
+}
+
+function triggerRave() {
+  if (raveTimerEl) {
+    raveTimerEl.classList.remove("rc-rave-critical");
+    raveTimerEl.classList.add("rc-rave-live");
+    raveTimerEl.querySelector(".rc-rave-label").textContent = "🚨 LIVE";
+    raveTimerEl.querySelector(".rc-rave-num").textContent = "CHAOS";
+  }
+
+  // Speed up the continuous rainbow wash for the chaos window.
+  raveHueOverride = wash.style.animationDuration;
+  wash.style.animationDuration = "0.35s, 6s";
+
+  // Rapid-fire: randomly trigger the existing effects far more often
+  // than their normal schedules for the duration of the rave.
+  const chaosFns = [motionTick, glitchTick, edgeIntrudeTick, popupTick];
+  const loop = setInterval(() => {
+    const fn = chaosFns[Math.floor(Math.random() * chaosFns.length)];
+    fn();
+  }, 220);
+
+  setTimeout(() => {
+    clearInterval(loop);
+    wash.style.animationDuration = raveHueOverride;
+    if (raveTimerEl) { raveTimerEl.remove(); raveTimerEl = null; }
+    startRaveCountdown(); // loop: next 5-minute build-up begins
+  }, RC_RAVE_DURATION * 1000);
+}
+
+if (isPrimary) startRaveCountdown();
