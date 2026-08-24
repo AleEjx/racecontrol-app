@@ -74,6 +74,10 @@ function togglePartyModePref() {
     stopPartyMode();
     return;
   }
+  if (!window._partyModeGateEnabled) {
+    showToast?.("🔒 Party Mode is locked — a dev needs to enable it first", "err");
+    return;
+  }
   const ok = confirm(
     "🎉 Party Mode\n\n" +
     "This throws the app into full chaos — color sweeps, shaking, glitches, " +
@@ -88,11 +92,27 @@ function togglePartyModePref() {
 
 /* ---------------- Engine start/stop ---------------- */
 
+function _rcPartyNotifyDev(event) {
+  try {
+    const url = typeof apiUrl !== "undefined" ? apiUrl : window.apiUrl;
+    if (!url) return;
+    fetch(`${url}/party-mode/notify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(typeof user !== "undefined" && user?.id ? { "x-discord-id": user.id } : {}),
+      },
+      body: JSON.stringify({ event, username: typeof user !== "undefined" ? user?.username : undefined }),
+    }).catch(() => {}); // fire-and-forget — never blocks the toggle
+  } catch {}
+}
+
 function startPartyMode() {
   if (_rcPartyActive) return;
   _rcPartyActive = true;
   updatePartyModeToggleBtn();
   showToast?.("🎉 Party Mode ON — press Esc to stop", "ok");
+  _rcPartyNotifyDev("start");
 
   document.documentElement.classList.add("rc-party-hue-active");
   _rcPartyHueSpeedLoop();
@@ -125,12 +145,15 @@ function startPartyMode() {
   _rcPartyDecoyCursor.style.top = "50%";
   document.body.appendChild(_rcPartyDecoyCursor);
   _rcPartySchedule(_rcPartyDecoyCursorTick, 1100, 2800);
+
+  _rcPartyStartRaveCountdown();
 }
 
 function stopPartyMode() {
   if (!_rcPartyActive) return;
   _rcPartyActive = false;
   updatePartyModeToggleBtn();
+  _rcPartyNotifyDev("stop");
 
   window.api?.partyOverlay?.stop?.();
 
@@ -141,9 +164,10 @@ function stopPartyMode() {
   _rcPartyTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
   _rcPartyTimers = [];
 
-  document.querySelectorAll(".rc-party-keyflash, .rc-party-alttab, .rc-party-popup, .rc-party-edge, .rc-party-surge, .rc-party-blackout, .rc-party-countdown, .rc-party-bomb")
+  document.querySelectorAll(".rc-party-keyflash, .rc-party-alttab, .rc-party-popup, .rc-party-edge, .rc-party-surge, .rc-party-blackout, .rc-party-countdown, .rc-party-bomb, .rc-party-rave-timer, .rc-party-confetti")
     .forEach(el => el.remove());
   _rcPartyActivePopups = [];
+  _rcPartyRaveTimerEl = null;
 
   _rcPartyFloatTargets.forEach(({ el, original }) => { if (el) el.innerHTML = original; });
   _rcPartyFloatTargets = [];
@@ -366,6 +390,89 @@ function _rcPartySongTick() {
     audio.play().catch(err => { console.warn("[party-mode] song play() rejected:", err); reset(); });
     _rcPartySongAudio = audio;
   } catch { reset(); }
+}
+
+// Rave build-up: a 5-minute countdown badge (top-left), then a
+// confetti payoff and one minute of maximum chaos — every existing
+// effect firing rapidly — before it settles back to normal and the
+// countdown restarts. All timers are tracked in _rcPartyTimers so
+// Escape/stop kills the whole sequence cleanly mid-cycle.
+const RC_PARTY_RAVE_COUNTDOWN = 300; // 5 minutes
+const RC_PARTY_RAVE_DURATION = 60;   // 1 minute of chaos
+let _rcPartyRaveTimerEl = null;
+let _rcPartyRaveHueOverride = "";
+
+function _rcPartyFormatMMSS(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return m + ":" + (s < 10 ? "0" : "") + s;
+}
+
+function _rcPartyStartRaveCountdown() {
+  if (!_rcPartyActive) return;
+  let remaining = RC_PARTY_RAVE_COUNTDOWN;
+  _rcPartyRaveTimerEl = document.createElement("div");
+  _rcPartyRaveTimerEl.className = "rc-party-rave-timer";
+  _rcPartyRaveTimerEl.textContent = _rcPartyFormatMMSS(remaining);
+  document.body.appendChild(_rcPartyRaveTimerEl);
+
+  const interval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(interval);
+      _rcPartyTriggerRave();
+      return;
+    }
+    if (_rcPartyRaveTimerEl) _rcPartyRaveTimerEl.textContent = _rcPartyFormatMMSS(remaining);
+  }, 1000);
+  _rcPartyTimers.push(interval);
+}
+
+function _rcPartySpawnConfetti() {
+  const colors = ["#ff2d55", "#ff8a1e", "#ffcc00", "#10e58a", "#3d8bff", "#7c4dff"];
+  for (let i = 0; i < 50; i++) {
+    const piece = document.createElement("div");
+    piece.className = "rc-party-confetti";
+    piece.style.left = Math.random() * 100 + "vw";
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (2.2 + Math.random() * 1.6).toFixed(2) + "s";
+    piece.style.animationDelay = (Math.random() * 0.4).toFixed(2) + "s";
+    document.body.appendChild(piece);
+    const id = setTimeout(() => piece.remove(), 4200);
+    _rcPartyTimers.push(id);
+  }
+}
+
+function _rcPartyTriggerRave() {
+  if (_rcPartyRaveTimerEl) {
+    _rcPartyRaveTimerEl.textContent = "🎉 RAVE STARTED";
+    _rcPartyRaveTimerEl.classList.add("rc-party-rave-live");
+  }
+  _rcPartySpawnConfetti();
+
+  // Speed up the continuous rainbow wash for the chaos window.
+  _rcPartyRaveHueOverride = document.documentElement.style.animationDuration;
+  document.documentElement.style.animationDuration = "0.35s";
+
+  // Rapid-fire: randomly trigger the existing effects far more often
+  // than their normal schedules for the duration of the rave.
+  const chaosFns = [
+    _rcPartyMotionTick, _rcPartyGlitchTick, _rcPartyPopupTick,
+    _rcPartyEdgeTick, _rcPartyKeyflashTick, _rcPartyAltTabTick
+  ];
+  const loop = setInterval(() => {
+    const fn = chaosFns[Math.floor(Math.random() * chaosFns.length)];
+    fn();
+  }, 220);
+  _rcPartyTimers.push(loop);
+
+  const endId = setTimeout(() => {
+    clearInterval(loop);
+    document.documentElement.style.animationDuration = _rcPartyRaveHueOverride;
+    if (_rcPartyRaveTimerEl) { _rcPartyRaveTimerEl.remove(); _rcPartyRaveTimerEl = null; }
+    _rcPartyStartRaveCountdown(); // loop: next 5-minute build-up begins
+  }, RC_PARTY_RAVE_DURATION * 1000);
+  _rcPartyTimers.push(endId);
 }
 
 // Cosmetic decoy cursor — drifts to random spots. Never moves the
