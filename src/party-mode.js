@@ -135,6 +135,7 @@ function stopPartyMode() {
 
   document.querySelectorAll(".rc-party-keyflash, .rc-party-alttab, .rc-party-popup, .rc-party-edge, .rc-party-surge")
     .forEach(el => el.remove());
+  _rcPartyActivePopups = [];
 
   _rcPartyFloatTargets.forEach(({ el, original }) => { if (el) el.innerHTML = original; });
   _rcPartyFloatTargets = [];
@@ -288,7 +289,17 @@ function _rcPartyAltTabTick() {
 
 // Fake "ad" popup with a close button that gets a couple of playful
 // dodges before it settles so it can always actually be closed.
+// Popups stay on screen until manually closed; capped at MAX so a
+// long session doesn't pile up unbounded DOM elements.
+const RC_PARTY_MAX_POPUPS = 14;
+let _rcPartyActivePopups = [];
+
 function _rcPartyPopupTick() {
+  if (_rcPartyActivePopups.length >= RC_PARTY_MAX_POPUPS) {
+    const oldest = _rcPartyActivePopups.shift();
+    oldest?.remove();
+  }
+
   const el = document.createElement("div");
   const variant = ["", "rc-alt2", "rc-alt3"][Math.floor(Math.random() * 3)];
   el.className = "rc-party-popup " + variant;
@@ -301,11 +312,16 @@ function _rcPartyPopupTick() {
   label.textContent = RC_PARTY_POPUP_LINES[Math.floor(Math.random() * RC_PARTY_POPUP_LINES.length)];
   el.appendChild(label);
 
+  const removePopup = () => {
+    el.remove();
+    _rcPartyActivePopups = _rcPartyActivePopups.filter(p => p !== el);
+  };
+
   if (RC_PARTY_IMAGE_FILES.length && Math.random() < 0.4) {
     const img = document.createElement("img");
     img.src = RC_PARTY_IMAGE_FILES[Math.floor(Math.random() * RC_PARTY_IMAGE_FILES.length)];
     img.alt = "";
-    img.onerror = () => el.remove();
+    img.onerror = removePopup;
     el.appendChild(img);
   }
 
@@ -321,12 +337,11 @@ function _rcPartyPopupTick() {
     closeBtn.style.top = (2 + Math.random() * 20) + "px";
     closeBtn.style.right = (2 + Math.random() * 20) + "px";
   });
-  closeBtn.addEventListener("click", () => el.remove());
+  closeBtn.addEventListener("click", removePopup);
   el.appendChild(closeBtn);
 
   document.body.appendChild(el);
-  const id = setTimeout(() => el.remove(), 6000);
-  _rcPartyTimers.push(id);
+  _rcPartyActivePopups.push(el);
 }
 
 // Wraps an element's visible text into per-letter spans that drift —
