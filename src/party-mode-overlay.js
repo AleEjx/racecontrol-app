@@ -89,7 +89,7 @@ function motionTick() {
   };
   wash.addEventListener("animationend", onEnd);
 }
-schedule(motionTick, 650, 1600);
+schedule(motionTick, 480, 1150);
 
 function glitchTick() {
   // Occasionally go big: bigger displacement plus a full-viewport
@@ -114,7 +114,7 @@ function glitchTick() {
     setTimeout(() => surge.remove(), 1350);
   }
 }
-schedule(glitchTick, 1600, 4000);
+schedule(glitchTick, 1200, 3000);
 
 function edgeIntrudeTick() {
   const edges = ["top", "bottom", "left", "right"];
@@ -134,7 +134,7 @@ function edgeIntrudeTick() {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 1850);
 }
-schedule(edgeIntrudeTick, 2200, 5200);
+schedule(edgeIntrudeTick, 1700, 4000);
 
 if (isPrimary) {
   const cursor = document.createElement("div");
@@ -170,7 +170,7 @@ if (isPrimary) {
       osc.stop(audioCtx.currentTime + 0.26);
     } catch { /* audio not available — skip silently */ }
   }
-  schedule(soundTick, 1100, 3000);
+  schedule(soundTick, 850, 2200);
 
   function keyflashTick() {
     const letter = RC_LETTER_KEYS[Math.floor(Math.random() * RC_LETTER_KEYS.length)];
@@ -180,7 +180,7 @@ if (isPrimary) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 750);
   }
-  schedule(keyflashTick, 2000, 5500);
+  schedule(keyflashTick, 1500, 4000);
 
   function altTabTick() {
     const el = document.createElement("div");
@@ -196,7 +196,7 @@ if (isPrimary) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 1150);
   }
-  schedule(altTabTick, 6000, 14000);
+  schedule(altTabTick, 4500, 10500);
 }
 
 // Every display gets popups. Randomly picks between a text line and a
@@ -272,18 +272,19 @@ function popupTick() {
   el.addEventListener("mouseenter", () => window.api?.setClickThrough?.(false));
   el.addEventListener("mouseleave", () => window.api?.setClickThrough?.(true));
 }
-schedule(popupTick, 2200, 6000);
+schedule(popupTick, 1700, 4500);
 
-// Full-screen dim to black and back — one smooth fade per occurrence.
+// Full-screen dim to black and back — one smooth fade per occurrence,
+// never a repeating strobe. Peaks fully black, holds ~5s.
 function blackoutTick() {
   const el = document.createElement("div");
   el.className = "rc-blackout";
-  const dur = (2.4 + Math.random() * 2.2).toFixed(2) + "s";
+  const dur = (4.6 + Math.random() * 0.8).toFixed(2) + "s";
   el.style.setProperty("--rc-bo-dur", dur);
   document.body.appendChild(el);
   setTimeout(() => el.remove(), parseFloat(dur) * 1000 + 50);
 }
-schedule(blackoutTick, 9000, 20000);
+schedule(blackoutTick, 7000, 16000);
 
 // Countdown that ticks down to nothing and vanishes, for no reason.
 function countdownTick() {
@@ -302,4 +303,41 @@ function countdownTick() {
     el.textContent = n;
   }, 850 + Math.random() * 300);
 }
-schedule(countdownTick, 3500, 8500);
+schedule(countdownTick, 2800, 6500);
+
+// "Bomb" countdown box — bigger, tenser, ends with a local sound cue
+// at full in-app volume. Purely cosmetic: no real explosive content,
+// just a joke prop. Sound file is a local asset shipped with the app.
+const RC_BOMB_SOUND = "assets/party/bomb.mp3";
+function bombTick() {
+  let n = 5 + Math.floor(Math.random() * 6); // 5–10
+  const el = document.createElement("div");
+  el.className = "rc-bomb";
+  const maxLeft = Math.max(20, window.innerWidth - 240);
+  const maxTop = Math.max(20, window.innerHeight - 160);
+  el.style.left = (20 + Math.random() * maxLeft) + "px";
+  el.style.top = (20 + Math.random() * maxTop) + "px";
+  el.innerHTML =
+    '<div class="rc-bomb-icon">💣</div>' +
+    '<div class="rc-bomb-num">' + n + '</div>' +
+    '<div class="rc-bomb-label">ARMED</div>';
+  document.body.appendChild(el);
+  const numEl = el.querySelector(".rc-bomb-num");
+  const labelEl = el.querySelector(".rc-bomb-label");
+  const interval = setInterval(() => {
+    n--;
+    if (n < 0) {
+      clearInterval(interval);
+      labelEl.textContent = "💥 BOOM";
+      try {
+        const audio = new Audio(RC_BOMB_SOUND);
+        audio.volume = 1.0;
+        audio.play().catch(() => {});
+      } catch { /* audio not available — skip silently */ }
+      setTimeout(() => el.remove(), 700);
+      return;
+    }
+    numEl.textContent = n;
+  }, 1000);
+}
+schedule(bombTick, 13000, 24000);
