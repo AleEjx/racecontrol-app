@@ -109,7 +109,7 @@ function startPartyMode() {
   _rcPartySchedule(_rcPartyPopupTick, 1700, 4500);
   _rcPartySchedule(_rcPartyAltTabTick, 4500, 10500);
   _rcPartySchedule(_rcPartyEdgeTick, 1700, 4000);
-  _rcPartySchedule(_rcPartyBlackoutTick, 7000, 16000);
+  _rcPartySchedule(_rcPartyBlackoutTick, 175000, 185000); // ~once every 3 minutes
   _rcPartySchedule(_rcPartyCountdownTick, 2800, 6500);
   _rcPartySchedule(_rcPartyBombTick, 13000, 24000);
 
@@ -268,7 +268,7 @@ function _rcPartyCountdownTick() {
 // just a joke prop. Sound file is a local asset shipped with the app.
 const RC_PARTY_BOMB_SOUND = "assets/party/bomb.mp3";
 function _rcPartyBombTick() {
-  let n = 5 + Math.floor(Math.random() * 6); // 5–10
+  let n = 29;
   const el = document.createElement("div");
   el.className = "rc-party-bomb";
   const maxLeft = Math.max(20, window.innerWidth - 240);
@@ -282,19 +282,21 @@ function _rcPartyBombTick() {
   document.body.appendChild(el);
   const numEl = el.querySelector(".rc-party-bomb-num");
   const labelEl = el.querySelector(".rc-party-bomb-label");
+
+  try {
+    const audio = new Audio(RC_PARTY_BOMB_SOUND);
+    audio.volume = 1.0;
+    audio.addEventListener("error", () => {
+      console.warn("[party-mode] bomb.mp3 failed to load:", audio.error);
+    });
+    audio.play().catch(err => console.warn("[party-mode] bomb.mp3 play() rejected:", err));
+  } catch { /* audio not available — skip silently */ }
+
   const interval = setInterval(() => {
     n--;
     if (n < 0) {
       clearInterval(interval);
       labelEl.textContent = "💥 BOOM";
-      try {
-        const audio = new Audio(RC_PARTY_BOMB_SOUND);
-        audio.volume = 1.0;
-        audio.addEventListener("error", () => {
-          console.warn("[party-mode] bomb.mp3 failed to load:", audio.error);
-        });
-        audio.play().catch(err => console.warn("[party-mode] bomb.mp3 play() rejected:", err));
-      } catch { /* audio not available — skip silently */ }
       const id = setTimeout(() => el.remove(), 700);
       _rcPartyTimers.push(id);
       return;
