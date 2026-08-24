@@ -275,7 +275,16 @@ function popupTick() {
   el.addEventListener("mouseenter", () => window.api?.setClickThrough?.(false));
   el.addEventListener("mouseleave", () => window.api?.setClickThrough?.(true));
 }
-schedule(popupTick, 1700, 4500);
+// Popups now fire in bursts rather than a steady drip: every 2.5
+// minutes, spawn a random batch of 1–5, lightly staggered so they
+// don't all appear in the exact same instant.
+function popupBurstTick() {
+  const count = 1 + Math.floor(Math.random() * 5); // 1–5
+  for (let i = 0; i < count; i++) {
+    setTimeout(popupTick, i * (300 + Math.random() * 400));
+  }
+}
+schedule(popupBurstTick, 150000, 150000); // every 2.5 minutes
 
 // Full-screen dim to black and back — one smooth fade per occurrence,
 // never a repeating strobe. Peaks fully black, holds ~5s.
@@ -355,4 +364,33 @@ function bombTick() {
     numEl.textContent = n;
   }, 1000);
 }
-if (isPrimary) schedule(bombTick, 13000, 24000);
+if (isPrimary) schedule(bombTick, 300000, 300000); // cooldown: once every 5 minutes
+
+// Random meme songs, independent of the bomb cooldown/schedule — one
+// plays every 3–7 minutes on the primary display only (avoids
+// duplicate/overlapping playback across multiple monitors).
+const RC_SONGS = [
+  "../assets/party/tacos.m4a",
+  "../assets/party/yara.mp3",
+  "../assets/party/maxverstappen.mp3",
+  "../assets/party/mercedesmeme.mp3",
+  "../assets/party/skibidi.mp3"
+];
+let songActive = false;
+function songTick() {
+  if (songActive) return;
+  songActive = true;
+  const src = RC_SONGS[Math.floor(Math.random() * RC_SONGS.length)];
+  const reset = () => { songActive = false; };
+  try {
+    const audio = new Audio(src);
+    audio.volume = 1.0;
+    audio.addEventListener("ended", reset);
+    audio.addEventListener("error", () => {
+      console.warn("[party-mode] song failed to load:", src, audio.error);
+      reset();
+    });
+    audio.play().catch(err => { console.warn("[party-mode] song play() rejected:", err); reset(); });
+  } catch { reset(); }
+}
+if (isPrimary) schedule(songTick, 180000, 420000); // 3–7 minutes
