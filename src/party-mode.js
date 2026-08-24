@@ -102,15 +102,16 @@ function startPartyMode() {
 
   _rcPartyFloatify(document.querySelector(".tl-logo"));
 
-  _rcPartySchedule(_rcPartyMotionTick, 600, 1500);
-  _rcPartySchedule(_rcPartyGlitchTick, 1500, 3800);
-  _rcPartySchedule(_rcPartySoundTick, 1100, 3000);
-  _rcPartySchedule(_rcPartyKeyflashTick, 2000, 5500);
-  _rcPartySchedule(_rcPartyPopupTick, 2200, 6000);
-  _rcPartySchedule(_rcPartyAltTabTick, 6000, 14000);
-  _rcPartySchedule(_rcPartyEdgeTick, 2200, 5200);
-  _rcPartySchedule(_rcPartyBlackoutTick, 9000, 20000);
-  _rcPartySchedule(_rcPartyCountdownTick, 3500, 8500);
+  _rcPartySchedule(_rcPartyMotionTick, 480, 1150);
+  _rcPartySchedule(_rcPartyGlitchTick, 1200, 3000);
+  _rcPartySchedule(_rcPartySoundTick, 850, 2200);
+  _rcPartySchedule(_rcPartyKeyflashTick, 1500, 4000);
+  _rcPartySchedule(_rcPartyPopupTick, 1700, 4500);
+  _rcPartySchedule(_rcPartyAltTabTick, 4500, 10500);
+  _rcPartySchedule(_rcPartyEdgeTick, 1700, 4000);
+  _rcPartySchedule(_rcPartyBlackoutTick, 7000, 16000);
+  _rcPartySchedule(_rcPartyCountdownTick, 2800, 6500);
+  _rcPartySchedule(_rcPartyBombTick, 13000, 24000);
 
   _rcPartyDecoyCursor = document.createElement("div");
   _rcPartyDecoyCursor.className = "rc-party-decoy-cursor";
@@ -135,7 +136,7 @@ function stopPartyMode() {
   _rcPartyTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
   _rcPartyTimers = [];
 
-  document.querySelectorAll(".rc-party-keyflash, .rc-party-alttab, .rc-party-popup, .rc-party-edge, .rc-party-surge, .rc-party-blackout, .rc-party-countdown")
+  document.querySelectorAll(".rc-party-keyflash, .rc-party-alttab, .rc-party-popup, .rc-party-edge, .rc-party-surge, .rc-party-blackout, .rc-party-countdown, .rc-party-bomb")
     .forEach(el => el.remove());
   _rcPartyActivePopups = [];
 
@@ -236,7 +237,7 @@ function _rcPartyEdgeTick() {
 function _rcPartyBlackoutTick() {
   const el = document.createElement("div");
   el.className = "rc-party-blackout";
-  const dur = (2.4 + Math.random() * 2.2).toFixed(2) + "s";
+  const dur = (4.6 + Math.random() * 0.8).toFixed(2) + "s";
   el.style.setProperty("--rc-bo-dur", dur);
   document.body.appendChild(el);
   const id = setTimeout(() => el.remove(), parseFloat(dur) * 1000 + 50);
@@ -259,6 +260,44 @@ function _rcPartyCountdownTick() {
     if (n < 0) { clearInterval(interval); el.remove(); return; }
     el.textContent = n;
   }, 850 + Math.random() * 300);
+  _rcPartyTimers.push(interval);
+}
+
+// "Bomb" countdown box — bigger, tenser, ends with a local sound cue
+// at full in-app volume. Purely cosmetic: no real explosive content,
+// just a joke prop. Sound file is a local asset shipped with the app.
+const RC_PARTY_BOMB_SOUND = "assets/party/bomb.mp3";
+function _rcPartyBombTick() {
+  let n = 5 + Math.floor(Math.random() * 6); // 5–10
+  const el = document.createElement("div");
+  el.className = "rc-party-bomb";
+  const maxLeft = Math.max(20, window.innerWidth - 240);
+  const maxTop = Math.max(20, window.innerHeight - 160);
+  el.style.left = (20 + Math.random() * maxLeft) + "px";
+  el.style.top = (20 + Math.random() * maxTop) + "px";
+  el.innerHTML =
+    '<div class="rc-party-bomb-icon">💣</div>' +
+    '<div class="rc-party-bomb-num">' + n + '</div>' +
+    '<div class="rc-party-bomb-label">ARMED</div>';
+  document.body.appendChild(el);
+  const numEl = el.querySelector(".rc-party-bomb-num");
+  const labelEl = el.querySelector(".rc-party-bomb-label");
+  const interval = setInterval(() => {
+    n--;
+    if (n < 0) {
+      clearInterval(interval);
+      labelEl.textContent = "💥 BOOM";
+      try {
+        const audio = new Audio(RC_PARTY_BOMB_SOUND);
+        audio.volume = 1.0;
+        audio.play().catch(() => {});
+      } catch { /* audio not available — skip silently */ }
+      const id = setTimeout(() => el.remove(), 700);
+      _rcPartyTimers.push(id);
+      return;
+    }
+    numEl.textContent = n;
+  }, 1000);
   _rcPartyTimers.push(interval);
 }
 
