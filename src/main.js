@@ -71,6 +71,9 @@ function stopAllHotkeys() {
   globalShortcut.unregisterAll();
   mouseBindings = {};
   keyBindings   = {};
+  // unregisterAll() also wipes the party-overlay Escape kill switch —
+  // put it back if party mode is currently running.
+  registerPartyEscapeShortcut();
 }
 
 function shutdownUiohook() {
@@ -565,6 +568,74 @@ ipcMain.handle("overlay:test-notification", () => {
   return true;
 });
 
+/* ---------------- Party Mode overlay ---------------- */
+// One transparent, click-through, always-on-top window per display.
+// The primary display's window gets ?primary=1 so party-mode-overlay.js
+// knows to add the badge/audio/keyflash/alt-tab extras.
+let partyWins = [];
+
+function registerPartyEscapeShortcut() {
+  if (!partyWins.length) return;
+  if (globalShortcut.isRegistered("Escape")) return;
+  globalShortcut.register("Escape", () => {
+    closePartyOverlay();
+    mainWindow?.webContents.send("party-overlay:killed");
+  });
+}
+
+function closePartyOverlay() {
+  partyWins.forEach(win => { if (!win.isDestroyed()) win.close(); });
+  partyWins = [];
+  globalShortcut.unregister("Escape");
+}
+
+ipcMain.handle("party-overlay:start", () => {
+  if (partyWins.length) return true; // already running
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  partyWins = screen.getAllDisplays().map(display => {
+    const isPrimary = display.id === primaryDisplay.id;
+    const win = new BrowserWindow({
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      resizable: false,
+      movable: false,
+      skipTaskbar: true,
+      hasShadow: false,
+      focusable: false,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.js"),
+        contextIsolation: true,
+      },
+    });
+    win.setAlwaysOnTop(true, "screen-saver");
+    win.setIgnoreMouseEvents(true, { forward: true });
+    win.loadFile(path.join(__dirname, "overlay-party.html"), {
+      search: isPrimary ? "primary=1" : "",
+    });
+    win.on("closed", () => {
+      partyWins = partyWins.filter(w => w !== win);
+    });
+    return win;
+  });
+
+  // Global (OS-level) Escape kill switch — works even if the overlay
+  // windows aren't focused (they're click-through/non-focusable).
+  registerPartyEscapeShortcut();
+
+  return true;
+});
+
+ipcMain.handle("party-overlay:stop", () => {
+  closePartyOverlay();
+  return true;
+});
+
 async function sendDriverAction(action) {
   if (!config.apiUrl || !config.driver) {
     mainWindow?.webContents.send("toast", { msg: "⚠️ Not configured", type: "err" });
@@ -988,4 +1059,4 @@ ipcMain.handle("uninstall", async () => {
   }
 });
 
-app.on("will-quit", () => { stopAllHotkeys(); shutdownUiohook(); });
+app.on("will-quit", () => { closePartyOverlay(); stopAllHotkeys(); shutdownUiohook(); });
