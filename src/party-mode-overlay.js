@@ -332,7 +332,10 @@ function bombTick() {
       try {
         const audio = new Audio(RC_BOMB_SOUND);
         audio.volume = 1.0;
-        audio.play().catch(() => {});
+        audio.addEventListener("error", () => {
+          console.warn("[party-mode] bomb.mp3 failed to load:", audio.error);
+        });
+        audio.play().catch(err => console.warn("[party-mode] bomb.mp3 play() rejected:", err));
       } catch { /* audio not available — skip silently */ }
       setTimeout(() => el.remove(), 700);
       return;
