@@ -411,6 +411,20 @@ function formatMMSS(totalSeconds) {
   return m + ":" + (s < 10 ? "0" : "") + s;
 }
 
+function spawnConfetti() {
+  const colors = ["#ff2d55", "#ff8a1e", "#ffcc00", "#10e58a", "#3d8bff", "#7c4dff"];
+  for (let i = 0; i < 50; i++) {
+    const piece = document.createElement("div");
+    piece.className = "rc-confetti";
+    piece.style.left = Math.random() * 100 + "vw";
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (2.2 + Math.random() * 1.6).toFixed(2) + "s";
+    piece.style.animationDelay = (Math.random() * 0.4).toFixed(2) + "s";
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 4200);
+  }
+}
+
 function startRaveCountdown() {
   let remaining = RC_RAVE_COUNTDOWN;
   raveTimerEl = document.createElement("div");
@@ -440,6 +454,7 @@ function triggerRave() {
     raveTimerEl.querySelector(".rc-rave-label").textContent = "🚨 LIVE";
     raveTimerEl.querySelector(".rc-rave-num").textContent = "CHAOS";
   }
+  spawnConfetti();
 
   // Speed up the continuous rainbow wash for the chaos window.
   raveHueOverride = wash.style.animationDuration;
