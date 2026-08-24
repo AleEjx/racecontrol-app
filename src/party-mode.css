@@ -1,0 +1,184 @@
+/* =========================================================
+   PARTY MODE — visual effects layer
+   Safety notes:
+   - The rainbow effect is a SMOOTH continuous hue-rotate, never a
+     discrete flash/strobe. Do not change this to a setInterval that
+     swaps background-color between hardcoded colors — that's a
+     photosensitive-seizure trigger. Smooth sweeps only.
+   - No effect here ever simulates real OS-level input. The "keypress"
+     and "alt-tab" effects are 100% cosmetic overlays.
+   ========================================================= */
+
+/* Continuous smooth rainbow — lives on <html> so it composes with
+   whatever transient effect is running on <body>. */
+@keyframes rc-party-hue {
+  from { filter: hue-rotate(0deg) saturate(1.6) brightness(1.04); }
+  to   { filter: hue-rotate(360deg) saturate(1.6) brightness(1.04); }
+}
+html.rc-party-hue-active {
+  animation-name: rc-party-hue;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  /* animation-duration is set/varied from JS, never below 0.6s —
+     keep well clear of 3–30Hz flash territory. */
+}
+
+/* Transient body effects — JS sets body.style.animation directly and
+   clears it on animationend, so only one of these plays at a time. */
+@keyframes rc-party-bounce-v {
+  0%   { transform: translateY(0); }
+  25%  { transform: translateY(-16px); }
+  55%  { transform: translateY(4px); }
+  80%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+@keyframes rc-party-bounce-h {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-14px); }
+  55%  { transform: translateX(6px); }
+  80%  { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+@keyframes rc-party-distort {
+  0%   { transform: skew(0deg, 0deg) scale(1); }
+  30%  { transform: skew(2.5deg, 0.8deg) scale(1.008); }
+  60%  { transform: skew(-2deg, -0.5deg) scale(0.994); }
+  100% { transform: skew(0deg, 0deg) scale(1); }
+}
+@keyframes rc-party-glitch {
+  0%   { transform: translate(0,0); filter: none; }
+  12%  { transform: translate(-7px, 2px); filter: hue-rotate(35deg) contrast(1.3); }
+  24%  { transform: translate(6px, -3px); filter: hue-rotate(-35deg) contrast(1.3); }
+  36%  { transform: translate(-4px, 1px); filter: none; }
+  48%  { transform: translate(5px, 2px); filter: hue-rotate(20deg); }
+  60%  { transform: translate(-2px, -2px); filter: none; }
+  100% { transform: translate(0,0); filter: none; }
+}
+
+body.rc-party-body-anim { will-change: transform, filter; }
+
+/* Floating letters — applied per-character to a target element's text */
+@keyframes rc-party-letter-float {
+  0%   { transform: translate(0,0) rotate(0deg); }
+  25%  { transform: translate(var(--rc-lx,3px), var(--rc-ly,-4px)) rotate(var(--rc-lr,3deg)); }
+  50%  { transform: translate(calc(var(--rc-lx,3px) * -1), calc(var(--rc-ly,-4px) * 0.4)) rotate(calc(var(--rc-lr,3deg) * -1)); }
+  75%  { transform: translate(var(--rc-lx,3px), var(--rc-ly,-4px)) rotate(0deg); }
+  100% { transform: translate(0,0) rotate(0deg); }
+}
+.rc-party-letter {
+  display: inline-block;
+  animation: rc-party-letter-float var(--rc-ldur, 1.6s) ease-in-out infinite;
+  animation-delay: var(--rc-ldelay, 0s);
+}
+
+/* Fake keypress flash overlay */
+@keyframes rc-party-keyflash-pop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.6) rotate(-6deg); }
+  15%  { opacity: 1; transform: translate(-50%,-50%) scale(1.08) rotate(2deg); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+}
+.rc-party-keyflash {
+  position: fixed;
+  top: 50%; left: 50%;
+  z-index: 999999;
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+  font-weight: 800;
+  font-size: 120px;
+  color: var(--text, #f0f0f6);
+  background: var(--surface, #131319);
+  border: 3px solid var(--green, #10e58a);
+  border-radius: 18px;
+  padding: 10px 34px;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.55));
+  animation: rc-party-keyflash-pop 0.7s ease-out forwards;
+}
+
+/* Fake alt-tab switcher overlay */
+@keyframes rc-party-fade-scale {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.92); }
+  15%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  85%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(0.96); }
+}
+.rc-party-alttab {
+  position: fixed;
+  top: 50%; left: 50%;
+  z-index: 999999;
+  pointer-events: none;
+  display: flex;
+  gap: 14px;
+  padding: 22px;
+  background: rgba(19,19,25,0.92);
+  border: 1px solid var(--border, #23232f);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.55));
+  animation: rc-party-fade-scale 1.1s ease-out forwards;
+  backdrop-filter: blur(6px);
+}
+.rc-party-alttab-tile {
+  width: 64px; height: 64px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  background: var(--surface-2, #191922);
+  border: 1px solid var(--border, #23232f);
+}
+.rc-party-alttab-tile.rc-active {
+  border-color: var(--green, #10e58a);
+  box-shadow: 0 0 0 2px rgba(16,229,138,0.25);
+}
+
+/* Fake ad popup */
+@keyframes rc-party-popup-in {
+  0%   { opacity: 0; transform: scale(0.85) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.rc-party-popup {
+  position: fixed;
+  z-index: 999998;
+  width: 220px;
+  padding: 16px 14px 14px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.55));
+  animation: rc-party-popup-in 0.35s var(--ease-spring, cubic-bezier(0.34,1.56,0.64,1));
+  background: linear-gradient(135deg, #ff2d55, #ff8a1e);
+}
+.rc-party-popup.rc-alt2 { background: linear-gradient(135deg, #3d8bff, #10e58a); }
+.rc-party-popup.rc-alt3 { background: linear-gradient(135deg, #ffcc00, #ff2d55); color: #1a1a1a; }
+.rc-party-popup-close {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  line-height: 22px;
+  cursor: pointer;
+  transition: left 0.12s ease, top 0.12s ease;
+}
+
+/* Party mode master toggle badge shown in the titlebar while active */
+.rc-party-live-badge {
+  position: fixed;
+  top: 10px; right: 14px;
+  z-index: 1000000;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  pointer-events: none;
+}
