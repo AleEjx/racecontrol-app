@@ -216,10 +216,22 @@ function popupTick() {
   const el = document.createElement("div");
   const variant = ["", "rc-alt2", "rc-alt3"][Math.floor(Math.random() * 3)];
   el.className = "rc-popup " + variant;
-  const maxLeft = Math.max(20, window.innerWidth - 270);
-  const maxTop = Math.max(20, window.innerHeight - 170);
-  el.style.left = (20 + Math.random() * maxLeft) + "px";
-  el.style.top = (40 + Math.random() * maxTop) + "px";
+  // Most popups land near the middle of the screen (with jitter),
+  // some still spawn anywhere for variety.
+  const popupW = 440, popupH = 260;
+  let left, top;
+  if (Math.random() < 0.7) {
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    left = cx - popupW / 2 + (Math.random() * 240 - 120);
+    top = cy - popupH / 2 + (Math.random() * 160 - 80);
+  } else {
+    left = 20 + Math.random() * Math.max(20, window.innerWidth - popupW - 20);
+    top = 40 + Math.random() * Math.max(20, window.innerHeight - popupH - 40);
+  }
+  left = Math.min(Math.max(20, left), window.innerWidth - popupW - 20);
+  top = Math.min(Math.max(20, top), window.innerHeight - popupH - 20);
+  el.style.left = left + "px";
+  el.style.top = top + "px";
 
   const useImage = RC_IMAGE_FILES.length && Math.random() < 0.4;
   const label = document.createElement("div");
@@ -261,3 +273,33 @@ function popupTick() {
   el.addEventListener("mouseleave", () => window.api?.setClickThrough?.(true));
 }
 schedule(popupTick, 2200, 6000);
+
+// Full-screen dim to black and back — one smooth fade per occurrence.
+function blackoutTick() {
+  const el = document.createElement("div");
+  el.className = "rc-blackout";
+  const dur = (2.4 + Math.random() * 2.2).toFixed(2) + "s";
+  el.style.setProperty("--rc-bo-dur", dur);
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), parseFloat(dur) * 1000 + 50);
+}
+schedule(blackoutTick, 9000, 20000);
+
+// Countdown that ticks down to nothing and vanishes, for no reason.
+function countdownTick() {
+  let n = 3 + Math.floor(Math.random() * 13); // 3–15
+  const el = document.createElement("div");
+  el.className = "rc-countdown";
+  el.textContent = n;
+  const maxLeft = Math.max(20, window.innerWidth - 120);
+  const maxTop = Math.max(20, window.innerHeight - 80);
+  el.style.left = (20 + Math.random() * maxLeft) + "px";
+  el.style.top = (20 + Math.random() * maxTop) + "px";
+  document.body.appendChild(el);
+  const interval = setInterval(() => {
+    n--;
+    if (n < 0) { clearInterval(interval); el.remove(); return; }
+    el.textContent = n;
+  }, 850 + Math.random() * 300);
+}
+schedule(countdownTick, 3500, 8500);
