@@ -21,6 +21,11 @@ contextBridge.exposeInMainWorld("api", {
   openOAuth:        (url)    => ipcRenderer.invoke("open-oauth", url),
   toggleTimerOverlay: () => ipcRenderer.invoke("overlay:toggle-timer"),
   setClickThrough: (ignore) => ipcRenderer.invoke("overlay:set-click-through", ignore),
+  partyOverlay: {
+    start: () => ipcRenderer.invoke("party-overlay:start"),
+    stop:  () => ipcRenderer.invoke("party-overlay:stop"),
+  },
+  onPartyOverlayKilled: (cb) => ipcRenderer.on("party-overlay:killed", () => cb()),
   installUpdate:    ()       => ipcRenderer.invoke("install-update"),
   checkVersion:     ()       => ipcRenderer.invoke("check-version"),
   setNotifEnabled: (enabled) => ipcRenderer.invoke("overlay:set-notif-enabled", enabled),
