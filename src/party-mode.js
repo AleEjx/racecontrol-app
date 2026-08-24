@@ -33,14 +33,18 @@ const RC_PARTY_POPUP_LINES = [
 // Local image/gif popups — drop files at these paths (relative to
 // renderer.html's folder, e.g. assets/party/party-1.gif) to have them
 // rotate in with the text popups. Missing files fail silently.
+// Local image/gif popups — drop files at these paths (resolved from
+// this file's own folder, src/, so they live one level up at the
+// project's shared assets/party/ folder) and they'll rotate in
+// alongside the text popups. Missing files are skipped silently.
 const RC_PARTY_IMAGE_FILES = [
-  "assets/party/party-1.gif",
-  "assets/party/party-2.gif",
-  "assets/party/party-3.gif",
-  "assets/party/party-4.gif",
-  "assets/party/party-5.gif",
-  "assets/party/party-6.gif",
-  "assets/party/party-7.png"
+  "../assets/party/party-1.gif",
+  "../assets/party/party-2.gif",
+  "../assets/party/party-3.gif",
+  "../assets/party/party-4.gif",
+  "../assets/party/party-5.gif",
+  "../assets/party/party-6.gif",
+  "../assets/party/party-7.png"
 ];
 const RC_PARTY_EDGE_LINES = ["👀 INCOMING", "🚧 CAUTION", "🎉 SURPRISE", "📣 HEADS UP", "🌀 CHAOS"];
 let _rcPartyDecoyCursor = null;
@@ -266,7 +270,7 @@ function _rcPartyCountdownTick() {
 // "Bomb" countdown box — bigger, tenser, ends with a local sound cue
 // at full in-app volume. Purely cosmetic: no real explosive content,
 // just a joke prop. Sound file is a local asset shipped with the app.
-const RC_PARTY_BOMB_SOUND = "assets/party/bomb.mp3";
+const RC_PARTY_BOMB_SOUND = "../assets/party/bomb.mp3";
 function _rcPartyBombTick() {
   let n = 29;
   const el = document.createElement("div");
