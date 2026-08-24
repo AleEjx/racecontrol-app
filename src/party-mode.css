@@ -307,6 +307,30 @@ body.rc-party-body-anim { will-change: transform, filter; }
 .rc-party-bomb-num { font-size: 56px; font-weight: 800; color: #ff2d55; line-height: 1; }
 .rc-party-bomb-label { font-size: 11px; letter-spacing: 0.08em; opacity: 0.7; margin-top: 4px; }
 
+/* Rave build-up countdown — ticks down top-left, then flips to a
+   "live" state (handled by JS swapping text + adding rc-party-rave-live)
+   when the chaos window kicks in. */
+.rc-party-rave-timer {
+  position: fixed;
+  top: 14px; left: 14px;
+  z-index: 1000000;
+  font-family: 'Courier New', monospace;
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--text, #f0f0f6);
+  background: rgba(19,19,25,0.85);
+  border: 2px solid var(--green, #10e58a);
+  border-radius: 12px;
+  padding: 8px 16px;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.55));
+  pointer-events: none;
+}
+.rc-party-rave-timer.rc-party-rave-live {
+  border-color: #ff2d55;
+  color: #ff2d55;
+  animation: rc-party-bomb-pulse 0.9s ease-in-out infinite;
+}
+
 /* Party mode master toggle badge shown in the titlebar while active */
 .rc-party-live-badge {
   position: fixed;
