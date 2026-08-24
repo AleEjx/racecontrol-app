@@ -20,8 +20,29 @@ const RC_POPUP_LINES = [
   "⚠️ YOUR TIRES ARE 1 CLICK AWAY",
   "🔥 CONGRATULATIONS, PIT CREW",
   "🎉 PARTY MODE APPROVES OF YOU",
-  "🚨 SUSPICIOUSLY FAST LAP DETECTED"
+  "🚨 SUSPICIOUSLY FAST LAP DETECTED",
+  "📉 YOUR APEX HAS LEFT THE CHAT",
+  "🍕 PIT CREW ORDERED PIZZA, BRB",
+  "🎯 BRAKE CHECK IN 3... 2...",
+  "🛞 ONE OF YOUR TIRES IS A DECOY",
+  "📡 SIGNAL LOST, VIBES FOUND",
+  "🐢 TURTLE MODE UNLOCKED",
+  "🎪 WELCOME TO THE CIRCUS TRACK",
+  "🧭 STEERING WHEEL IS NOW SUGGESTIVE"
 ];
+// Local image/gif popups — drop files at these paths (relative to this
+// overlay's folder, e.g. assets/party/party-1.gif) and they'll rotate
+// in alongside the text popups. Missing files are skipped silently.
+const RC_IMAGE_FILES = [
+  "assets/party/party-1.gif",
+  "assets/party/party-2.gif",
+  "assets/party/party-3.gif",
+  "assets/party/party-4.gif",
+  "assets/party/party-5.gif",
+  "assets/party/party-6.gif",
+  "assets/party/party-7.gif"
+];
+const RC_EDGE_LINES = ["👀 INCOMING", "🚧 CAUTION", "🎉 SURPRISE", "📣 HEADS UP", "🌀 CHAOS"];
 
 const wash = document.getElementById("rc-wash");
 
@@ -39,6 +60,14 @@ if (isPrimary) {
 function schedule(fn, minMs, maxMs) {
   const delay = minMs + Math.random() * (maxMs - minMs);
   setTimeout(() => { fn(); schedule(fn, minMs, maxMs); }, delay);
+}
+
+function appendWashAnim(name, rule) {
+  wash.style.animation = wash.style.animation.replace(new RegExp(",?\\s*" + name + "[^,]*"), "");
+  wash.style.animation += ", " + rule;
+}
+function removeWashAnim(name, rule) {
+  wash.style.animation = wash.style.animation.replace(", " + rule, "");
 }
 
 function hueSpeedLoop() {
@@ -60,19 +89,68 @@ function motionTick() {
   };
   wash.addEventListener("animationend", onEnd);
 }
-schedule(motionTick, 1000, 2400);
+schedule(motionTick, 650, 1600);
 
 function glitchTick() {
-  const anim = "rc-glitch 0.35s linear";
+  // Occasionally go big: bigger displacement plus a full-viewport
+  // color surge, for the "more screen coverage" chaos beats. Still a
+  // single smooth animation each — no repeating strobe.
+  const big = Math.random() < 0.35;
+  const animName = big ? "rc-glitch-big" : "rc-glitch";
+  const anim = animName + " 0.35s linear";
   wash.style.animation += ", " + anim;
   const onEnd = (e) => {
-    if (e.animationName !== "rc-glitch") return;
+    if (e.animationName !== animName) return;
     wash.style.animation = wash.style.animation.replace(", " + anim, "");
     wash.removeEventListener("animationend", onEnd);
   };
   wash.addEventListener("animationend", onEnd);
+
+  if (big) {
+    const surge = document.createElement("div");
+    surge.className = "rc-wash-surge-el";
+    surge.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:999996;background:linear-gradient(120deg,#ff2d55,#7c4dff,#3d8bff,#10e58a);background-size:300% 300%;opacity:0;animation:rc-wash-surge-flat 1.3s ease-in-out forwards;";
+    document.body.appendChild(surge);
+    setTimeout(() => surge.remove(), 1350);
+  }
 }
-schedule(glitchTick, 2800, 6500);
+schedule(glitchTick, 1600, 4000);
+
+function edgeIntrudeTick() {
+  const edges = ["top", "bottom", "left", "right"];
+  const edge = edges[Math.floor(Math.random() * edges.length)];
+  const el = document.createElement("div");
+  el.className = "rc-edge";
+  el.textContent = RC_EDGE_LINES[Math.floor(Math.random() * RC_EDGE_LINES.length)];
+  const offsets = {
+    top:    { ex: "0", ey: "-120px", css: "top:0; left:" + (10 + Math.random() * 70) + "%;" },
+    bottom: { ex: "0", ey: "120px",  css: "bottom:0; left:" + (10 + Math.random() * 70) + "%;" },
+    left:   { ex: "-160px", ey: "0", css: "left:0; top:" + (10 + Math.random() * 70) + "%;" },
+    right:  { ex: "160px", ey: "0",  css: "right:0; top:" + (10 + Math.random() * 70) + "%;" },
+  }[edge];
+  el.style.cssText = offsets.css;
+  el.style.setProperty("--rc-ex", offsets.ex);
+  el.style.setProperty("--rc-ey", offsets.ey);
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1850);
+}
+schedule(edgeIntrudeTick, 2200, 5200);
+
+if (isPrimary) {
+  const cursor = document.createElement("div");
+  cursor.className = "rc-cursor";
+  cursor.textContent = "🖱️";
+  cursor.style.left = "50%";
+  cursor.style.top = "50%";
+  document.body.appendChild(cursor);
+  function decoyCursorTick() {
+    const x = 5 + Math.random() * 90;
+    const y = 5 + Math.random() * 90;
+    cursor.style.left = x + "%";
+    cursor.style.top = y + "%";
+  }
+  schedule(decoyCursorTick, 1100, 2800);
+}
 
 if (isPrimary) {
   let audioCtx = null;
@@ -92,7 +170,7 @@ if (isPrimary) {
       osc.stop(audioCtx.currentTime + 0.26);
     } catch { /* audio not available — skip silently */ }
   }
-  schedule(soundTick, 1500, 4000);
+  schedule(soundTick, 1100, 3000);
 
   function keyflashTick() {
     const letter = RC_LETTER_KEYS[Math.floor(Math.random() * RC_LETTER_KEYS.length)];
@@ -102,7 +180,7 @@ if (isPrimary) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 750);
   }
-  schedule(keyflashTick, 3200, 8500);
+  schedule(keyflashTick, 2000, 5500);
 
   function altTabTick() {
     const el = document.createElement("div");
@@ -118,10 +196,12 @@ if (isPrimary) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 1150);
   }
-  schedule(altTabTick, 9500, 21000);
+  schedule(altTabTick, 6000, 14000);
 }
 
-// Every display gets popups.
+// Every display gets popups. Randomly picks between a text line and a
+// local image/gif (if any RC_IMAGE_FILES exist) — missing image files
+// just fail their <img> silently and the popup closes itself.
 function popupTick() {
   const el = document.createElement("div");
   const variant = ["", "rc-alt2", "rc-alt3"][Math.floor(Math.random() * 3)];
@@ -130,7 +210,19 @@ function popupTick() {
   const maxTop = Math.max(20, window.innerHeight - 170);
   el.style.left = (20 + Math.random() * maxLeft) + "px";
   el.style.top = (40 + Math.random() * maxTop) + "px";
-  el.textContent = RC_POPUP_LINES[Math.floor(Math.random() * RC_POPUP_LINES.length)];
+
+  const useImage = RC_IMAGE_FILES.length && Math.random() < 0.4;
+  const label = document.createElement("div");
+  label.textContent = RC_POPUP_LINES[Math.floor(Math.random() * RC_POPUP_LINES.length)];
+  el.appendChild(label);
+
+  if (useImage) {
+    const img = document.createElement("img");
+    img.src = RC_IMAGE_FILES[Math.floor(Math.random() * RC_IMAGE_FILES.length)];
+    img.alt = "";
+    img.onerror = () => { el.remove(); window.api?.setClickThrough?.(true); };
+    el.appendChild(img);
+  }
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "rc-popup-close";
@@ -152,4 +244,4 @@ function popupTick() {
   el.addEventListener("mouseleave", () => window.api?.setClickThrough?.(true));
   setTimeout(() => { el.remove(); window.api?.setClickThrough?.(true); }, 6000);
 }
-schedule(popupTick, 4200, 11000);
+schedule(popupTick, 2200, 6000);
