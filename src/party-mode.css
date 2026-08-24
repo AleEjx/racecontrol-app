@@ -167,6 +167,85 @@ body.rc-party-body-anim { will-change: transform, filter; }
   transition: left 0.12s ease, top 0.12s ease;
 }
 
+/* Bigger/wider-reaching glitch variant — same smooth-transform rule
+   applies (no discrete color-flash toggling), just larger displacement
+   and a touch more filter distortion for the "big moment" beats. */
+@keyframes rc-party-glitch-big {
+  0%   { transform: translate(0,0) scale(1); filter: none; }
+  10%  { transform: translate(-18px, 6px) scale(1.012); filter: hue-rotate(60deg) contrast(1.6) saturate(1.4); }
+  22%  { transform: translate(16px, -10px) scale(0.99); filter: hue-rotate(-60deg) contrast(1.6); }
+  35%  { transform: translate(-10px, 4px) scale(1.015); filter: none; }
+  48%  { transform: translate(12px, 6px) scale(1); filter: hue-rotate(30deg); }
+  62%  { transform: translate(-6px,-4px) scale(1); filter: none; }
+  100% { transform: translate(0,0) scale(1); filter: none; }
+}
+
+/* Full-viewport color surge — a single smooth opacity pulse, not a
+   repeating strobe, so it stays clear of flash-safety thresholds.
+   Used alongside the big glitch for "more screen coverage" moments. */
+@keyframes rc-party-surge {
+  0%   { opacity: 0; }
+  30%  { opacity: 0.32; }
+  100% { opacity: 0; }
+}
+.rc-party-surge {
+  position: fixed;
+  inset: 0;
+  z-index: 999996;
+  pointer-events: none;
+  background: linear-gradient(120deg, #ff2d55, #7c4dff, #3d8bff, #10e58a);
+  background-size: 300% 300%;
+  animation: rc-party-surge 1.3s ease-in-out forwards;
+}
+
+/* Edge-intrusion banner — slides in from a random screen edge and
+   retreats. Direction/offset is set per-instance via CSS vars. */
+@keyframes rc-party-edge-intrude {
+  0%   { transform: translate(var(--rc-ex,0), var(--rc-ey,0)); opacity: 0; }
+  20%  { opacity: 1; }
+  40%  { transform: translate(0,0); opacity: 1; }
+  72%  { transform: translate(0,0); opacity: 1; }
+  100% { transform: translate(var(--rc-ex,0), var(--rc-ey,0)); opacity: 0; }
+}
+.rc-party-edge {
+  position: fixed;
+  z-index: 999997;
+  pointer-events: none;
+  font-family: system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7c4dff, #3d8bff);
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.55));
+  animation: rc-party-edge-intrude 1.8s ease-in-out forwards;
+}
+
+/* Cosmetic decoy cursor — a second on-screen pointer that drifts to
+   random spots. Purely visual: pointer-events disabled, never moves
+   the real OS cursor or intercepts clicks. */
+.rc-party-decoy-cursor {
+  position: fixed;
+  z-index: 1000001;
+  pointer-events: none;
+  font-size: 30px;
+  transform: translate(-4px, -2px);
+  transition: left 0.35s ease, top 0.35s ease;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+}
+
+/* Optional image/gif popup content — sized to fit inside the existing
+   popup card alongside its close button. */
+.rc-party-popup img {
+  display: block;
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+
 /* Party mode master toggle badge shown in the titlebar while active */
 .rc-party-live-badge {
   position: fixed;
