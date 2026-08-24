@@ -311,8 +311,15 @@ schedule(countdownTick, 2800, 6500);
 // "Bomb" countdown box — bigger, tenser, ends with a local sound cue
 // at full in-app volume. Purely cosmetic: no real explosive content,
 // just a joke prop. Sound file is a local asset shipped with the app.
+// Only spawns on the primary display (like the badge/audio/keyflash
+// extras above), and only one at a time, so audio never overlaps
+// across monitors or across back-to-back bombs.
 const RC_BOMB_SOUND = "../assets/party/bomb.mp3";
+let bombActive = false;
 function bombTick() {
+  if (bombActive) return;
+  bombActive = true;
+
   let n = 29;
   const el = document.createElement("div");
   el.className = "rc-bomb";
@@ -342,10 +349,10 @@ function bombTick() {
     if (n < 0) {
       clearInterval(interval);
       labelEl.textContent = "💥 BOOM";
-      setTimeout(() => el.remove(), 700);
+      setTimeout(() => { el.remove(); bombActive = false; }, 700);
       return;
     }
     numEl.textContent = n;
   }, 1000);
 }
-schedule(bombTick, 13000, 24000);
+if (isPrimary) schedule(bombTick, 13000, 24000);
