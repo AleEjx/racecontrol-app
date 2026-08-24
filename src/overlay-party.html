@@ -276,6 +276,24 @@
   .rc-rave-timer.rc-rave-live {
     animation: rc-rave-glow 0.9s ease-in-out infinite;
   }
+
+  /* Confetti burst — spawned when the rave build-up hits zero.
+     Straight fall + spin, no strobing. */
+  @keyframes rc-confetti-fall {
+    0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0.85; }
+  }
+  .rc-confetti {
+    position: fixed;
+    top: -10px;
+    width: 9px;
+    height: 15px;
+    z-index: 1000005;
+    pointer-events: none;
+    border-radius: 2px;
+    animation: rc-confetti-fall 3s linear forwards;
+  }
 </style>
 </head>
 <body>
