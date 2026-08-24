@@ -247,11 +247,12 @@ body.rc-party-body-anim { will-change: transform, filter; }
 }
 
 /* Full-screen dim to black and back — a single smooth fade, not a
-   repeating strobe, so it stays clear of flash-safety thresholds. */
+   repeating strobe, so it stays clear of flash-safety thresholds.
+   Peaks at fully opaque black and holds for the bulk of the duration. */
 @keyframes rc-party-blackout {
   0%   { opacity: 0; }
-  35%  { opacity: 0.94; }
-  65%  { opacity: 0.94; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
   100% { opacity: 0; }
 }
 .rc-party-blackout {
@@ -261,7 +262,7 @@ body.rc-party-body-anim { will-change: transform, filter; }
   pointer-events: none;
   background: #000;
   opacity: 0;
-  animation: rc-party-blackout var(--rc-bo-dur, 3s) ease-in-out forwards;
+  animation: rc-party-blackout var(--rc-bo-dur, 5s) ease-in-out forwards;
 }
 
 /* Pointless countdown badge — just ticks down and disappears. */
@@ -279,6 +280,32 @@ body.rc-party-body-anim { will-change: transform, filter; }
   padding: 10px 22px;
   box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.55));
 }
+
+/* "Bomb" countdown box — bigger, red-themed, gentle continuous pulse
+   (smooth scale/glow breathing, never a hard flash) building tension
+   until it hits zero. Purely cosmetic; no real explosive content. */
+@keyframes rc-party-bomb-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 24px 4px rgba(255,45,85,0.35); }
+  50%      { transform: scale(1.035); box-shadow: 0 0 40px 10px rgba(255,45,85,0.55); }
+}
+.rc-party-bomb {
+  position: fixed;
+  z-index: 1000002;
+  pointer-events: none;
+  width: 220px;
+  padding: 22px 18px;
+  border-radius: 16px;
+  background: #0c0c10;
+  border: 3px solid #ff2d55;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  color: #fff;
+  box-shadow: 0 0 24px 4px rgba(255,45,85,0.35);
+  animation: rc-party-bomb-pulse 0.9s ease-in-out infinite;
+}
+.rc-party-bomb-icon { font-size: 34px; margin-bottom: 4px; }
+.rc-party-bomb-num { font-size: 56px; font-weight: 800; color: #ff2d55; line-height: 1; }
+.rc-party-bomb-label { font-size: 11px; letter-spacing: 0.08em; opacity: 0.7; margin-top: 4px; }
 
 /* Party mode master toggle badge shown in the titlebar while active */
 .rc-party-live-badge {
