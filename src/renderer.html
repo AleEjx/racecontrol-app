@@ -1033,7 +1033,7 @@
         <div id="party-mode-gate-status" class="text-muted-sm mt-4"></div>
       </div>
 
-      <div class="dev-card" id="dev-custom-themes">
+      <div class="dev-card">
         <div class="dev-title">🎨 Custom Themes</div>
         <div class="text-muted-note">Upload an image — colors are extracted automatically and saved for the whole league to use in Settings → Look.</div>
         <div id="theme-image-drop" class="upload-drop mt-4"
@@ -1044,7 +1044,7 @@
           🖼️ Click or drop an image here
         </div>
         <input type="file" id="theme-image-input" accept="image/*" style="display:none;" onchange="devHandleThemeImage(this.files[0])" />
-        <div id="theme-cluster-label" class="text-muted-sm mt-4" style="display:none;">Colors found in the image — pick the one you want the theme built from:</div>
+        <div id="theme-cluster-label" class="text-muted-sm mt-4" style="display:none;">Colors found in the image — pick one for a solid theme, or select a few for a gradient:</div>
         <div id="theme-cluster-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
         <div id="theme-preview-label" class="text-muted-sm mt-4" style="display:none;">Generated theme:</div>
         <div id="theme-preview-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
@@ -3083,17 +3083,57 @@ function applyDriverPanelStyle() {
     }
 
     function _buildThemeFromHueSat(h, s) {
+      const bg = _hsl(h, Math.round(s * 0.55), 6);
+      const surface = _hsl(h, Math.round(s * 0.50), 10);
+      const surface2 = _hsl(h, Math.round(s * 0.45), 13);
       return {
-        bg:       _hsl(h, Math.round(s * 0.55), 6),
-        surface:  _hsl(h, Math.round(s * 0.50), 10),
-        surface2: _hsl(h, Math.round(s * 0.45), 13),
-        border:   _hsl(h, Math.round(s * 0.35), 21),
-        text:     _hsl(h, Math.round(s * 0.12), 96),
-        muted:    _hsl(h, Math.round(s * 0.28), 47),
+        bg, surface, surface2,
+        border:      _hsl(h, Math.round(s * 0.35), 21),
+        text:        _hsl(h, Math.round(s * 0.12), 96),
+        muted:       _hsl(h, Math.round(s * 0.28), 47),
+        surfaceGrad: `linear-gradient(160deg, ${surface2} 0%, ${bg} 100%)`,
+      };
+    }
+
+    // Circular mean for hue (it's cyclic, 0-360) — used to derive a single
+    // representative accent (border/text/muted) when multiple colors are
+    // blended into a gradient theme.
+    function _blendHueSat(clusters) {
+      let sumSin = 0, sumCos = 0, sumSat = 0;
+      clusters.forEach(c => {
+        const rad = c.h * Math.PI / 180;
+        sumSin += Math.sin(rad);
+        sumCos += Math.cos(rad);
+        sumSat += c.s;
+      });
+      let h = Math.atan2(sumSin, sumCos) * 180 / Math.PI;
+      if (h < 0) h += 360;
+      return { h: Math.round(h), s: Math.round(sumSat / clusters.length) };
+    }
+
+    // Multiple selected colors → a real multi-stop gradient for --bg and
+    // --surface-grad. Borders/text/muted stay solid (a gradient border or
+    // gradient text is unreadable) so they're derived from the blended hue.
+    function _buildGradientTheme(selected) {
+      const n = selected.length;
+      const pct = i => Math.round((i / (n - 1)) * 100);
+      const bgStops = selected.map((c, i) => `${_hsl(c.h, Math.round(c.s * 0.55), 6)} ${pct(i)}%`).join(", ");
+      const surfaceGradStops = selected.map((c, i) => `${_hsl(c.h, Math.round(c.s * 0.5), 12)} ${pct(i)}%`).join(", ");
+      const blended = _blendHueSat(selected);
+      const flat = _buildThemeFromHueSat(blended.h, blended.s);
+      return {
+        bg: `linear-gradient(135deg, ${bgStops})`,
+        surface: flat.surface,
+        surface2: flat.surface2,
+        border: flat.border,
+        text: flat.text,
+        muted: flat.muted,
+        surfaceGrad: `linear-gradient(160deg, ${surfaceGradStops})`,
       };
     }
 
     let _themeClusters = [];
+    let _selectedClusterIdxs = new Set();
     let _themeSourceImage = null;
 
     function devHandleThemeImage(file) {
@@ -3102,8 +3142,9 @@ function applyDriverPanelStyle() {
       img.onload = () => {
         _themeSourceImage = img; // kept around so we can compress it into a background at save time
         _themeClusters = _extractPaletteClusters(img);
+        _selectedClusterIdxs = new Set([0]); // default to the most common color; dev can add more below
         _renderClusterPicker();
-        selectThemeCluster(0); // default to the most common color; dev can override below
+        _rebuildPendingThemeFromSelection();
         document.getElementById("theme-bg-option").style.display = "block";
       };
       img.onerror = () => showToast("❌ Could not read that image", "err");
@@ -3114,28 +3155,38 @@ function applyDriverPanelStyle() {
       let row = document.getElementById("theme-cluster-row");
       if (!row) return;
       row.innerHTML = _themeClusters.map((c, i) => `
-        <div class="theme-cluster-swatch" data-idx="${i}" onclick="selectThemeCluster(${i})"
-             style="width:32px;height:32px;border-radius:50%;cursor:pointer;flex-shrink:0;background:${_hsl(c.h, c.s, 55)};border:2px solid transparent;"></div>
+        <div class="theme-cluster-swatch" data-idx="${i}" onclick="toggleThemeCluster(${i})"
+             style="width:32px;height:32px;border-radius:50%;cursor:pointer;flex-shrink:0;background:${_hsl(c.h, c.s, 55)};border:2px solid ${_selectedClusterIdxs.has(i) ? "var(--red)" : "transparent"};"></div>
       `).join("");
       row.style.display = "flex";
       document.getElementById("theme-cluster-label").style.display = "block";
     }
 
-    function selectThemeCluster(idx) {
-      const c = _themeClusters[idx];
-      if (!c) return;
+    function toggleThemeCluster(idx) {
+      if (_selectedClusterIdxs.has(idx)) {
+        if (_selectedClusterIdxs.size > 1) _selectedClusterIdxs.delete(idx); // always keep at least one selected
+      } else {
+        _selectedClusterIdxs.add(idx);
+      }
       document.querySelectorAll(".theme-cluster-swatch").forEach((el, i) => {
-        el.style.borderColor = i === idx ? "var(--red)" : "transparent";
+        el.style.borderColor = _selectedClusterIdxs.has(i) ? "var(--red)" : "transparent";
       });
-      const colors = _buildThemeFromHueSat(c.h, c.s);
-      _pendingTheme = { h: c.h, s: c.s, colors };
+      _rebuildPendingThemeFromSelection();
+    }
+
+    function _rebuildPendingThemeFromSelection() {
+      const selected = [..._selectedClusterIdxs].sort((a, b) => a - b).map(i => _themeClusters[i]).filter(Boolean);
+      if (!selected.length) return;
+      const colors = selected.length === 1 ? _buildThemeFromHueSat(selected[0].h, selected[0].s) : _buildGradientTheme(selected);
+      const rep = selected.length === 1 ? selected[0] : _blendHueSat(selected);
+      _pendingTheme = { h: rep.h, s: rep.s, colors };
       _renderThemePreview(colors);
     }
 
     function _renderThemePreview(colors) {
       const row = document.getElementById("theme-preview-row");
       if (!row) return;
-      const order = ["bg", "surface", "surface2", "border", "text", "muted"];
+      const order = ["bg", "surface", "surface2", "border", "text", "muted", "surfaceGrad"];
       row.innerHTML = order.map(key => `
         <div title="${key}" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;background:${colors[key]};"></div>
       `).join("");
@@ -3183,6 +3234,7 @@ function applyDriverPanelStyle() {
           nameInput.value = "";
           _pendingTheme = null;
           _themeClusters = [];
+          _selectedClusterIdxs = new Set();
           if (_themeSourceImage) { URL.revokeObjectURL(_themeSourceImage.src); _themeSourceImage = null; }
           document.getElementById("theme-cluster-row").style.display = "none";
           document.getElementById("theme-cluster-label").style.display = "none";
@@ -3283,7 +3335,7 @@ function applyDriverPanelStyle() {
       root.style.setProperty("--border", theme.colors.border);
       root.style.setProperty("--text", theme.colors.text);
       root.style.setProperty("--muted", theme.colors.muted);
-      root.style.setProperty("--surface-grad", `linear-gradient(160deg, ${theme.colors.surface2} 0%, ${theme.colors.bg} 100%)`);
+      root.style.setProperty("--surface-grad", theme.colors.surfaceGrad || `linear-gradient(160deg, ${theme.colors.surface2} 0%, ${theme.colors.bg} 100%)`);
       if (theme.backgroundImage) {
         document.body.style.backgroundImage = `url(${theme.backgroundImage})`;
         document.body.style.backgroundRepeat = theme.backgroundMode === "cover" ? "no-repeat" : "repeat";
@@ -7032,7 +7084,6 @@ function launchMarshalPanel(startPoll = true) {
         { id: "dev-engineers", label: "Engineering Assignments" },
         { id: "dev-drivers-card", label: "Driver Database" },
         { id: "dev-toggles", label: "Toggles" },
-        { id: "dev-custom-themes", label: "Custom Themes" },
       ];
       let _toolboxVisible = {};
 
