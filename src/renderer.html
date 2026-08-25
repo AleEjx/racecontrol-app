@@ -1035,7 +1035,11 @@
 
       <div class="dev-card" id="dev-custom-themes">
         <div class="dev-title">🎨 Custom Themes</div>
-        <div class="text-muted-note">Upload an image — colors are extracted automatically and saved for the whole league to use in Settings → Look.</div>
+        <div id="theme-editing-banner" style="display:none;background:rgba(41,121,255,0.1);border:1px solid var(--blue,#4fc3f7);border-radius:5px;padding:6px 8px;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;">
+          <span class="font-11">✏️ Editing "<span id="theme-editing-name"></span>"</span>
+          <button class="dev-btn no-grow font-9" onclick="devCancelEditTheme()">Cancel</button>
+        </div>
+        <div class="text-muted-note">Upload an image, pick a base color, or set colors manually below — themes are saved for the whole league to use in Settings → Look.</div>
         <div id="theme-image-drop" class="upload-drop mt-4"
              onclick="document.getElementById('theme-image-input').click()"
              ondragover="event.preventDefault(); this.style.borderColor='var(--text)';"
@@ -1044,9 +1048,14 @@
           🖼️ Click or drop an image here
         </div>
         <input type="file" id="theme-image-input" accept="image/*" style="display:none;" onchange="devHandleThemeImage(this.files[0])" />
+        <div class="s-kb-row mt-4">
+          <span class="settings-label font-11">🎨 Or pick a base color</span>
+          <input type="color" id="theme-base-color-input" value="#2979ff" oninput="devPickBaseColor(this.value)"
+                 style="width:40px;height:28px;padding:0;border:1px solid var(--border,#333);border-radius:4px;background:none;cursor:pointer;" />
+        </div>
         <div id="theme-cluster-label" class="text-muted-sm mt-4" style="display:none;">Colors found in the image — pick one for a solid theme, or select a few for a gradient:</div>
         <div id="theme-cluster-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
-        <div id="theme-preview-label" class="text-muted-sm mt-4" style="display:none;">Generated theme:</div>
+        <div id="theme-preview-label" class="text-muted-sm mt-4" style="display:none;">Theme colors — click any swatch to fine-tune it:</div>
         <div id="theme-preview-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
         <div id="theme-bg-option" class="mt-4" style="display:none;">
           <label class="font-11" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
@@ -3136,6 +3145,61 @@ function applyDriverPanelStyle() {
     let _selectedClusterIdxs = new Set();
     let _themeSourceImage = null;
 
+    // id of the saved theme currently being edited, or null when creating a
+    // brand new one. Kept separate from _pendingTheme so cancel/edit can
+    // freely swap the working colors without losing track of which saved
+    // record (if any) a Save should overwrite.
+    let _editingThemeId = null;
+    let _editingBackgroundImage = null;
+    let _editingBackgroundMode = "tile";
+
+    // Manual color conversion helpers — the generator works in HSL, but
+    // native <input type="color"> pickers only speak hex, so we convert
+    // both ways when a dev fine-tunes an individual swatch.
+    function _hslToHex(h, s, l) {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      const toHex = x => Math.round(x * 255).toString(16).padStart(2, "0");
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    }
+    function _hslStringToHex(str) {
+      const m = /hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)/.exec(str || "");
+      if (!m) return "#888888"; // not a solid hsl color (e.g. a multi-stop gradient) — neutral fallback
+      return _hslToHex(parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]));
+    }
+    function _hexToHueSat(hex) {
+      const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      let h = 0, s = 0;
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h *= 60;
+      }
+      return { h: Math.round(h), s: Math.round(Math.min(s * 100, 100)) };
+    }
+
+    // Pick a single color as the base for a generated theme — an alternative
+    // to uploading an image, for when a dev just wants "make it blue" etc.
+    function devPickBaseColor(hex) {
+      const { h, s } = _hexToHueSat(hex);
+      _themeClusters = [];
+      _selectedClusterIdxs = new Set();
+      document.getElementById("theme-cluster-row").style.display = "none";
+      document.getElementById("theme-cluster-label").style.display = "none";
+      const colors = _buildThemeFromHueSat(h, s);
+      _pendingTheme = { h, s, colors };
+      _renderThemePreview(colors);
+    }
+
     function devHandleThemeImage(file) {
       if (!file) return;
       const img = new Image();
@@ -3186,14 +3250,31 @@ function applyDriverPanelStyle() {
     function _renderThemePreview(colors) {
       const row = document.getElementById("theme-preview-row");
       if (!row) return;
-      const order = ["bg", "surface", "surface2", "border", "text", "muted", "surfaceGrad"];
-      row.innerHTML = order.map(key => `
-        <div title="${key}" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;background:${colors[key]};"></div>
+      const editableKeys = [
+        ["bg", "Background"], ["surface", "Surface"], ["surface2", "Surface 2"],
+        ["border", "Border"], ["text", "Text"], ["muted", "Muted"],
+      ];
+      row.innerHTML = editableKeys.map(([key, label]) => `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+          <input type="color" title="Click to customize ${label}" value="${_hslStringToHex(colors[key])}"
+                 oninput="_onManualColorChange('${key}', this.value)"
+                 style="width:32px;height:28px;padding:0;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:none;cursor:pointer;" />
+          <span class="font-9 text-muted" style="text-align:center;">${label}</span>
+        </div>
       `).join("");
       row.style.display = "flex";
       document.getElementById("theme-preview-label").style.display = "block";
       document.getElementById("theme-name-input").style.display = "block";
       document.getElementById("theme-save-btn").style.display = "block";
+    }
+
+    // A dev tweaked one swatch by hand — store it as-is and keep the surface
+    // gradient (used for panel backgrounds) in sync so it never lags behind
+    // a manual edit to bg/surface2.
+    function _onManualColorChange(key, hex) {
+      if (!_pendingTheme) return;
+      _pendingTheme.colors[key] = hex;
+      _pendingTheme.colors.surfaceGrad = `linear-gradient(160deg, ${_pendingTheme.colors.surface2} 0%, ${_pendingTheme.colors.bg} 100%)`;
     }
 
     function _compressImageForBackground(img, maxDim = 640, quality = 0.72) {
@@ -3219,22 +3300,30 @@ function applyDriverPanelStyle() {
       if (useBg && _themeSourceImage) {
         body.backgroundImage = _compressImageForBackground(_themeSourceImage);
         body.backgroundMode = bgMode;
+      } else if (useBg && _editingBackgroundImage) {
+        // editing an existing theme without uploading a replacement image — keep its old background
+        body.backgroundImage = _editingBackgroundImage;
+        body.backgroundMode = bgMode;
       }
+      const isEditing = !!_editingThemeId;
+      if (isEditing) body.id = _editingThemeId;
 
       try {
-        const res = await fetch(`${apiUrl}/admin/themes`, {
+        const res = await fetch(isEditing ? `${apiUrl}/admin/themes/edit` : `${apiUrl}/admin/themes`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
           body: JSON.stringify(body),
         });
         const data = await res.json();
         if (res.ok) {
-          showToast(`✓ Saved "${name}"`, "ok");
+          showToast(isEditing ? `✓ Updated "${name}"` : `✓ Saved "${name}"`, "ok");
           statusEl.textContent = "";
           nameInput.value = "";
           _pendingTheme = null;
           _themeClusters = [];
           _selectedClusterIdxs = new Set();
+          _editingThemeId = null;
+          _editingBackgroundImage = null;
           if (_themeSourceImage) { URL.revokeObjectURL(_themeSourceImage.src); _themeSourceImage = null; }
           document.getElementById("theme-cluster-row").style.display = "none";
           document.getElementById("theme-cluster-label").style.display = "none";
@@ -3242,8 +3331,10 @@ function applyDriverPanelStyle() {
           document.getElementById("theme-preview-label").style.display = "none";
           document.getElementById("theme-bg-option").style.display = "none";
           document.getElementById("theme-bg-checkbox").checked = true;
+          document.getElementById("theme-editing-banner").style.display = "none";
           nameInput.style.display = "none";
           document.getElementById("theme-save-btn").style.display = "none";
+          document.getElementById("theme-save-btn").textContent = "💾 Save Theme";
           fetchCustomThemes();
         } else {
           statusEl.textContent = data.error || "Failed to save.";
@@ -3251,6 +3342,58 @@ function applyDriverPanelStyle() {
       } catch {
         statusEl.textContent = "Bot unreachable.";
       }
+    }
+
+    // Load a saved theme back into the editor so its colors/name can be
+    // changed and re-saved in place (rather than creating a duplicate).
+    function devEditCustomTheme(id) {
+      const theme = _customThemesList.find(t => t.id === id);
+      if (!theme) return;
+      _editingThemeId = id;
+      _editingBackgroundImage = theme.backgroundImage || null;
+      _editingBackgroundMode = theme.backgroundMode || "tile";
+      _pendingTheme = { h: theme.h, s: theme.s, colors: { ...theme.colors } };
+      _themeClusters = [];
+      _selectedClusterIdxs = new Set();
+      document.getElementById("theme-cluster-row").style.display = "none";
+      document.getElementById("theme-cluster-label").style.display = "none";
+
+      const hasBg = !!theme.backgroundImage;
+      document.getElementById("theme-bg-option").style.display = hasBg ? "block" : "none";
+      const bgCheckbox = document.getElementById("theme-bg-checkbox");
+      if (bgCheckbox) bgCheckbox.checked = hasBg;
+      document.querySelectorAll('input[name="theme-bg-mode"]').forEach(r => { r.checked = r.value === _editingBackgroundMode; });
+
+      const nameInput = document.getElementById("theme-name-input");
+      nameInput.value = theme.name;
+      nameInput.style.display = "block";
+
+      _renderThemePreview(_pendingTheme.colors);
+      const saveBtn = document.getElementById("theme-save-btn");
+      saveBtn.textContent = "💾 Update Theme";
+      saveBtn.style.display = "block";
+
+      const banner = document.getElementById("theme-editing-banner");
+      banner.style.display = "flex";
+      document.getElementById("theme-editing-name").textContent = theme.name;
+      document.getElementById("dev-custom-themes").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function devCancelEditTheme() {
+      _editingThemeId = null;
+      _editingBackgroundImage = null;
+      _pendingTheme = null;
+      document.getElementById("theme-editing-banner").style.display = "none";
+      const nameInput = document.getElementById("theme-name-input");
+      nameInput.value = "";
+      nameInput.style.display = "none";
+      const saveBtn = document.getElementById("theme-save-btn");
+      saveBtn.style.display = "none";
+      saveBtn.textContent = "💾 Save Theme";
+      document.getElementById("theme-preview-row").style.display = "none";
+      document.getElementById("theme-preview-label").style.display = "none";
+      document.getElementById("theme-bg-option").style.display = "none";
+      document.getElementById("theme-save-status").textContent = "";
     }
 
     async function loadCustomThemesDevList() {
@@ -3263,7 +3406,10 @@ function applyDriverPanelStyle() {
             <span style="width:14px;height:14px;border-radius:4px;display:inline-block;background:${t.colors.bg};border:1px solid rgba(255,255,255,0.2);"></span>
             ${t.name}
           </span>
-          <button class="dev-btn no-grow font-9" onclick="devDeleteCustomTheme('${t.id}')">🗑️</button>
+          <span style="display:flex;gap:4px;">
+            <button class="dev-btn no-grow font-9" onclick="devEditCustomTheme('${t.id}')">✏️</button>
+            <button class="dev-btn no-grow font-9" onclick="devDeleteCustomTheme('${t.id}')">🗑️</button>
+          </span>
         </div>
       `).join("");
     }
