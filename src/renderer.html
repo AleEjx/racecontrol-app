@@ -1048,6 +1048,20 @@
         <div id="theme-cluster-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
         <div id="theme-preview-label" class="text-muted-sm mt-4" style="display:none;">Generated theme:</div>
         <div id="theme-preview-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
+        <div id="theme-bg-option" class="mt-4" style="display:none;">
+          <label class="font-11" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="theme-bg-checkbox" checked />
+            Use this image as a background pattern
+          </label>
+          <div class="flex-row-gap-6 mt-4">
+            <label class="font-10 text-muted" style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="radio" name="theme-bg-mode" value="tile" checked /> Tile (repeating pattern)
+            </label>
+            <label class="font-10 text-muted" style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="radio" name="theme-bg-mode" value="cover" /> Cover (single photo)
+            </label>
+          </div>
+        </div>
         <input type="text" id="theme-name-input" placeholder="Theme name, e.g. Midnight Circuit" class="font-11 mt-4" style="display:none;width:100%;box-sizing:border-box;" />
         <button id="theme-save-btn" onclick="devSaveCustomTheme()" class="dev-btn success-small mt-4" style="display:none;">💾 Save Theme</button>
         <div id="theme-save-status" class="text-muted-sm mt-4"></div>
@@ -3080,15 +3094,17 @@ function applyDriverPanelStyle() {
     }
 
     let _themeClusters = [];
+    let _themeSourceImage = null;
 
     function devHandleThemeImage(file) {
       if (!file) return;
       const img = new Image();
       img.onload = () => {
+        _themeSourceImage = img; // kept around so we can compress it into a background at save time
         _themeClusters = _extractPaletteClusters(img);
         _renderClusterPicker();
         selectThemeCluster(0); // default to the most common color; dev can override below
-        URL.revokeObjectURL(img.src);
+        document.getElementById("theme-bg-option").style.display = "block";
       };
       img.onerror = () => showToast("❌ Could not read that image", "err");
       img.src = URL.createObjectURL(file);
@@ -3129,17 +3145,36 @@ function applyDriverPanelStyle() {
       document.getElementById("theme-save-btn").style.display = "block";
     }
 
+    function _compressImageForBackground(img, maxDim = 640, quality = 0.72) {
+      const canvas = document.createElement("canvas");
+      let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+      else if (h >= w && h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      return canvas.toDataURL("image/jpeg", quality);
+    }
+
     async function devSaveCustomTheme() {
       if (!_pendingTheme) return;
       const nameInput = document.getElementById("theme-name-input");
       const name = nameInput.value.trim();
       if (!name) return showToast("⚠️ Give the theme a name first", "err");
       const statusEl = document.getElementById("theme-save-status");
+
+      const useBg = document.getElementById("theme-bg-checkbox")?.checked;
+      const bgMode = document.querySelector('input[name="theme-bg-mode"]:checked')?.value || "tile";
+      const body = { name, colors: _pendingTheme.colors, h: _pendingTheme.h, s: _pendingTheme.s };
+      if (useBg && _themeSourceImage) {
+        body.backgroundImage = _compressImageForBackground(_themeSourceImage);
+        body.backgroundMode = bgMode;
+      }
+
       try {
         const res = await fetch(`${apiUrl}/admin/themes`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
-          body: JSON.stringify({ name, colors: _pendingTheme.colors, h: _pendingTheme.h, s: _pendingTheme.s }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (res.ok) {
@@ -3148,10 +3183,13 @@ function applyDriverPanelStyle() {
           nameInput.value = "";
           _pendingTheme = null;
           _themeClusters = [];
+          if (_themeSourceImage) { URL.revokeObjectURL(_themeSourceImage.src); _themeSourceImage = null; }
           document.getElementById("theme-cluster-row").style.display = "none";
           document.getElementById("theme-cluster-label").style.display = "none";
           document.getElementById("theme-preview-row").style.display = "none";
           document.getElementById("theme-preview-label").style.display = "none";
+          document.getElementById("theme-bg-option").style.display = "none";
+          document.getElementById("theme-bg-checkbox").checked = true;
           nameInput.style.display = "none";
           document.getElementById("theme-save-btn").style.display = "none";
           fetchCustomThemes();
@@ -3221,10 +3259,13 @@ function applyDriverPanelStyle() {
         btn.dataset.themeId = t.id;
         btn.onclick = () => applyCustomThemeObj(t);
         btn.innerHTML = `
-          <div class="theme-preview" style="background:${t.colors.bg};border:1px solid ${t.colors.border};">
+          <div class="theme-preview" style="${t.backgroundImage
+            ? `background-image:url(${t.backgroundImage});background-size:cover;background-position:center;border:1px solid ${t.colors.border};`
+            : `background:${t.colors.bg};border:1px solid ${t.colors.border};`}">
+            ${t.backgroundImage ? "" : `
             <div class="theme-preview-line short" style="background:${t.colors.text};opacity:0.5;"></div>
             <div class="theme-preview-line medium" style="background:${t.colors.text};opacity:0.5;"></div>
-            <div class="theme-preview-line long" style="background:${t.colors.text};opacity:0.5;"></div>
+            <div class="theme-preview-line long" style="background:${t.colors.text};opacity:0.5;"></div>`}
           </div>
           <span class="theme-label">${t.name}</span>
         `;
@@ -3243,13 +3284,29 @@ function applyDriverPanelStyle() {
       root.style.setProperty("--text", theme.colors.text);
       root.style.setProperty("--muted", theme.colors.muted);
       root.style.setProperty("--surface-grad", `linear-gradient(160deg, ${theme.colors.surface2} 0%, ${theme.colors.bg} 100%)`);
+      if (theme.backgroundImage) {
+        document.body.style.backgroundImage = `url(${theme.backgroundImage})`;
+        document.body.style.backgroundRepeat = theme.backgroundMode === "cover" ? "no-repeat" : "repeat";
+        document.body.style.backgroundSize = theme.backgroundMode === "cover" ? "cover" : "170px";
+        document.body.style.backgroundPosition = "center";
+      } else {
+        _clearThemeBackgroundImage();
+      }
       localStorage.setItem("rc_theme", "custom:" + theme.id);
       updateThemeBtns();
+    }
+
+    function _clearThemeBackgroundImage() {
+      document.body.style.removeProperty("background-image");
+      document.body.style.removeProperty("background-repeat");
+      document.body.style.removeProperty("background-size");
+      document.body.style.removeProperty("background-position");
     }
 
     function _clearCustomThemeOverrides() {
       const root = document.documentElement;
       ["--bg", "--surface", "--surface-2", "--border", "--text", "--muted", "--surface-grad"].forEach(v => root.style.removeProperty(v));
+      _clearThemeBackgroundImage();
     }
 
     function loadThemePrefs() {
