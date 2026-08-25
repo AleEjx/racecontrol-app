@@ -1034,6 +1034,25 @@
       </div>
 
       <div class="dev-card">
+        <div class="dev-title">🎨 Custom Themes</div>
+        <div class="text-muted-note">Upload an image — colors are extracted automatically and saved for the whole league to use in Settings → Look.</div>
+        <div id="theme-image-drop" class="upload-drop mt-4"
+             onclick="document.getElementById('theme-image-input').click()"
+             ondragover="event.preventDefault(); this.style.borderColor='var(--text)';"
+             ondragleave="this.style.borderColor='';"
+             ondrop="event.preventDefault(); this.style.borderColor=''; devHandleThemeImage(event.dataTransfer.files[0]);">
+          🖼️ Click or drop an image here
+        </div>
+        <input type="file" id="theme-image-input" accept="image/*" style="display:none;" onchange="devHandleThemeImage(this.files[0])" />
+        <div id="theme-preview-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
+        <input type="text" id="theme-name-input" placeholder="Theme name, e.g. Midnight Circuit" class="font-11 mt-4" style="display:none;width:100%;box-sizing:border-box;" />
+        <button id="theme-save-btn" onclick="devSaveCustomTheme()" class="dev-btn success-small mt-4" style="display:none;">💾 Save Theme</button>
+        <div id="theme-save-status" class="text-muted-sm mt-4"></div>
+        <div class="dev-title mt-6" style="border-top:1px solid var(--border);padding-top:8px;">Saved Themes</div>
+        <div id="dev-theme-list" class="flex-col-gap-4 mt-4 font-10 text-muted">Loading…</div>
+      </div>
+
+      <div class="dev-card">
         <div class="dev-title">Engineering Assignments</div>
         <div id="dev-engineers" class="flex-col-gap-4 mt-4 font-10 text-muted">
           Loading...</div>
@@ -1206,7 +1225,7 @@
 
       <div class="stab-panel active" id="stab-appearance">
         <div class="s-section-title">Theme</div>
-        <div class="grid-3-col">
+        <div class="grid-3-col" id="theme-grid">
           <button id="theme-dark-btn" onclick="setTheme('dark')" class="theme-tile">
             <div class="theme-preview theme-preview-dark">
               <div class="theme-preview-line short"></div>
@@ -2515,6 +2534,7 @@ function setMarshalTab(tab) {
         document.documentElement.classList.remove("light-mode", "transparent-mode");
         if (theme === "light") document.documentElement.classList.add("light-mode");
         if (theme === "transparent") document.documentElement.classList.add("transparent-mode");
+        _clearCustomThemeOverrides();
         localStorage.setItem("rc_theme", theme);
         updateThemeBtns();
       }, 280);
@@ -2547,9 +2567,14 @@ function setMarshalTab(tab) {
     function updateThemeBtns() {
       const isLight = document.documentElement.classList.contains('light-mode');
       const isTransparent = document.documentElement.classList.contains('transparent-mode');
-      document.getElementById('theme-dark-btn')?.classList.toggle('active', !isLight && !isTransparent);
-      document.getElementById('theme-light-btn')?.classList.toggle('active', isLight);
-      document.getElementById('theme-transparent-btn')?.classList.toggle('active', isTransparent);
+      const saved = localStorage.getItem('rc_theme') || '';
+      const isCustom = saved.startsWith('custom:');
+      document.getElementById('theme-dark-btn')?.classList.toggle('active', !isLight && !isTransparent && !isCustom);
+      document.getElementById('theme-light-btn')?.classList.toggle('active', isLight && !isCustom);
+      document.getElementById('theme-transparent-btn')?.classList.toggle('active', isTransparent && !isCustom);
+      document.querySelectorAll('.custom-theme-tile').forEach(el => {
+        el.classList.toggle('active', isCustom && el.dataset.themeId === saved.slice(7));
+      });
       const title = document.getElementById('glass-opacity-title');
       const card = document.getElementById('glass-opacity-card');
       if (title) title.style.display = isTransparent ? 'block' : 'none';
@@ -2978,6 +3003,217 @@ function applyDriverPanelStyle() {
   }
 }
     
+    // ── Custom Themes (dev panel) ──────────────────────────────────────────
+    // Colors are never lifted raw from the photo for bg/surface/text — that
+    // risks illegible combinations depending on the source image. Instead we
+    // pull one dominant hue+saturation from the image's most common vibrant
+    // pixel cluster, then generate the full tonal palette ourselves on a
+    // fixed lightness curve, so every custom theme stays readable regardless
+    // of what photo it came from. Flag colors (green/red/yellow/orange/blue)
+    // are intentionally left untouched — they're safety-critical UI, not
+    // decoration, so themes only recolor the chrome (bg/surface/text/etc).
+    let _pendingTheme = null;
+    let _customThemesList = [];
+
+    function _hsl(h, s, l) { return `hsl(${h}, ${s}%, ${l}%)`; }
+
+    function _extractDominantHueSat(img) {
+      const canvas = document.createElement("canvas");
+      const w = 48, h = 48;
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      let data;
+      try { data = ctx.getImageData(0, 0, w, h).data; } catch { return { h: 210, s: 40 }; }
+
+      const buckets = {};
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+        if (a < 128) continue;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const sat = max === 0 ? 0 : (max - min) / max;
+        if (sat < 0.15) continue; // skip near-white/black/gray pixels — we want the punchy hue
+        const key = [Math.round(r / 16), Math.round(g / 16), Math.round(b / 16)].join(",");
+        if (!buckets[key]) buckets[key] = { r: 0, g: 0, b: 0, n: 0 };
+        buckets[key].r += r; buckets[key].g += g; buckets[key].b += b; buckets[key].n++;
+      }
+      let best = null;
+      for (const k in buckets) { if (!best || buckets[k].n > best.n) best = buckets[k]; }
+      if (!best) return { h: 210, s: 40 }; // fallback: neutral blue
+
+      const r = best.r / best.n / 255, g = best.g / best.n / 255, b = best.b / best.n / 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      let hh = 0, ss = 0;
+      if (max !== min) {
+        const d = max - min;
+        ss = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: hh = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: hh = (b - r) / d + 2; break;
+          case b: hh = (r - g) / d + 4; break;
+        }
+        hh *= 60;
+      }
+      return { h: Math.round(hh), s: Math.round(Math.min(ss * 100, 70)) };
+    }
+
+    function _buildThemeFromHueSat(h, s) {
+      return {
+        bg:       _hsl(h, Math.round(s * 0.55), 6),
+        surface:  _hsl(h, Math.round(s * 0.50), 10),
+        surface2: _hsl(h, Math.round(s * 0.45), 13),
+        border:   _hsl(h, Math.round(s * 0.35), 21),
+        text:     _hsl(h, Math.round(s * 0.12), 96),
+        muted:    _hsl(h, Math.round(s * 0.28), 47),
+      };
+    }
+
+    function devHandleThemeImage(file) {
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        const { h, s } = _extractDominantHueSat(img);
+        const colors = _buildThemeFromHueSat(h, s);
+        _pendingTheme = { h, s, colors };
+        _renderThemePreview(colors);
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => showToast("❌ Could not read that image", "err");
+      img.src = URL.createObjectURL(file);
+    }
+
+    function _renderThemePreview(colors) {
+      const row = document.getElementById("theme-preview-row");
+      if (!row) return;
+      const order = ["bg", "surface", "surface2", "border", "text", "muted"];
+      row.innerHTML = order.map(key => `
+        <div title="${key}" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;background:${colors[key]};"></div>
+      `).join("");
+      row.style.display = "flex";
+      document.getElementById("theme-name-input").style.display = "block";
+      document.getElementById("theme-save-btn").style.display = "block";
+    }
+
+    async function devSaveCustomTheme() {
+      if (!_pendingTheme) return;
+      const nameInput = document.getElementById("theme-name-input");
+      const name = nameInput.value.trim();
+      if (!name) return showToast("⚠️ Give the theme a name first", "err");
+      const statusEl = document.getElementById("theme-save-status");
+      try {
+        const res = await fetch(`${apiUrl}/admin/themes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+          body: JSON.stringify({ name, colors: _pendingTheme.colors, h: _pendingTheme.h, s: _pendingTheme.s }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`✓ Saved "${name}"`, "ok");
+          statusEl.textContent = "";
+          nameInput.value = "";
+          _pendingTheme = null;
+          document.getElementById("theme-preview-row").style.display = "none";
+          nameInput.style.display = "none";
+          document.getElementById("theme-save-btn").style.display = "none";
+          fetchCustomThemes();
+        } else {
+          statusEl.textContent = data.error || "Failed to save.";
+        }
+      } catch {
+        statusEl.textContent = "Bot unreachable.";
+      }
+    }
+
+    async function loadCustomThemesDevList() {
+      const el = document.getElementById("dev-theme-list");
+      if (!el) return;
+      if (!_customThemesList.length) { el.innerHTML = '<span class="placeholder-text">No custom themes yet.</span>'; return; }
+      el.innerHTML = _customThemesList.map(t => `
+        <div class="card-row-between">
+          <span style="display:flex;align-items:center;gap:6px;">
+            <span style="width:14px;height:14px;border-radius:4px;display:inline-block;background:${t.colors.bg};border:1px solid rgba(255,255,255,0.2);"></span>
+            ${t.name}
+          </span>
+          <button class="dev-btn no-grow font-9" onclick="devDeleteCustomTheme('${t.id}')">🗑️</button>
+        </div>
+      `).join("");
+    }
+
+    async function devDeleteCustomTheme(id) {
+      try {
+        const res = await fetch(`${apiUrl}/admin/themes/remove`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+          body: JSON.stringify({ id }),
+        });
+        const data = await res.json();
+        if (res.ok) { showToast("✓ Theme deleted", "ok"); fetchCustomThemes(); }
+        else showToast(`✗ ${data.error || "Failed"}`, "err");
+      } catch {
+        showToast("✗ Bot unreachable", "err");
+      }
+    }
+
+    async function fetchCustomThemes() {
+      if (!apiUrl) return;
+      try {
+        const res = await fetch(`${apiUrl}/themes`);
+        const data = await res.json();
+        _customThemesList = data.themes || [];
+      } catch {
+        _customThemesList = [];
+      }
+      loadCustomThemesDevList();
+      renderCustomThemeTiles();
+      const saved = localStorage.getItem("rc_theme") || "";
+      if (saved.startsWith("custom:")) {
+        const theme = _customThemesList.find(t => t.id === saved.slice(7));
+        if (theme) applyCustomThemeObj(theme);
+      }
+    }
+
+    function renderCustomThemeTiles() {
+      const grid = document.getElementById("theme-grid");
+      if (!grid) return;
+      grid.querySelectorAll(".custom-theme-tile").forEach(el => el.remove());
+      _customThemesList.forEach(t => {
+        const btn = document.createElement("button");
+        btn.className = "theme-tile custom-theme-tile";
+        btn.dataset.themeId = t.id;
+        btn.onclick = () => applyCustomThemeObj(t);
+        btn.innerHTML = `
+          <div class="theme-preview" style="background:${t.colors.bg};border:1px solid ${t.colors.border};">
+            <div class="theme-preview-line short" style="background:${t.colors.text};opacity:0.5;"></div>
+            <div class="theme-preview-line medium" style="background:${t.colors.text};opacity:0.5;"></div>
+            <div class="theme-preview-line long" style="background:${t.colors.text};opacity:0.5;"></div>
+          </div>
+          <span class="theme-label">${t.name}</span>
+        `;
+        grid.appendChild(btn);
+      });
+      updateThemeBtns();
+    }
+
+    function applyCustomThemeObj(theme) {
+      document.documentElement.classList.remove("light-mode", "transparent-mode");
+      const root = document.documentElement;
+      root.style.setProperty("--bg", theme.colors.bg);
+      root.style.setProperty("--surface", theme.colors.surface);
+      root.style.setProperty("--surface-2", theme.colors.surface2);
+      root.style.setProperty("--border", theme.colors.border);
+      root.style.setProperty("--text", theme.colors.text);
+      root.style.setProperty("--muted", theme.colors.muted);
+      root.style.setProperty("--surface-grad", `linear-gradient(160deg, ${theme.colors.surface2} 0%, ${theme.colors.bg} 100%)`);
+      localStorage.setItem("rc_theme", "custom:" + theme.id);
+      updateThemeBtns();
+    }
+
+    function _clearCustomThemeOverrides() {
+      const root = document.documentElement;
+      ["--bg", "--surface", "--surface-2", "--border", "--text", "--muted", "--surface-grad"].forEach(v => root.style.removeProperty(v));
+    }
+
     function loadThemePrefs() {
       const saved = localStorage.getItem("rc_theme");
       document.documentElement.classList.remove("light-mode", "transparent-mode");
@@ -4072,6 +4308,7 @@ setInterval(async () => {
 }
       loadUserTabPrefs();
       loadPartyModeGateState();
+      fetchCustomThemes();
 
       document.getElementById("s-api").value = config.apiUrl || "";
       document.getElementById("kb-blue_flag").value = config.keybinds?.blue_flag || "F1";
