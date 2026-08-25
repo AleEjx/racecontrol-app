@@ -589,6 +589,35 @@ function closePartyOverlay() {
   globalShortcut.unregister("Escape");
 }
 
+// Mirrors _rcPartyNotifyDev("stop") in party-mode.js. That renderer-side
+// notify only fires from the toggle button / Esc / party-overlay:killed —
+// none of which run when the app itself is closed while Party Mode is
+// still on, so the dev never got the "stopped" DM. This is the same
+// notify, fired from the main process so it also covers window-close/
+// tray-quit/updater-install/etc.
+function notifyPartyModeStoppedOnQuit() {
+  if (!config.apiUrl) return Promise.resolve();
+  const req = fetch(`${config.apiUrl}/party-mode/notify`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(config.discordId ? { "x-discord-id": config.discordId } : {}),
+    },
+    body: JSON.stringify({ event: "stop", username: config.username }),
+  }).catch(err => console.error("[Party Mode] Failed to notify dev on app close:", err.message));
+  // Never let a hung request block quitting.
+  return Promise.race([req, new Promise(resolve => setTimeout(resolve, 3000))]);
+}
+
+let _partyNotifiedOnQuit = false;
+app.on("before-quit", (e) => {
+  if (partyWins.length && !_partyNotifiedOnQuit) {
+    e.preventDefault();
+    _partyNotifiedOnQuit = true;
+    notifyPartyModeStoppedOnQuit().finally(() => app.quit());
+  }
+});
+
 ipcMain.handle("party-overlay:start", () => {
   if (partyWins.length) return true; // already running
 
