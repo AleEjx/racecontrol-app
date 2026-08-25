@@ -1044,6 +1044,9 @@
           🖼️ Click or drop an image here
         </div>
         <input type="file" id="theme-image-input" accept="image/*" style="display:none;" onchange="devHandleThemeImage(this.files[0])" />
+        <div id="theme-cluster-label" class="text-muted-sm mt-4" style="display:none;">Colors found in the image — pick the one you want the theme built from:</div>
+        <div id="theme-cluster-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
+        <div id="theme-preview-label" class="text-muted-sm mt-4" style="display:none;">Generated theme:</div>
         <div id="theme-preview-row" class="flex-row-gap-6 mt-4" style="display:none;"></div>
         <input type="text" id="theme-name-input" placeholder="Theme name, e.g. Midnight Circuit" class="font-11 mt-4" style="display:none;width:100%;box-sizing:border-box;" />
         <button id="theme-save-btn" onclick="devSaveCustomTheme()" class="dev-btn success-small mt-4" style="display:none;">💾 Save Theme</button>
@@ -3017,14 +3020,14 @@ function applyDriverPanelStyle() {
 
     function _hsl(h, s, l) { return `hsl(${h}, ${s}%, ${l}%)`; }
 
-    function _extractDominantHueSat(img) {
+    function _extractPaletteClusters(img, count = 6) {
       const canvas = document.createElement("canvas");
       const w = 48, h = 48;
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, w, h);
       let data;
-      try { data = ctx.getImageData(0, 0, w, h).data; } catch { return { h: 210, s: 40 }; }
+      try { data = ctx.getImageData(0, 0, w, h).data; } catch { return [{ h: 210, s: 40, n: 1 }]; }
 
       const buckets = {};
       for (let i = 0; i < data.length; i += 4) {
@@ -3032,30 +3035,37 @@ function applyDriverPanelStyle() {
         if (a < 128) continue;
         const max = Math.max(r, g, b), min = Math.min(r, g, b);
         const sat = max === 0 ? 0 : (max - min) / max;
-        if (sat < 0.15) continue; // skip near-white/black/gray pixels — we want the punchy hue
+        if (sat < 0.15) continue; // skip near-white/black/gray pixels — we want punchy hues, not background noise
         const key = [Math.round(r / 16), Math.round(g / 16), Math.round(b / 16)].join(",");
         if (!buckets[key]) buckets[key] = { r: 0, g: 0, b: 0, n: 0 };
         buckets[key].r += r; buckets[key].g += g; buckets[key].b += b; buckets[key].n++;
       }
-      let best = null;
-      for (const k in buckets) { if (!best || buckets[k].n > best.n) best = buckets[k]; }
-      if (!best) return { h: 210, s: 40 }; // fallback: neutral blue
 
-      const r = best.r / best.n / 255, g = best.g / best.n / 255, b = best.b / best.n / 255;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      const l = (max + min) / 2;
-      let hh = 0, ss = 0;
-      if (max !== min) {
-        const d = max - min;
-        ss = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch (max) {
-          case r: hh = (g - b) / d + (g < b ? 6 : 0); break;
-          case g: hh = (b - r) / d + 2; break;
-          case b: hh = (r - g) / d + 4; break;
+      const sorted = Object.values(buckets).sort((a, b) => b.n - a.n);
+      const clusters = [];
+      for (const bucket of sorted) {
+        const r = bucket.r / bucket.n / 255, g = bucket.g / bucket.n / 255, b = bucket.b / bucket.n / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const l = (max + min) / 2;
+        let hh = 0, ss = 0;
+        if (max !== min) {
+          const d = max - min;
+          ss = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r: hh = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: hh = (b - r) / d + 2; break;
+            case b: hh = (r - g) / d + 4; break;
+          }
+          hh *= 60;
         }
-        hh *= 60;
+        hh = Math.round(hh); ss = Math.round(Math.min(ss * 100, 70));
+        // skip near-duplicate hues so the picker shows genuinely distinct colors,
+        // not five shades of the same yellow background
+        if (clusters.some(c => Math.abs(c.h - hh) < 18 && Math.abs(c.s - ss) < 15)) continue;
+        clusters.push({ h: hh, s: ss, n: bucket.n });
+        if (clusters.length >= count) break;
       }
-      return { h: Math.round(hh), s: Math.round(Math.min(ss * 100, 70)) };
+      return clusters.length ? clusters : [{ h: 210, s: 40, n: 1 }]; // fallback: neutral blue
     }
 
     function _buildThemeFromHueSat(h, s) {
@@ -3069,18 +3079,41 @@ function applyDriverPanelStyle() {
       };
     }
 
+    let _themeClusters = [];
+
     function devHandleThemeImage(file) {
       if (!file) return;
       const img = new Image();
       img.onload = () => {
-        const { h, s } = _extractDominantHueSat(img);
-        const colors = _buildThemeFromHueSat(h, s);
-        _pendingTheme = { h, s, colors };
-        _renderThemePreview(colors);
+        _themeClusters = _extractPaletteClusters(img);
+        _renderClusterPicker();
+        selectThemeCluster(0); // default to the most common color; dev can override below
         URL.revokeObjectURL(img.src);
       };
       img.onerror = () => showToast("❌ Could not read that image", "err");
       img.src = URL.createObjectURL(file);
+    }
+
+    function _renderClusterPicker() {
+      let row = document.getElementById("theme-cluster-row");
+      if (!row) return;
+      row.innerHTML = _themeClusters.map((c, i) => `
+        <div class="theme-cluster-swatch" data-idx="${i}" onclick="selectThemeCluster(${i})"
+             style="width:32px;height:32px;border-radius:50%;cursor:pointer;flex-shrink:0;background:${_hsl(c.h, c.s, 55)};border:2px solid transparent;"></div>
+      `).join("");
+      row.style.display = "flex";
+      document.getElementById("theme-cluster-label").style.display = "block";
+    }
+
+    function selectThemeCluster(idx) {
+      const c = _themeClusters[idx];
+      if (!c) return;
+      document.querySelectorAll(".theme-cluster-swatch").forEach((el, i) => {
+        el.style.borderColor = i === idx ? "var(--red)" : "transparent";
+      });
+      const colors = _buildThemeFromHueSat(c.h, c.s);
+      _pendingTheme = { h: c.h, s: c.s, colors };
+      _renderThemePreview(colors);
     }
 
     function _renderThemePreview(colors) {
@@ -3091,6 +3124,7 @@ function applyDriverPanelStyle() {
         <div title="${key}" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;background:${colors[key]};"></div>
       `).join("");
       row.style.display = "flex";
+      document.getElementById("theme-preview-label").style.display = "block";
       document.getElementById("theme-name-input").style.display = "block";
       document.getElementById("theme-save-btn").style.display = "block";
     }
@@ -3113,7 +3147,11 @@ function applyDriverPanelStyle() {
           statusEl.textContent = "";
           nameInput.value = "";
           _pendingTheme = null;
+          _themeClusters = [];
+          document.getElementById("theme-cluster-row").style.display = "none";
+          document.getElementById("theme-cluster-label").style.display = "none";
           document.getElementById("theme-preview-row").style.display = "none";
+          document.getElementById("theme-preview-label").style.display = "none";
           nameInput.style.display = "none";
           document.getElementById("theme-save-btn").style.display = "none";
           fetchCustomThemes();
