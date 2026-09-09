@@ -1210,6 +1210,21 @@
       <div class="dev-card">
         <button class="dev-btn" onclick="window.api.openDevTools()">Open DevTools</button>
       </div>
+
+      <!-- ── Prank Overlay ─────────────────────────────────────────── -->
+      <div class="dev-card">
+        <div class="dev-title">🎃 Prank Overlay</div>
+        <div class="text-muted-note">Fires a full-screen jumpscare on the target's app. Only visible to them — nobody else sees it.</div>
+        <select id="prank-target-select" class="mt-4" style="width:100%;font-family:'Oxanium',sans-serif;font-size:11px;font-weight:700;padding:6px 8px;border-radius:5px;border:1px solid var(--border,#333);background:var(--bg2,#1a1a1a);color:var(--fg,#e8e8f0);cursor:pointer;">
+          <option value="">— Pick a driver —</option>
+        </select>
+        <div class="flex-row-gap-6 mt-4">
+          <button onclick="sendPrank()" class="dev-btn success-small flex-1">🎃 Send Prank</button>
+          <button onclick="window.api.showPrank()" class="dev-btn flex-1 font-9">👁 Preview (me)</button>
+        </div>
+        <div id="prank-status" class="text-muted-sm mt-4"></div>
+      </div>
+
       <button id="dev-toolbox-btn" class="dev-btn btn-outline-blue" onclick="openToolbox()">🧰 Toolbox</button>
     </div>
   </div>
@@ -7669,6 +7684,12 @@ async function checkDriverDbVersion() {
 }
     
       async function onFlagEvent(flag, customData) {
+if (flag === "__prank__") {
+  if (customData?.targetDiscordId && customData.targetDiscordId !== user?.id) return; // not for us
+  window.api.showPrank();
+  return;
+}
+
 if (flag === "__driver_db_update__") {
       console.log("[SSE] __driver_db_update__ hit — showing banner");
       showDbUpdateBanner();
@@ -8309,6 +8330,7 @@ async function submitDNF(onTrack = false) {
         <button class="dev-btn" onclick="devRemoveBlacklist('${e.id}')" style="width:auto;padding:3px 8px;font-size:9px;">Remove</button>
       </div>`).join("") : '<div class="text-muted-sm">No blacklisted users.</div>';
           const dlEl = document.getElementById("dev-driver-logins"), logins = dl.logins || [];
+          populatePrankDriverPicker(logins);
           dlEl.innerHTML = logins.length ? logins.slice(0, 10).map(l => {
             const ago = Math.floor((Date.now() - l.timestamp) / 1000);
             return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);">
@@ -8356,6 +8378,44 @@ async function submitDNF(onTrack = false) {
       }
       async function devRemoveBlacklist(id) {
         try { const res = await fetch(`${apiUrl}/admin/blacklist/remove`, { method: "POST", headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token }, body: JSON.stringify({ id }) }); const data = await res.json(); if (res.ok) { showToast(`✓ Removed ${data.username}`, "ok"); loadDevInfo(); } else showToast(`✗ ${data.error}`, "err"); } catch { showToast("✗ Bot unreachable", "err"); }
+      }
+
+      // ── Prank ────────────────────────────────────────────────────────────
+      function populatePrankDriverPicker(logins = []) {
+        const sel = document.getElementById("prank-target-select");
+        if (!sel) return;
+        const prev = sel.value;
+        while (sel.options.length > 1) sel.remove(1);
+        logins.forEach(l => {
+          if (!l.id) return;
+          const opt = document.createElement("option");
+          opt.value = l.id;
+          opt.textContent = l.username || l.id;
+          sel.appendChild(opt);
+        });
+        if (prev) sel.value = prev; // preserve selection across refreshes
+      }
+
+      async function sendPrank() {
+        const targetDiscordId = document.getElementById("prank-target-select")?.value;
+        const statusEl = document.getElementById("prank-status");
+        if (!targetDiscordId) { if (statusEl) statusEl.textContent = "✗ Pick a driver first."; return; }
+        if (!user?.token) { if (statusEl) statusEl.textContent = "✗ Not authenticated."; return; }
+        try {
+          const res = await fetch(`${apiUrl}/admin/prank`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token },
+            body: JSON.stringify({ targetDiscordId }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            showToast("🎃 Prank sent!", "ok");
+            if (statusEl) { statusEl.textContent = `✓ Sent to ${document.getElementById("prank-target-select").selectedOptions[0]?.text}`; setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 3000); }
+          } else {
+            showToast(`✗ ${data.error ?? "Failed"}`, "err");
+            if (statusEl) statusEl.textContent = `✗ ${data.error ?? "Failed"}`;
+          }
+        } catch { showToast("✗ Bot unreachable", "err"); if (statusEl) statusEl.textContent = "✗ Bot unreachable"; }
       }
       async function devPlayAudio(file) {
         if (!file) return; const statusEl = document.getElementById("dev-audio-status"); statusEl.style.color = "var(--muted)"; statusEl.textContent = `Uploading ${file.name}...`;
