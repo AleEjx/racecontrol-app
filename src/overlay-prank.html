@@ -464,6 +464,9 @@ function act2() {
 // ACT 3 — Red screen, gorilla grows + shakes
 // ─────────────────────────────────────────────
 function act3red() {
+  // From here on the overlay is opaque — capture mouse/keyboard so ESC/click can close it
+  try { window.api.prankCaptureInput(); } catch(e) {}
+
   redLayer.style.display = 'block';
   flash();
 
