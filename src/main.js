@@ -666,41 +666,60 @@ ipcMain.handle("party-overlay:stop", () => {
   return true;
 });
 
-/* ── Prank overlay ── */
+/* ── Prank overlay ────────────────────────────────────────────────── */
 function createPrankWindow() {
   const { bounds } = screen.getPrimaryDisplay();
   prankWin = new BrowserWindow({
-    x: bounds.x,
-    y: bounds.y,
+    x:      bounds.x,
+    y:      bounds.y,
     width:  bounds.width,
     height: bounds.height,
-    frame:       false,
-    transparent: true,          // must be true — desktop shows through gorilla/stop-sign phases
-    alwaysOnTop: true,
-    resizable:   false,
-    movable:     false,
-    skipTaskbar: true,
-    show:        false,
+    frame:           false,
+    transparent:     true,          // desktop shows through gorilla/stop-sign phases
+    backgroundColor: "#00000000",
+    alwaysOnTop:     true,
+    resizable:       false,
+    movable:         false,
+    skipTaskbar:     true,
+    show:            false,         // shown only via ready-to-show below
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload:          path.join(__dirname, "preload.js"),
       contextIsolation: true,
+      nodeIntegration:  false,
     },
   });
+
   prankWin.setAlwaysOnTop(true, "screen-saver");
+
+  // Click-through during gorilla/stop-sign phases so the real desktop stays usable.
+  // overlay-prank.html calls window.api.prankCaptureInput() when the red screen starts.
+  prankWin.setIgnoreMouseEvents(true, { forward: true });
+
+  prankWin.once("ready-to-show", () => prankWin?.show());
   prankWin.loadFile(path.join(__dirname, "overlay-prank.html"));
   prankWin.on("closed", () => { prankWin = null; });
 }
 
+// Show — create fresh window each time (ready-to-show handles the actual show)
 ipcMain.handle("show-prank", () => {
-  if (!prankWin || prankWin.isDestroyed()) createPrankWindow();
-  prankWin.once("ready-to-show", () => prankWin?.show());
-  if (!prankWin.isVisible()) prankWin.show();
+  if (prankWin && !prankWin.isDestroyed()) {
+    if (!prankWin.isVisible()) prankWin.show();
+    return true;
+  }
+  createPrankWindow();
   return true;
 });
 
+// Hide / close
 ipcMain.handle("hide-prank", () => {
   if (prankWin && !prankWin.isDestroyed()) prankWin.close();
   prankWin = null;
+  return true;
+});
+
+// Called by overlay when red screen starts — stop forwarding clicks to desktop
+ipcMain.handle("prank-capture-input", () => {
+  if (prankWin && !prankWin.isDestroyed()) prankWin.setIgnoreMouseEvents(false);
   return true;
 });
 
