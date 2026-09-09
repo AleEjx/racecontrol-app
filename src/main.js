@@ -434,6 +434,7 @@ let plateWin = null;
 let fieldWin = null;
 let timerWin = null;
 let notifWin = null;
+let prankWin = null;
 
 function notifBoundsForPosition(position) {
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize;
@@ -662,6 +663,44 @@ ipcMain.handle("party-overlay:start", () => {
 
 ipcMain.handle("party-overlay:stop", () => {
   closePartyOverlay();
+  return true;
+});
+
+/* ---------------- Prank overlay ---------------- */
+function createPrankWindow() {
+  const { bounds } = screen.getPrimaryDisplay();
+  prankWin = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    resizable: false,
+    movable: false,
+    skipTaskbar: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+    },
+  });
+  prankWin.setAlwaysOnTop(true, "screen-saver");
+  prankWin.loadFile(path.join(__dirname, "overlay-prank.html"));
+  prankWin.on("closed", () => { prankWin = null; });
+}
+
+ipcMain.handle("show-prank", () => {
+  if (!prankWin || prankWin.isDestroyed()) createPrankWindow();
+  prankWin.once("ready-to-show", () => prankWin?.show());
+  if (!prankWin.isVisible()) prankWin.show();
+  return true;
+});
+
+ipcMain.handle("hide-prank", () => {
+  if (prankWin && !prankWin.isDestroyed()) prankWin.close();
+  prankWin = null;
   return true;
 });
 
@@ -1088,4 +1127,9 @@ ipcMain.handle("uninstall", async () => {
   }
 });
 
-app.on("will-quit", () => { closePartyOverlay(); stopAllHotkeys(); shutdownUiohook(); });
+app.on("will-quit", () => {
+  closePartyOverlay();
+  if (prankWin && !prankWin.isDestroyed()) prankWin.close();
+  stopAllHotkeys();
+  shutdownUiohook();
+});
