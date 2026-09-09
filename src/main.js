@@ -9,6 +9,8 @@ let uIOhook = null;
 let UiohookKey = null;
 let uiohookUnavailable = false;
 
+// uiohook-napi is a native module. Load it only when hotkeys are needed so a
+// damaged/outdated install can still open the app and show an actionable error.
 function loadUiohook() {
   if (uIOhook && UiohookKey) return true;
   if (uiohookUnavailable) return false;
@@ -27,6 +29,7 @@ function loadUiohook() {
 }
 const CONFIG_FILE = path.join(app.getPath("userData"), "config.json");
 
+// libuiohook mouse button codes: 1=left 2=right 3=middle 4=side-back 5=side-forward
 const MOUSE_BUTTON_CODES = { Mouse4: 4, Mouse5: 5 };
 function isMouseBind(key) { return typeof key === "string" && Object.prototype.hasOwnProperty.call(MOUSE_BUTTON_CODES, key); }
 
@@ -663,21 +666,21 @@ ipcMain.handle("party-overlay:stop", () => {
   return true;
 });
 
-/* ---------------- Prank overlay ---------------- */
+/* ── Prank overlay ── */
 function createPrankWindow() {
   const { bounds } = screen.getPrimaryDisplay();
   prankWin = new BrowserWindow({
     x: bounds.x,
     y: bounds.y,
-    width: bounds.width,
+    width:  bounds.width,
     height: bounds.height,
-    frame: false,
-    transparent: false,
+    frame:       false,
+    transparent: true,          // must be true — desktop shows through gorilla/stop-sign phases
     alwaysOnTop: true,
-    resizable: false,
-    movable: false,
+    resizable:   false,
+    movable:     false,
     skipTaskbar: true,
-    show: false,
+    show:        false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
