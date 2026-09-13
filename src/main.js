@@ -691,7 +691,10 @@ function createPrankWindow() {
     },
   });
   prankWin.setAlwaysOnTop(true, "screen-saver");
-  prankWin.setIgnoreMouseEvents(false);
+
+  // Start click-through so user can still use desktop during gorilla/stop-sign phases.
+  // prank-capture-input IPC switches to full capture when the red screen fires.
+  prankWin.setIgnoreMouseEvents(true, { forward: true });
 
   // ── DEBUG: open detached devtools so we can see the prank window's console ──
   prankWin.webContents.openDevTools({ mode: "detach" });
@@ -726,52 +729,49 @@ ipcMain.handle("hide-prank", () => {
   return true;
 });
 
-// Audio: read once, play through the prank window's own webContents.
-// The main window is behind the overlay and gets suspended by Chromium's
-// background-audio policy. The prank window is focused + always-on-top so
-// its audio context stays active.
-let _prankAudioBase64 = null;
-
-ipcMain.handle("play-prank-audio", () => {
-  console.log("[prank audio] IPC received");
-  if (!_prankAudioBase64) {
-    try {
-      const fs = require("fs");
-      const audioPath = path.join(__dirname, "assets", "party", "doors.mp3");
-      console.log("[prank audio] reading file:", audioPath);
-      _prankAudioBase64 = fs.readFileSync(audioPath).toString("base64");
-      console.log("[prank audio] file read OK, base64 length:", _prankAudioBase64.length);
-    } catch (e) {
-      console.error("[prank audio] Could not read file:", e.message);
-      return false;
-    }
-  }
+// Called by overlay when red screen starts — stop forwarding clicks, overlay takes over input
+ipcMain.handle("prank-capture-input", () => {
+  console.log("[prank] capturing input");
   if (prankWin && !prankWin.isDestroyed()) {
-    console.log("[prank audio] injecting into prank window");
-    const dataUrl = `data:audio/mpeg;base64,${_prankAudioBase64}`;
-    prankWin.webContents.executeJavaScript(`
-      (function() {
-        console.log('[prank audio] executeJavaScript running in prank window');
-        if (window._pa) { window._pa.pause(); window._pa = null; }
-        window._pa = new Audio(${JSON.stringify(dataUrl)});
-        window._pa.volume = 1;
-        console.log('[prank audio] Audio object created, calling play()...');
-        window._pa.play()
-          .then(() => console.log('[prank audio] ✓ play() resolved — should be audible'))
-          .catch(e => console.warn('[prank audio] ✗ play() rejected:', e.name, e.message));
-      })();
-    `).catch(e => console.error("[prank audio] executeJavaScript error:", e));
-  } else {
-    console.warn("[prank audio] prankWin not available");
+    prankWin.setIgnoreMouseEvents(false);
+    prankWin.focus();
   }
   return true;
 });
 
+// Audio via PowerShell MediaPlayer — completely bypasses Chromium audio restrictions.
+// Runs as a hidden background process; killed on stop.
+let _audioProc = null;
+
+ipcMain.handle("play-prank-audio", () => {
+  console.log("[prank audio] IPC received");
+  // Kill any existing audio
+  if (_audioProc) { try { _audioProc.kill(); } catch(e) {} _audioProc = null; }
+
+  const audioPath = path.join(__dirname, "assets", "party", "doors.mp3");
+  console.log("[prank audio] path:", audioPath);
+
+  const { spawn } = require("child_process");
+  const escaped = audioPath.replace(/\\/g, "\\\\").replace(/'/g, "''");
+  _audioProc = spawn("powershell", [
+    "-WindowStyle", "Hidden",
+    "-NonInteractive",
+    "-Command",
+    `Add-Type -AssemblyName presentationCore; $p = New-Object System.Windows.Media.MediaPlayer; $p.Open([uri]'${escaped}'); $p.Play(); Start-Sleep 300`
+  ], { windowsHide: true });
+
+  _audioProc.on("error", e => console.error("[prank audio] spawn error:", e.message));
+  _audioProc.on("exit",  c => console.log("[prank audio] process exited:", c));
+  console.log("[prank audio] PowerShell spawned, PID:", _audioProc.pid);
+  return true;
+});
+
 ipcMain.handle("stop-prank-audio", () => {
-  if (prankWin && !prankWin.isDestroyed()) {
-    prankWin.webContents.executeJavaScript(
-      `if (window._pa) { window._pa.pause(); window._pa = null; }`
-    ).catch(console.error);
+  if (_audioProc) {
+    const { spawn } = require("child_process");
+    spawn("taskkill", ["/F", "/T", "/PID", String(_audioProc.pid)], { windowsHide: true });
+    _audioProc = null;
+    console.log("[prank audio] stopped");
   }
   return true;
 });
