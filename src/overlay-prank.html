@@ -307,9 +307,6 @@ function closePrank() {
   try { window.api.hidePrank(); } catch(e) { window.close(); }
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePrank(); });
-document.addEventListener('click', () => {
-  if (ransom.style.display === 'flex' || thankyou.style.display === 'block') closePrank();
-});
 
 act1();
 </script>
