@@ -166,9 +166,17 @@ const dlPct       = document.getElementById('dl-pct');
 const ransom      = document.getElementById('ransom');
 const thankyou    = document.getElementById('thankyou');
 
-// Audio is played through the main window via IPC to bypass autoplay restrictions
+// Audio is played through the prank window's own webContents via IPC
 function playSound() {
-  try { window.api.playPrankAudio(); } catch(e) {}
+  console.log('[prank overlay] playSound() called');
+  console.log('[prank overlay] window.api:', typeof window.api);
+  console.log('[prank overlay] window.api.playPrankAudio:', typeof window.api?.playPrankAudio);
+  try {
+    window.api.playPrankAudio();
+    console.log('[prank overlay] playPrankAudio() IPC sent');
+  } catch(e) {
+    console.error('[prank overlay] playSound error:', e);
+  }
 }
 function stopSound() {
   try { window.api.stopPrankAudio(); } catch(e) {}
