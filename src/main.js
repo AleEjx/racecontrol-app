@@ -726,15 +726,14 @@ ipcMain.handle("hide-prank", () => {
 });
 
 // Audio: play through the main window which already has user-gesture context.
-// This bypasses Electron's autoplay restrictions on overlay windows entirely.
+// renderer.html is loaded from the app root, so relative paths resolve correctly —
+// no file:/// construction needed.
 ipcMain.handle("play-prank-audio", () => {
-  const audioPath = path.join(__dirname, "assets", "party", "doors.mp3")
-    .replace(/\\/g, "/");
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.executeJavaScript(`
       (function() {
-        if (window._prankAudio) { window._prankAudio.pause(); }
-        window._prankAudio = new Audio('file:///${audioPath}');
+        if (window._prankAudio) { window._prankAudio.pause(); window._prankAudio = null; }
+        window._prankAudio = new Audio('assets/party/doors.mp3');
         window._prankAudio.volume = 1;
         window._prankAudio.play().catch(e => console.warn('[prank audio]', e));
       })();
