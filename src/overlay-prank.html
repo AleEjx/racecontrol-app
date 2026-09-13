@@ -169,11 +169,14 @@ const ransom      = document.getElementById('ransom');
 const thankyou    = document.getElementById('thankyou');
 const snd         = document.getElementById('snd');
 
-// ── Audio: build absolute file:// URL from current page location ──
-// This fixes the relative path resolution issue in Electron
-const pageBase = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-snd.src = pageBase + 'assets/party/doors.mp3';
-snd.load();
+// ── Audio: path passed from main process via URL query param ──
+// main.js calls loadFile(..., { query: { audio: absolutePath } })
+// so we always get the exact resolved path — no guessing needed.
+const audioParam = new URLSearchParams(window.location.search).get('audio');
+if (audioParam) {
+  snd.src = 'file:///' + audioParam.replace(/^\/+/, ''); // ensure valid file:/// URL
+  snd.load();
+}
 
 function playSound() {
   snd.currentTime = 0;
