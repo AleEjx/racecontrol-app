@@ -146,6 +146,9 @@ oauthServer.on("error", (err) => {
 });
 oauthServer.listen(OAUTH_PORT);
 
+// Allow audio to play in overlay windows without requiring a user gesture
+app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
+
 app.whenReady().then(() => {
   createWindow();
   createTray();
@@ -690,10 +693,8 @@ function createPrankWindow() {
   });
   prankWin.setAlwaysOnTop(true, "screen-saver");
 
-  // Pass absolute audio path as query param — renderer reads it from the URL.
-  // This is the only reliable way to resolve asset paths in a transparent overlay.
   const audioPath = path.join(__dirname, "assets", "party", "doors.mp3")
-    .replace(/\\/g, "/"); // normalise Windows backslashes
+    .replace(/\\/g, "/");
 
   prankWin.once("ready-to-show", () => {
     prankWin?.show();
