@@ -725,15 +725,27 @@ ipcMain.handle("hide-prank", () => {
   return true;
 });
 
-// Audio: play through the main window which already has user-gesture context.
-// renderer.html is loaded from the app root, so relative paths resolve correctly —
-// no file:/// construction needed.
+// Audio: read the file in the main process and inject as a base64 data URL.
+// This bypasses all file:// URL resolution issues and CSP restrictions entirely.
+let _prankAudioBase64 = null; // cached after first read
+
 ipcMain.handle("play-prank-audio", () => {
+  if (!_prankAudioBase64) {
+    try {
+      const fs = require("fs");
+      const audioPath = path.join(__dirname, "assets", "party", "doors.mp3");
+      _prankAudioBase64 = fs.readFileSync(audioPath).toString("base64");
+    } catch (e) {
+      console.error("[prank audio] Could not read audio file:", e.message);
+      return false;
+    }
+  }
   if (mainWindow && !mainWindow.isDestroyed()) {
+    const dataUrl = `data:audio/mpeg;base64,${_prankAudioBase64}`;
     mainWindow.webContents.executeJavaScript(`
       (function() {
         if (window._prankAudio) { window._prankAudio.pause(); window._prankAudio = null; }
-        window._prankAudio = new Audio('assets/party/doors.mp3');
+        window._prankAudio = new Audio(${JSON.stringify(dataUrl)});
         window._prankAudio.volume = 1;
         window._prankAudio.play().catch(e => console.warn('[prank audio]', e));
       })();
