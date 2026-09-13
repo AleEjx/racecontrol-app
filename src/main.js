@@ -725,9 +725,11 @@ ipcMain.handle("hide-prank", () => {
   return true;
 });
 
-// Audio: read the file in the main process and inject as a base64 data URL.
-// This bypasses all file:// URL resolution issues and CSP restrictions entirely.
-let _prankAudioBase64 = null; // cached after first read
+// Audio: read once, play through the prank window's own webContents.
+// The main window is behind the overlay and gets suspended by Chromium's
+// background-audio policy. The prank window is focused + always-on-top so
+// its audio context stays active.
+let _prankAudioBase64 = null;
 
 ipcMain.handle("play-prank-audio", () => {
   if (!_prankAudioBase64) {
@@ -736,18 +738,20 @@ ipcMain.handle("play-prank-audio", () => {
       const audioPath = path.join(__dirname, "assets", "party", "doors.mp3");
       _prankAudioBase64 = fs.readFileSync(audioPath).toString("base64");
     } catch (e) {
-      console.error("[prank audio] Could not read audio file:", e.message);
+      console.error("[prank audio] Could not read file:", e.message);
       return false;
     }
   }
-  if (mainWindow && !mainWindow.isDestroyed()) {
+  if (prankWin && !prankWin.isDestroyed()) {
     const dataUrl = `data:audio/mpeg;base64,${_prankAudioBase64}`;
-    mainWindow.webContents.executeJavaScript(`
+    prankWin.webContents.executeJavaScript(`
       (function() {
-        if (window._prankAudio) { window._prankAudio.pause(); window._prankAudio = null; }
-        window._prankAudio = new Audio(${JSON.stringify(dataUrl)});
-        window._prankAudio.volume = 1;
-        window._prankAudio.play().catch(e => console.warn('[prank audio]', e));
+        if (window._pa) { window._pa.pause(); window._pa = null; }
+        window._pa = new Audio(${JSON.stringify(dataUrl)});
+        window._pa.volume = 1;
+        window._pa.play()
+          .then(() => console.log('[prank audio] playing'))
+          .catch(e => console.warn('[prank audio]', e.name, e.message));
       })();
     `).catch(console.error);
   }
@@ -755,9 +759,9 @@ ipcMain.handle("play-prank-audio", () => {
 });
 
 ipcMain.handle("stop-prank-audio", () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.executeJavaScript(
-      `if (window._prankAudio) { window._prankAudio.pause(); window._prankAudio = null; }`
+  if (prankWin && !prankWin.isDestroyed()) {
+    prankWin.webContents.executeJavaScript(
+      `if (window._pa) { window._pa.pause(); window._pa = null; }`
     ).catch(console.error);
   }
   return true;
