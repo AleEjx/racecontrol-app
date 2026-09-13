@@ -146,7 +146,6 @@ oauthServer.on("error", (err) => {
 });
 oauthServer.listen(OAUTH_PORT);
 
-// Allow audio to play in overlay windows without requiring a user gesture
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 
 app.whenReady().then(() => {
@@ -692,6 +691,9 @@ function createPrankWindow() {
     },
   });
   prankWin.setAlwaysOnTop(true, "screen-saver");
+  // Capture all mouse input from the start — prevents clicks passing through
+  // the transparent window to whatever app is underneath
+  prankWin.setIgnoreMouseEvents(false);
 
   const audioPath = path.join(__dirname, "assets", "party", "doors.mp3")
     .replace(/\\/g, "/");
@@ -723,10 +725,29 @@ ipcMain.handle("hide-prank", () => {
   return true;
 });
 
-ipcMain.handle("prank-capture-input", () => {
-  if (prankWin && !prankWin.isDestroyed()) {
-    prankWin.setIgnoreMouseEvents(false);
-    prankWin.focus();
+// Audio: play through the main window which already has user-gesture context.
+// This bypasses Electron's autoplay restrictions on overlay windows entirely.
+ipcMain.handle("play-prank-audio", () => {
+  const audioPath = path.join(__dirname, "assets", "party", "doors.mp3")
+    .replace(/\\/g, "/");
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.executeJavaScript(`
+      (function() {
+        if (window._prankAudio) { window._prankAudio.pause(); }
+        window._prankAudio = new Audio('file:///${audioPath}');
+        window._prankAudio.volume = 1;
+        window._prankAudio.play().catch(e => console.warn('[prank audio]', e));
+      })();
+    `).catch(console.error);
+  }
+  return true;
+});
+
+ipcMain.handle("stop-prank-audio", () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.executeJavaScript(
+      `if (window._prankAudio) { window._prankAudio.pause(); window._prankAudio = null; }`
+    ).catch(console.error);
   }
   return true;
 });
