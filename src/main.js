@@ -691,9 +691,10 @@ function createPrankWindow() {
     },
   });
   prankWin.setAlwaysOnTop(true, "screen-saver");
-  // Capture all mouse input from the start — prevents clicks passing through
-  // the transparent window to whatever app is underneath
   prankWin.setIgnoreMouseEvents(false);
+
+  // ── DEBUG: open detached devtools so we can see the prank window's console ──
+  prankWin.webContents.openDevTools({ mode: "detach" });
 
   const audioPath = path.join(__dirname, "assets", "party", "doors.mp3")
     .replace(/\\/g, "/");
@@ -732,28 +733,36 @@ ipcMain.handle("hide-prank", () => {
 let _prankAudioBase64 = null;
 
 ipcMain.handle("play-prank-audio", () => {
+  console.log("[prank audio] IPC received");
   if (!_prankAudioBase64) {
     try {
       const fs = require("fs");
       const audioPath = path.join(__dirname, "assets", "party", "doors.mp3");
+      console.log("[prank audio] reading file:", audioPath);
       _prankAudioBase64 = fs.readFileSync(audioPath).toString("base64");
+      console.log("[prank audio] file read OK, base64 length:", _prankAudioBase64.length);
     } catch (e) {
       console.error("[prank audio] Could not read file:", e.message);
       return false;
     }
   }
   if (prankWin && !prankWin.isDestroyed()) {
+    console.log("[prank audio] injecting into prank window");
     const dataUrl = `data:audio/mpeg;base64,${_prankAudioBase64}`;
     prankWin.webContents.executeJavaScript(`
       (function() {
+        console.log('[prank audio] executeJavaScript running in prank window');
         if (window._pa) { window._pa.pause(); window._pa = null; }
         window._pa = new Audio(${JSON.stringify(dataUrl)});
         window._pa.volume = 1;
+        console.log('[prank audio] Audio object created, calling play()...');
         window._pa.play()
-          .then(() => console.log('[prank audio] playing'))
-          .catch(e => console.warn('[prank audio]', e.name, e.message));
+          .then(() => console.log('[prank audio] ✓ play() resolved — should be audible'))
+          .catch(e => console.warn('[prank audio] ✗ play() rejected:', e.name, e.message));
       })();
-    `).catch(console.error);
+    `).catch(e => console.error("[prank audio] executeJavaScript error:", e));
+  } else {
+    console.warn("[prank audio] prankWin not available");
   }
   return true;
 });
