@@ -666,60 +666,67 @@ ipcMain.handle("party-overlay:stop", () => {
   return true;
 });
 
-/* ── Prank overlay ────────────────────────────────────────────────── */
+/* ── Prank overlay ── */
 function createPrankWindow() {
   const { bounds } = screen.getPrimaryDisplay();
   prankWin = new BrowserWindow({
-    x:      bounds.x,
-    y:      bounds.y,
-    width:  bounds.width,
-    height: bounds.height,
+    x:               bounds.x,
+    y:               bounds.y,
+    width:           bounds.width,
+    height:          bounds.height,
     frame:           false,
-    transparent:     true,          // desktop shows through gorilla/stop-sign phases
+    transparent:     true,
     backgroundColor: "#00000000",
     alwaysOnTop:     true,
     resizable:       false,
     movable:         false,
     skipTaskbar:     true,
-    show:            false,         // shown only via ready-to-show below
+    show:            false,
     webPreferences: {
       preload:          path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration:  false,
     },
   });
-
   prankWin.setAlwaysOnTop(true, "screen-saver");
 
-  // Click-through during gorilla/stop-sign phases so the real desktop stays usable.
-  // overlay-prank.html calls window.api.prankCaptureInput() when the red screen starts.
-  prankWin.setIgnoreMouseEvents(true, { forward: true });
+  // Pass absolute audio path as query param — renderer reads it from the URL.
+  // This is the only reliable way to resolve asset paths in a transparent overlay.
+  const audioPath = path.join(__dirname, "assets", "party", "doors.mp3")
+    .replace(/\\/g, "/"); // normalise Windows backslashes
 
-  prankWin.once("ready-to-show", () => prankWin?.show());
-  prankWin.loadFile(path.join(__dirname, "overlay-prank.html"));
+  prankWin.once("ready-to-show", () => {
+    prankWin?.show();
+    prankWin?.focus();
+  });
+
+  prankWin.loadFile(path.join(__dirname, "overlay-prank.html"), {
+    query: { audio: audioPath },
+  });
+
   prankWin.on("closed", () => { prankWin = null; });
 }
 
-// Show — create fresh window each time (ready-to-show handles the actual show)
 ipcMain.handle("show-prank", () => {
   if (prankWin && !prankWin.isDestroyed()) {
-    if (!prankWin.isVisible()) prankWin.show();
+    if (!prankWin.isVisible()) { prankWin.show(); prankWin.focus(); }
     return true;
   }
   createPrankWindow();
   return true;
 });
 
-// Hide / close
 ipcMain.handle("hide-prank", () => {
   if (prankWin && !prankWin.isDestroyed()) prankWin.close();
   prankWin = null;
   return true;
 });
 
-// Called by overlay when red screen starts — stop forwarding clicks to desktop
 ipcMain.handle("prank-capture-input", () => {
-  if (prankWin && !prankWin.isDestroyed()) prankWin.setIgnoreMouseEvents(false);
+  if (prankWin && !prankWin.isDestroyed()) {
+    prankWin.setIgnoreMouseEvents(false);
+    prankWin.focus();
+  }
   return true;
 });
 
