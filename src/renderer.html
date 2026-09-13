@@ -203,7 +203,8 @@
 
     /* --- Settings unsaved-changes bar --- */
     /* ── Session Expired Banner ── */
-    #session-expired-banner {
+    #session-expired-banner,
+    #session-expired-banner-marshal {
       display: none;
       align-items: center;
       justify-content: space-between;
@@ -667,6 +668,7 @@
   <div class="screen" id="screen-marshal">
     <div class="scroll-body">
       <div id="flag-notif-marshal" class="pb-4"></div>
+      <div id="session-expired-banner-marshal"></div>
       <div class="status-row">
         <div class="flex-row-gap-6">
           <div class="status-dot live" id="m-status-dot"></div>
@@ -7249,6 +7251,14 @@ function filterSpectateLeaderboard(q) {
     
 function launchMarshalPanel(startPoll = true) {
   showScreen("screen-marshal"); currentPanel = "marshal";
+
+  // Show session expired banner if marshal token is missing
+  const _meb = document.getElementById("session-expired-banner-marshal");
+  if (_meb) {
+    const expired = !user?.marshalToken && !user?.token;
+    _meb.style.display = expired ? "flex" : "none";
+    if (expired) _meb.innerHTML = `<span>⚠️ Your session has expired — you may lose race data.</span><a onclick="goToReLogin()">Re-login in Settings → Account →</a>`;
+  }
   applyMarshalPanelStyle();
   document.getElementById("shutdown-banner-marshal") && (document.getElementById("shutdown-banner-marshal").style.display = "");
       document.getElementById("shutdown-banner-driver") && (document.getElementById("shutdown-banner-driver").style.display = "none");
