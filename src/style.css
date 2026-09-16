@@ -559,6 +559,7 @@ select:hover:not(:focus) {
 /* Panel switcher buttons */
 #panel-switcher {
   display: none;
+  position: relative;
   align-items: center;
   flex-shrink: 1;
   min-width: 0;
@@ -573,6 +574,33 @@ select:hover:not(:focus) {
   scrollbar-width: none;
 }
 #panel-switcher::-webkit-scrollbar { display: none; }
+
+/* Sliding active-tab indicator — glides between buttons instead of popping */
+.switcher-indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: 0;
+  border-radius: 5px;
+  opacity: 0;
+  background: linear-gradient(160deg, rgba(61,139,255,0.28), rgba(61,139,255,0.14));
+  border: 1px solid rgba(61,139,255,0.5);
+  box-shadow: 0 0 12px rgba(61,139,255,0.25), var(--inset-hi);
+  transition: transform 0.32s var(--ease-spring), width 0.24s var(--ease-out), background 0.22s var(--ease-out), border-color 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out), opacity 0.15s;
+  pointer-events: none;
+  z-index: 0;
+}
+.switcher-indicator.marshal {
+  background: linear-gradient(160deg, rgba(255,204,0,0.24), rgba(255,204,0,0.1));
+  border-color: rgba(255,204,0,0.5);
+  box-shadow: 0 0 12px rgba(255,204,0,0.22), var(--inset-hi);
+}
+.switcher-indicator.dev {
+  background: linear-gradient(160deg, rgba(255,45,85,0.26), rgba(255,45,85,0.12));
+  border-color: rgba(255,45,85,0.5);
+  box-shadow: 0 0 12px rgba(255,45,85,0.22), var(--inset-hi);
+}
 
 .switch-btn {
   display: inline-flex;
@@ -596,22 +624,8 @@ select:hover:not(:focus) {
 }
 .switch-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 .switch-btn:active { transform: scale(0.96); }
-.switch-btn.active {
-  color: #fff;
-  border-color: rgba(61,139,255,0.5);
-  background: linear-gradient(160deg, rgba(61,139,255,0.28), rgba(61,139,255,0.14));
-  box-shadow: 0 0 12px rgba(61,139,255,0.25), var(--inset-hi);
-}
-#sw-marshal.active {
-  border-color: rgba(255,204,0,0.5);
-  background: linear-gradient(160deg, rgba(255,204,0,0.24), rgba(255,204,0,0.1));
-  box-shadow: 0 0 12px rgba(255,204,0,0.22), var(--inset-hi);
-}
-#sw-dev.active {
-  border-color: rgba(255,45,85,0.5);
-  background: linear-gradient(160deg, rgba(255,45,85,0.26), rgba(255,45,85,0.12));
-  box-shadow: 0 0 12px rgba(255,45,85,0.22), var(--inset-hi);
-}
+.switch-btn { position: relative; z-index: 1; }
+.switch-btn.active { color: #fff; }
 
 /* Titlebar window-control buttons */
 .tb-btns {
@@ -721,17 +735,44 @@ select:hover:not(:focus) {
    13. Login & Password Screens
    ============================================================================= */
 
+#screen-login {
+  position: relative;
+  overflow: hidden;
+}
+#screen-login::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(115deg, transparent 40%, rgba(61,139,255,0.06) 48%, rgba(61,139,255,0.1) 50%, rgba(61,139,255,0.06) 52%, transparent 60%);
+  background-size: 200% 200%;
+  animation: loginSweep 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes loginSweep {
+  0%, 100% { background-position: 100% 0%; }
+  50%      { background-position: 0% 100%; }
+}
+
 .login-logo {
   font-size: 28px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #fff;
-  animation: fadeInUp 0.4s var(--ease-out);
+  animation: fadeInUp 0.4s var(--ease-out) backwards;
+  animation-delay: 0.02s;
+  position: relative;
 }
 .login-logo span {
   color: var(--red);
   text-shadow: 0 0 24px rgba(255,45,85,0.55);
+}
+
+.screen-centered .small-heading {
+  animation: fadeInUp 0.4s var(--ease-out) backwards;
+  animation-delay: 0.1s;
+  position: relative;
 }
 
 .login-card,
@@ -748,7 +789,7 @@ select:hover:not(:focus) {
   box-shadow: var(--shadow-lg), var(--inset-hi);
   position: relative;
   overflow: hidden;
-  animation: fadeInUp 0.45s 0.05s var(--ease-out) backwards;
+  animation: fadeInUp 0.45s 0.18s var(--ease-out) backwards;
 }
 .login-card::before,
 .pw-card::before {
@@ -776,11 +817,23 @@ select:hover:not(:focus) {
   border-radius: var(--radius);
   cursor: pointer;
   font-family: 'Oxanium', sans-serif;
-  transition: filter 0.15s, transform 0.1s;
+  transition: filter 0.15s, transform 0.15s var(--ease-out), box-shadow 0.2s var(--ease-out);
   box-shadow: 0 4px 14px rgba(88,101,242,0.35);
 }
-.discord-btn:hover  { filter: brightness(1.1); }
+.discord-btn:hover  { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(88,101,242,0.45); }
 .discord-btn:active { transform: scale(0.97); }
+.discord-btn:disabled { cursor: not-allowed; }
+.discord-btn.loading { filter: brightness(0.9); }
+.discord-btn.loading svg { display: none; }
+.discord-btn.loading::before {
+  content: '';
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .login-error,
 .pw-error {
@@ -1208,6 +1261,7 @@ select:hover:not(:focus) {
    ============================================================================= */
 
 .flag-card {
+  position: relative;
   border-radius: var(--radius-lg);
   padding: 10px 14px;
   display: flex;
@@ -1216,8 +1270,30 @@ select:hover:not(:focus) {
   border: 1.5px solid transparent;
   animation: slideIn 0.35s var(--ease-spring);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 .flag-card.space-between { justify-content: space-between; }
+.flag-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.12) 45%, transparent 60%);
+  background-size: 220% 100%;
+  background-position: 120% 0;
+  animation: flagCardSheen 0.7s var(--ease-out) 0.08s;
+  pointer-events: none;
+}
+@keyframes flagCardSheen {
+  from { background-position: 120% 0; }
+  to   { background-position: -20% 0; }
+}
+
+.fc-emoji { animation: fcEmojiPop 0.4s var(--ease-spring) 0.05s backwards; }
+@keyframes fcEmojiPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  70%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
 
 .flag-card.green  { background: rgba(16,229,138,0.09); border-color: rgba(16,229,138,0.5);  color: var(--green);  box-shadow: 0 0 18px rgba(16,229,138,0.12); }
 .flag-card.yellow { background: rgba(255,204,0,0.09);  border-color: rgba(255,204,0,0.5);   color: var(--yellow); box-shadow: 0 0 18px rgba(255,204,0,0.12); }
@@ -2502,28 +2578,79 @@ input.fixed-square {
    30. Toast
    ============================================================================= */
 
-#toast {
+#toast-container {
   position: fixed;
-  bottom: 10px;
+  bottom: 14px;
   left: 50%;
-  transform: translateX(-50%) translateY(30px) scale(0.95);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 7px;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.toast-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   background: var(--surface-grad);
   border: 1px solid var(--border);
   color: var(--text);
   font-size: 11px;
   font-weight: 700;
-  padding: 7px 16px;
+  padding: 8px 16px 8px 12px;
   border-radius: 20px;
-  opacity: 0;
-  transition: transform 0.28s var(--ease-spring), opacity 0.2s;
   white-space: nowrap;
-  pointer-events: none;
-  z-index: 9998;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), var(--inset-hi);
+  overflow: hidden;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(16px) scale(0.92);
+  transition: transform 0.32s var(--ease-spring), opacity 0.22s var(--ease-out), max-width 0.2s;
 }
-#toast.show { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-#toast.ok   { border-color: var(--green); color: var(--green); box-shadow: var(--shadow-lg), 0 0 16px rgba(16,229,138,0.2); }
-#toast.err  { border-color: var(--red);   color: var(--red);   box-shadow: var(--shadow-lg), 0 0 16px rgba(255,45,85,0.2); }
+.toast-item.show { opacity: 1; transform: translateY(0) scale(1); }
+.toast-item.hide { opacity: 0; transform: translateY(-6px) scale(0.94); transition: transform 0.2s var(--ease-out), opacity 0.18s; }
+.toast-item.toast-pop { animation: toastNudge 0.24s var(--ease-spring); }
+@keyframes toastNudge {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(0) scale(1.04); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.toast-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 9px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+.toast-msg { line-height: 1.3; }
+
+.toast-progress {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: currentColor;
+  opacity: 0.35;
+  transform-origin: left;
+  animation: toastDrain 3.2s linear forwards;
+}
+@keyframes toastDrain {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+.toast-item.ok  { border-color: var(--green); color: var(--green); box-shadow: var(--shadow-lg), 0 0 16px rgba(16,229,138,0.2); }
+.toast-item.ok  .toast-icon { background: rgba(16,229,138,0.18); color: var(--green); }
+.toast-item.err { border-color: var(--red); color: var(--red); box-shadow: var(--shadow-lg), 0 0 16px rgba(255,45,85,0.2); }
+.toast-item.err .toast-icon { background: rgba(255,45,85,0.18); color: var(--red); }
+.toast-item .toast-msg { color: var(--text); }
 
 
 /* =============================================================================
@@ -3317,3 +3444,48 @@ input.fixed-square {
 .fsm-item:hover { border-color:var(--blue); }
 .fsm-item img { width:100%; height:80px; object-fit:cover; border-radius:4px; background:#000; }
 .fsm-item .fsm-name { font-size:9px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* =============================================================================
+   43. Motion & Accessibility Polish
+   ============================================================================= */
+
+/* Titlebar accent — subtle animated sheen instead of a static line */
+.titlebar::after {
+  background: linear-gradient(90deg, var(--red) 0%, transparent 30%, transparent 70%, var(--blue) 100%);
+  background-size: 220% 100%;
+  animation: titlebarSheen 9s ease-in-out infinite alternate;
+}
+@keyframes titlebarSheen {
+  from { background-position: 0% 0; opacity: 0.35; }
+  to   { background-position: 100% 0; opacity: 0.55; }
+}
+
+/* Visible keyboard focus everywhere interactive — accessibility floor */
+button:focus-visible,
+.switch-btn:focus-visible,
+.action-btn:focus-visible,
+.rc-action-block:focus-visible,
+.role-card:focus-visible,
+.tb-btn:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  box-shadow: var(--ring-blue);
+}
+
+/* Respect reduced-motion preference: keep state changes, drop decorative motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  #screen-login::before,
+  .titlebar::after {
+    animation: none !important;
+  }
+}
