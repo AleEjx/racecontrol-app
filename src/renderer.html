@@ -338,6 +338,7 @@
       <div class="tl-logo">Race<span>Control</span></div>
       <span id="mode-badge" class="tl-badge hidden"></span>
 <div id="panel-switcher">
+  <div class="switcher-indicator" id="switcher-indicator"></div>
   <button class="switch-btn" id="sw-driver" onclick="switchPanel('driver')">🏎️ Driver</button>
   <button class="switch-btn" id="sw-marshal" onclick="switchPanel('marshal')">🏁 Marshal 🔒</button>
   <button class="switch-btn" id="sw-spectate" onclick="switchPanel('spectate')">👁️ Spectate</button>
@@ -1798,7 +1799,7 @@
     <button class="save-btn" id="fc-confirm-btn" onclick="fuelCalibNext()" disabled>Next →</button>
   </div>
 </div>
-  <div id="toast"></div>
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
   <div id="settings-unsaved-bar" class="settings-unsaved-bar hidden">
     <span>⚠️ You have some unsaved changes</span>
     <div class="flex-row-gap-6">
@@ -4654,7 +4655,12 @@ setInterval(async () => {
       if (document.getElementById("kb-blue_flag2")) document.getElementById("kb-blue_flag2").value = config.keybinds?.blue_flag2 || "F4";
       if (document.getElementById("kb-next_lap2")) document.getElementById("kb-next_lap2").value = config.keybinds?.next_lap2 || "F5";
       if (document.getElementById("kb-pitting2")) document.getElementById("kb-pitting2").value = config.keybinds?.pitting2 || "F6";
-      document.getElementById("btn-discord-login")?.addEventListener("click", loginWithDiscord);
+      document.getElementById("btn-discord-login")?.addEventListener("click", async function () {
+        if (this.disabled) return;
+        this.disabled = true; this.classList.add("loading");
+        try { await loginWithDiscord(); }
+        finally { this.disabled = false; this.classList.remove("loading"); }
+      });
 
       window.api.onToast(({ msg, type }) => showToast(msg, type));
       window.api.onCooldownStart((s, slot, action) => startCooldown(s, slot, action));
@@ -5884,6 +5890,18 @@ function goBack() {
   else showScreen("screen-login");
 }
 
+function positionSwitcherIndicator() {
+  const indicator = document.getElementById("switcher-indicator");
+  const active = document.querySelector("#panel-switcher .switch-btn.active");
+  if (!indicator || !active || active.offsetParent === null) { if (indicator) indicator.style.opacity = "0"; return; }
+  indicator.style.width = active.offsetWidth + "px";
+  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+  indicator.style.opacity = "1";
+  const kind = active.id.replace("sw-", "");
+  indicator.className = "switcher-indicator " + kind;
+}
+window.addEventListener("resize", () => requestAnimationFrame(positionSwitcherIndicator));
+
 function updateSwitcher() {
   window.api?.setCommitteeScreenActive?.(currentPanel === "committee");
 
@@ -5919,6 +5937,7 @@ function updateSwitcher() {
     : currentPanel === "committee" ? "sw-committee"
     : "sw-dev";
   document.getElementById(aId)?.classList.add("active");
+  positionSwitcherIndicator();
   const badge = document.getElementById("mode-badge");
   if (currentPanel === "driver")   { badge.textContent = "Driver";   badge.className = "tl-badge driver";   badge.style.display = ""; }
   if (currentPanel === "marshal")  { badge.textContent = "Marshal";  badge.className = "tl-badge marshal";  badge.style.display = ""; }
@@ -8906,10 +8925,53 @@ document.addEventListener("keydown", e => {
         showToast(v ? "📌 App pinned!" : "📌 Unpinned", v ? "ok" : "");
       }
       function installUpdate() { window.api.installUpdate(); }
+      const TOAST_ICONS = { ok: "✓", err: "✕", "": "●" };
+      let _toastSeq = 0;
       function showToast(msg, type = "", skipNotify = false) {
-        const t = document.getElementById("toast"); t.textContent = msg; t.className = `show ${type}`;
-        clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ""; }, 2500);
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+
+        // Collapse rapid duplicate toasts instead of stacking clones
+        const dupe = [...container.children].find(el => el.dataset.msg === msg && el.dataset.type === type);
+        if (dupe) {
+          dupe.classList.remove("toast-pop");
+          void dupe.offsetWidth;
+          dupe.classList.add("toast-pop");
+          clearTimeout(dupe._hideTimer);
+          dupe._hideTimer = setTimeout(() => dismissToast(dupe), 3200);
+          if (!skipNotify) showAppNotification(msg, type);
+          return;
+        }
+
+        const id = `toast-${++_toastSeq}`;
+        const el = document.createElement("div");
+        el.className = `toast-item ${type}`;
+        el.id = id;
+        el.dataset.msg = msg;
+        el.dataset.type = type;
+        el.innerHTML = `
+          <span class="toast-icon">${TOAST_ICONS[type] ?? "●"}</span>
+          <span class="toast-msg"></span>
+          <span class="toast-progress"></span>`;
+        el.querySelector(".toast-msg").textContent = msg;
+        el.addEventListener("click", () => dismissToast(el));
+
+        container.appendChild(el);
+        // Cap the stack so notifications never overwhelm the screen
+        while (container.children.length > 4) dismissToast(container.firstElementChild);
+
+        requestAnimationFrame(() => el.classList.add("show"));
+        el._hideTimer = setTimeout(() => dismissToast(el), 3200);
+
         if (!skipNotify) showAppNotification(msg, type);
+      }
+
+      function dismissToast(el) {
+        if (!el || el.classList.contains("hide")) return;
+        clearTimeout(el._hideTimer);
+        el.classList.remove("show");
+        el.classList.add("hide");
+        setTimeout(() => el.remove(), 220);
       }
 
       setTimeout(() => {
