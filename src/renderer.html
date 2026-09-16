@@ -5335,23 +5335,29 @@ function showRoleSelectScreen(isInDB) {
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
     : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png`;
 
-  const racerCard = isInDB ? `
-    <button onclick="chooseRoleRacer()" class="role-card racer">
-      <span class="role-icon">🏎️</span>
-      <div class="role-title">Racer</div>
-      <div class="role-sub">You are driving today</div>
-    </button>` : '';
+  const canEngineer = canEngineerForActiveLeague();
+  const canDev = hasDev || hasJuniorDev;
 
-const engineerCard = canEngineerForActiveLeague() ? `
-    <button onclick="chooseRoleEngineer()" class="role-card engineer">
-      <span class="role-icon">🎧</span>
-      <div class="role-title">Engineer</div>
-      <div class="role-sub">You are managing a driver remotely</div>
-    </button>` : '';
+  const tiles = [];
+  if (isInDB) tiles.push({ tone: "driver",   icon: "🏎️", title: "Driver",    desc: "You are racing today",              onclick: "chooseRoleRacer()" });
+  if (canEngineer) tiles.push({ tone: "engineer", icon: "🎧", title: "Engineer",  desc: "You are managing a driver remotely", onclick: "chooseRoleEngineer()" });
+  tiles.push({ tone: "marshal",  icon: "🏁", title: "Marshal",   desc: "You are officiating the session",   onclick: "switchPanel('marshal')" });
+  tiles.push({ tone: "spectate", icon: "👁️", title: "Spectator", desc: "You are just here to watch",         onclick: "switchPanel('spectate')" });
+  if (canDev) tiles.push({ tone: "dev", icon: "⚙️", title: "Dev", desc: "You are building or debugging the tools", onclick: "switchPanel('dev')" });
+
+  const soloLast = tiles.length % 2 === 1;
+  const tilesHtml = tiles.map((t, i) => `
+    <button onclick="${t.onclick}" class="home-tile ${t.tone}${(soloLast && i === tiles.length - 1) ? " solo" : ""}">
+      <span class="home-tile-icon">${t.icon}</span>
+      <span class="home-tile-text">
+        <span class="home-tile-title">${t.title}</span>
+        <span class="home-tile-desc">${t.desc}</span>
+      </span>
+    </button>`).join("");
 
   screen.innerHTML = `
     <div class="login-logo">Race<span>Control</span></div>
-    <div class="login-card" style="max-width:340px;gap:14px;">
+    <div class="home-card">
       <div class="user-pill">
         <img src="${avatarSrc}" style="width:28px;height:28px;border-radius:50%;"/>
         <div>
@@ -5359,10 +5365,9 @@ const engineerCard = canEngineerForActiveLeague() ? `
           <div class="vrfd">✓ Discord verified</div>
         </div>
       </div>
-      <div class="small-heading" style="text-align:center;margin-top:4px;">What are you today?</div>
-      <div class="role-select-grid">
-        ${racerCard}
-        ${engineerCard}
+      <div class="small-heading" style="text-align:center;margin-top:4px;">Select what you are today</div>
+      <div class="home-grid">
+        ${tilesHtml}
       </div>
       ${hasDev ? `<button onclick="skipEngineerScreen()" style="background:none;border:none;color:var(--muted);font-family:'Oxanium',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;margin-top:2px;align-self:center;">⚙️ Skip (dev only)</button>` : ''}
       <div class="login-error" id="role-select-error"></div>
