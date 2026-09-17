@@ -255,8 +255,11 @@
       font-weight: 700;
       color: #ffca66;
       box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.35);
+      transform: translateY(0);
+      opacity: 1;
+      transition: transform 0.28s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.2s ease;
     }
-    .settings-unsaved-bar.hidden { display: none; }
+    .settings-unsaved-bar.hidden { transform: translateY(100%); opacity: 0; pointer-events: none; }
     .settings-unsaved-bar.shake { animation: settings-bar-shake 0.4s ease; }
     @keyframes settings-bar-shake {
       0%, 100% { transform: translateX(0); }
@@ -1275,14 +1278,17 @@
 </div>
 
   <div class="screen" id="screen-settings">
+    <div class="settings-tabs-wrap">
     <div
       class="toolbar-row" id="settings-tabs-row">
-      <button class="stab active" data-tab="appearance" onclick="openSettingsTab('appearance')">🎨 Look</button>
-      <button class="stab" data-tab="audio" onclick="openSettingsTab('audio')">🔊 Audio</button>
-      <button class="stab" data-tab="keybinds" onclick="openSettingsTab('keybinds')">⌨️ Keys</button>
-      <button class="stab" data-tab="connection" onclick="openSettingsTab('connection')">🔗 API</button>
-      <button class="stab" data-tab="modes" onclick="openSettingsTab('modes')">🕹️ Modes</button>
-      <button class="stab" data-tab="account" onclick="openSettingsTab('account')">👤 Account</button>
+      <div class="settings-tab-indicator" id="settings-tab-indicator"></div>
+      <button class="stab active" data-tab="appearance" onclick="openSettingsTab('appearance')"><span class="stab-icon">🎨</span><span class="stab-label">Look</span></button>
+      <button class="stab" data-tab="audio" onclick="openSettingsTab('audio')"><span class="stab-icon">🔊</span><span class="stab-label">Audio</span></button>
+      <button class="stab" data-tab="keybinds" onclick="openSettingsTab('keybinds')"><span class="stab-icon">⌨️</span><span class="stab-label">Keys</span></button>
+      <button class="stab" data-tab="connection" onclick="openSettingsTab('connection')"><span class="stab-icon">🔗</span><span class="stab-label">API</span></button>
+      <button class="stab" data-tab="modes" onclick="openSettingsTab('modes')"><span class="stab-icon">🕹️</span><span class="stab-label">Modes</span></button>
+      <button class="stab" data-tab="account" onclick="openSettingsTab('account')"><span class="stab-icon">👤</span><span class="stab-label">Account</span></button>
+    </div>
     </div>
     <input type="range" id="settings-tabs-scroll-slider" class="settings-tabs-scroll-slider"
       min="0" max="100" value="0" step="0.1"
@@ -5830,7 +5836,7 @@ function switchPanel(panel) {
         openSettingsTab('appearance');
         showScreen("screen-settings");
         currentPanel = "settings";
-        requestAnimationFrame(() => requestAnimationFrame(syncSettingsTabsScrollSlider));
+        requestAnimationFrame(() => requestAnimationFrame(() => { syncSettingsTabsScrollSlider(); positionSettingsTabIndicator(); }));
       }
     }
 
@@ -6356,8 +6362,21 @@ async function revertSettingsChanges() {
 function openSettingsTab(tab) {
   document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.stab-panel').forEach(p => p.classList.toggle('active', p.id === 'stab-' + tab));
+  const activeBtn = document.querySelector(`.stab[data-tab="${tab}"]`);
+  activeBtn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   requestAnimationFrame(syncSettingsTabsScrollSlider);
+  requestAnimationFrame(positionSettingsTabIndicator);
 }
+
+function positionSettingsTabIndicator() {
+  const indicator = document.getElementById("settings-tab-indicator");
+  const active = document.querySelector(".stab.active");
+  if (!indicator || !active || active.offsetParent === null) { if (indicator) indicator.style.opacity = "0"; return; }
+  indicator.style.width = active.offsetWidth + "px";
+  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+  indicator.style.opacity = "1";
+}
+window.addEventListener("resize", () => requestAnimationFrame(positionSettingsTabIndicator));
 
     // --- Settings tab row scroll slider ---
     // The tab row can overflow the window width (e.g. Account getting cut
