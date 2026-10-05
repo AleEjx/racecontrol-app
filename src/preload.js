@@ -36,6 +36,8 @@ onNotification: (callback) => ipcRenderer.on("notif:incoming", (_e, payload) => 
   overlayNudge:      (dx, dy) => ipcRenderer.invoke("overlay:nudge", dx, dy),
 overlayResizeBy:   (dw, dh) => ipcRenderer.invoke("overlay:resize-by", dw, dh),
   registerHotkeys:  (kb)     => ipcRenderer.invoke("register-hotkeys", kb),
+  setVoicePttKey:   (key)    => ipcRenderer.invoke("voice:set-ptt-key", key),
+  onVoicePtt:       (cb)     => safeOn("voice-ptt", cb),
   suspendHotkeys:   ()       => ipcRenderer.invoke("suspend-hotkeys"),
   toggleSplitView: (enable) => ipcRenderer.invoke("overlay:toggle-split", enable),
   resetOverlayPositions: () => ipcRenderer.invoke("overlay:reset-positions"),
