@@ -52,16 +52,61 @@ let mouseBindings = {};   // { [buttonCode]: actionHandlerFn }
 let keyBindings   = {};   // { [uiohookKeycode]: actionHandlerFn }
 let uiohookStarted = false;
 
+// ── Proximity Chat push-to-talk ────────────────────────────────────────────
+// Separate from the action keybinds above because PTT needs key RELEASE as well as
+// press (hold-to-talk). Press/release are forwarded to the renderer as "voice-ptt".
+let pttKeycode  = null;
+let pttMouseCode = null;
+let pttDown     = false;
+
+function setVoicePttKey(key) {
+  if (pttDown) { pttDown = false; mainWindow?.webContents.send("voice-ptt", false); }
+  pttKeycode = null;
+  pttMouseCode = null;
+  if (!key || key === "None") return { ok: true };
+
+  if (isMouseBind(key)) {
+    pttMouseCode = MOUSE_BUTTON_CODES[key];
+  } else if (key.length === 1) {
+    // Same rule as the other keybinds: a bare letter would fire while typing anywhere on the PC.
+    return { ok: false, reason: "Single letter keys can't be used. Pick an F-key, numpad key, or mouse side button." };
+  } else {
+    const code = toUiohookKeycode(key);
+    if (code == null) return { ok: false, reason: `"${key}" isn't a key the app can listen for. Try an F-key.` };
+    pttKeycode = code;
+  }
+  ensureUiohookStarted();
+  if (!uiohookStarted) { pttKeycode = null; pttMouseCode = null; return { ok: false, reason: "Global hotkeys are unavailable. Reinstall or update the app." }; }
+  return { ok: true };
+}
+
 function ensureUiohookStarted() {
   if (uiohookStarted) return;
   if (!loadUiohook()) return;
   uIOhook.on("mousedown", (e) => {
+    if (pttMouseCode != null && e.button === pttMouseCode && !pttDown) {
+      pttDown = true; mainWindow?.webContents.send("voice-ptt", true);
+    }
     const handler = mouseBindings[e.button];
     if (handler) handler();
   });
+  uIOhook.on("mouseup", (e) => {
+    if (pttMouseCode != null && e.button === pttMouseCode && pttDown) {
+      pttDown = false; mainWindow?.webContents.send("voice-ptt", false);
+    }
+  });
   uIOhook.on("keydown", (e) => {
+    // Holding a key auto-repeats keydown, so only the first one counts.
+    if (pttKeycode != null && e.keycode === pttKeycode && !pttDown) {
+      pttDown = true; mainWindow?.webContents.send("voice-ptt", true);
+    }
     const handler = keyBindings[e.keycode];
     if (handler) handler();
+  });
+  uIOhook.on("keyup", (e) => {
+    if (pttKeycode != null && e.keycode === pttKeycode && pttDown) {
+      pttDown = false; mainWindow?.webContents.send("voice-ptt", false);
+    }
   });
   uIOhook.start();
   uiohookStarted = true;
@@ -1029,6 +1074,7 @@ ipcMain.handle("install-update", () => autoUpdater.quitAndInstall());
 ipcMain.handle("check-version",  () => app.getVersion());
 ipcMain.handle("flag-broadcast", (_, data) => mainWindow?.webContents.send("flag-event", data));
 ipcMain.handle("register-hotkeys",  (_, keybinds) => { registerHotkeys(keybinds); return true; });
+ipcMain.handle("voice:set-ptt-key", (_, key) => setVoicePttKey(key));
 ipcMain.handle("set-practice-mode-active", (_, active) => { practiceModeActive = !!active; return true; });
 ipcMain.handle("set-committee-screen-active", (_, active) => { committeeScreenActive = !!active; return true; });
 ipcMain.handle("set-keybind-override-game", (_, active) => { keybindOverrideGame = !!active; return true; });
