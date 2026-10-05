@@ -574,6 +574,7 @@
         <button class="active" id="d-tab-btn-overview" onclick="setDriverTab('overview')">Overview</button>
         <button id="d-tab-btn-field" onclick="setDriverTab('field')">Field</button>
         <button id="d-tab-btn-track" onclick="setDriverTab('track')">Track</button>
+        <button id="d-tab-btn-voice" onclick="setDriverTab('voice')">Proximity</button>
       </div>
 
       <div class="d-tab-panel active" id="d-tab-overview">
@@ -664,6 +665,8 @@
   <div class="track-map-legend" id="track-map-legend"></div>
   -->
 </div>
+
+<div class="d-tab-panel" id="d-tab-voice"></div>
 
 </template>
   </div>
@@ -3027,6 +3030,8 @@ function applyDriverPanelStyle() {
   if (!isLegacy) {
     setDriverTab("overview");
     document.getElementById("rc-car-strip"); // no-op guard, chips reset naturally on next poll
+    window.ProximityChat?.mountUI?.();
+    window.ProximityChat?.ensureConnected?.();
   }
   applyLapGraphVisibility();
   updateKeybindLabels();
@@ -5970,6 +5975,7 @@ function updateSwitcher() {
         }
         const data = await res.json();
         _lastRaceState = data;
+        window.ProximityChat?.ensureConnected?.();
         const lapCounterEl = document.getElementById("d-lap-counter");
 if (lapCounterEl) {
   const primaryName = (isEngineer && config.driver2)
@@ -6447,7 +6453,10 @@ function setDriverTab(tab) {
   document.getElementById("d-tab-overview")?.classList.toggle("active", tab === "overview");
   document.getElementById("d-tab-field")?.classList.toggle("active", tab === "field");
   document.getElementById("d-tab-track")?.classList.toggle("active", tab === "track");
+  document.getElementById("d-tab-btn-voice")?.classList.toggle("active", tab === "voice");
+  document.getElementById("d-tab-voice")?.classList.toggle("active", tab === "voice");
   if (tab === "track") startTrackMapSim(); else stopTrackMapSim();
+  window.ProximityChat?.onTabChange?.(tab);
 }
 
 // ─── Live Track Map (F1-style) ───────────────────────────────────────────
@@ -9171,6 +9180,7 @@ document.addEventListener("keydown", e => {
       }
   </script>
   <script src="party-mode.js"></script>
+  <script src="proximity-chat.js"></script>
 </body>
 
 </html>
