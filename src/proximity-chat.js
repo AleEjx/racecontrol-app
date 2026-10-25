@@ -329,7 +329,9 @@
     releaseMicSoon();
     render(); renderTargets();
     if (tx.encoder) {
-      try { await tx.encoder.flush(); } catch (_) {}
+      // flush() can stall on some builds, and the "stop" message used to wait on it, so the
+      // server never heard you let go. Give the last frames a moment, then stop regardless.
+      try { await Promise.race([tx.encoder.flush(), new Promise((r) => setTimeout(r, 150))]); } catch (_) {}
       try { tx.encoder.close(); } catch (_) {}
     }
     tx.sendFrames = false;
