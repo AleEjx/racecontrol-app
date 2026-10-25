@@ -6474,15 +6474,11 @@ function setDriverTab(tab) {
 // Uses the official ER:LC map images from https://api.erlc.gg/maps
 // (fall/snow/spring/summer × blank/postals) so the map always matches the game.
 //
-// COORDINATES: live positions arrive from flagApi.js as { x, y }. The overlay
-// is drawn in IMAGE PIXELS, so world coords must be converted:
-//     px = x * a + bx      py = y * c + by
-// Calibrate by clicking two known spots on the map (pixel coords are printed
-// to the dev console + shown in the badge) and comparing them with the world
-// coords of those same spots. If flagApi.js already sends pixel coords, leave
-// TRACK_MAP_CALIB as the identity transform.
+// COORDINATES: live positions arrive from flagApi.js as { x, y } expressed as
+// FRACTIONS of the map image (0–1, from the top-left corner), plus rawX/rawZ
+// (the untouched PRC world coordinates). Calibration therefore lives in ONE place:
+// TRACK_MAP_CALIBRATION in flagApi.js — no app release needed to tweak it.
 const TRACK_MAP_BASE = "https://api.erlc.gg/maps";
-const TRACK_MAP_CALIB = { a: 1, bx: 0, c: 1, by: 0 };
 const TRACK_MAP_REF_WIDTH = 460;   // dot sizes were designed for a 460px-wide viewBox
 
 let _trackMapCars = []; // [{ name, number, callsign, color, x, y }]
@@ -6564,6 +6560,8 @@ function applyLiveTrackPositions(positions) {
     color: TRACK_MAP_COLORS[i % TRACK_MAP_COLORS.length],
     x: p.x,
     y: p.y,
+    rawX: p.rawX,
+    rawZ: p.rawZ,
   }));
 
   if (document.getElementById("d-tab-track")?.classList.contains("active")) {
@@ -6612,10 +6610,13 @@ function renderTrackMapDots() {
     g.appendChild(dot);
   }
 
+  const img = document.getElementById("track-map-img");
+  const W = img?.naturalWidth || 0, H = img?.naturalHeight || 0;
+  if (!W || !H) return; // image not loaded yet — onload re-renders
   const k = _trackMapDotScale || 1;
   _trackMapCars.forEach((car, i) => {
-    const px = car.x * TRACK_MAP_CALIB.a + TRACK_MAP_CALIB.bx;
-    const py = car.y * TRACK_MAP_CALIB.c + TRACK_MAP_CALIB.by;
+    const px = car.x * W;
+    const py = car.y * H;
     const dot = g.children[i];
     dot.setAttribute("transform", `translate(${px.toFixed(1)},${py.toFixed(1)}) scale(${k.toFixed(3)})`);
     dot.querySelector("circle").setAttribute("fill", car.color);
