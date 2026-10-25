@@ -193,7 +193,24 @@ oauthServer.listen(OAUTH_PORT);
 
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 
+// api.erlc.gg serves its map images with Cross-Origin-Resource-Policy: same-origin,
+// which makes Chromium block them in the file:// renderer (ERR_BLOCKED_BY_RESPONSE.NotSameOrigin).
+// Strip that header for that host only so the Track tab can show the map.
+function setupMapImageHeaders() {
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ["https://api.erlc.gg/*"] },
+    (details, callback) => {
+      const headers = { ...details.responseHeaders };
+      for (const key of Object.keys(headers)) {
+        if (key.toLowerCase() === "cross-origin-resource-policy") delete headers[key];
+      }
+      callback({ responseHeaders: headers });
+    }
+  );
+}
+
 app.whenReady().then(() => {
+  setupMapImageHeaders();
   createWindow();
   createTray();
   setupAutoUpdater();
