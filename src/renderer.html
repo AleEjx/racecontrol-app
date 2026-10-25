@@ -645,25 +645,36 @@
 
 <div class="d-tab-panel" id="d-tab-track">
   <div class="rc-block-title">Live Track Map</div>
-  <div class="track-map-coming-soon">
-    <div class="track-map-coming-soon-icon">🗺️</div>
-    <div class="track-map-coming-soon-title">Coming Soon</div>
-    <div class="track-map-coming-soon-sub">Live car positions on the track map are still being wired up. Check back soon!</div>
+  <style>
+    .tm-controls{display:flex;gap:8px;margin:0 0 8px}
+    .tm-controls select{flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);padding:6px 8px;font-family:inherit;font-size:12px}
+    .tm-wrap{position:relative;width:100%;line-height:0;background:var(--surface);border:1px solid var(--border);overflow:hidden}
+    .tm-img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+    .tm-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+    .tm-wrap .track-map-badge{line-height:1.2}
+    .tm-error{display:none;padding:16px;text-align:center;line-height:1.4;font-size:12px;color:var(--text)}
+  </style>
+  <div class="tm-controls">
+    <select id="tm-season" onchange="setTrackMapStyle()">
+      <option value="fall">Fall</option>
+      <option value="snow">Snow</option>
+      <option value="spring">Spring</option>
+      <option value="summer">Summer</option>
+    </select>
+    <select id="tm-variant" onchange="setTrackMapStyle()">
+      <option value="blank">Blank</option>
+      <option value="postals">Postals</option>
+    </select>
   </div>
-  <!-- Live Track Map markup — kept in place, just not rendered yet.
-       Re-enable by removing this comment wrapper once the PRC position
-       feed is ready to go live again.
-  <div class="track-map-wrap">
-    <svg viewBox="0 0 460 802" class="track-map-svg" id="track-map-svg" preserveAspectRatio="xMidYMid meet">
-      <path id="track-map-path" class="track-map-path"
-        d="M 374.5 79.9 L 319.0 42.3 Q 300.8 30.0 278.8 30.3 L 121.9 32.6 Q 99.9 32.9 91.8 41.5 L 79.2 54.9 Q 71.1 63.5 71.1 85.5 L 71.1 147.7 Q 71.1 169.7 75.1 170.0 L 81.5 170.4 Q 85.5 170.7 85.5 177.9 L 85.5 189.3 Q 85.5 196.5 103.2 199.7 L 131.0 204.8 Q 148.7 208.0 149.8 213.6 L 151.4 222.5 Q 152.5 228.1 156.0 224.1 L 161.4 217.7 Q 164.9 213.7 186.8 215.4 L 229.2 218.7 Q 251.1 220.4 251.4 231.4 L 251.7 248.7 Q 252.0 259.7 243.2 279.9 L 225.4 320.8 Q 216.6 341.0 194.6 341.0 L 90.3 341.0 Q 68.3 341.0 68.1 363.0 L 67.5 447.2 Q 67.3 469.2 56.9 484.2 L 40.4 507.8 Q 30.0 522.8 42.9 531.9 L 63.0 546.3 Q 75.9 555.4 75.0 577.4 L 68.2 742.9 Q 67.3 764.9 89.3 765.3 L 388.9 771.2 Q 410.9 771.6 411.6 749.6 L 429.3 208.0 Q 430.0 186.0 421.9 165.6 L 400.8 112.6 Q 392.7 92.2 374.5 79.9 Z" />
-      <line x1="46" y1="660" x2="90" y2="655" class="track-map-startfinish" />
+  <div class="track-map-wrap tm-wrap">
+    <img id="track-map-img" class="tm-img" alt="ER:LC map" draggable="false" />
+    <svg id="track-map-svg" class="tm-overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none">
       <g id="track-map-dots"></g>
     </svg>
-    <div class="track-map-badge">🧪 Test data</div>
+    <div class="track-map-badge">⏳ Waiting for live data</div>
   </div>
+  <div class="tm-error" id="track-map-error">Couldn't load the map image from api.erlc.gg. Check your connection and try again.</div>
   <div class="track-map-legend" id="track-map-legend"></div>
-  -->
 </div>
 
 <div class="d-tab-panel" id="d-tab-voice"></div>
@@ -6459,39 +6470,93 @@ function setDriverTab(tab) {
   window.ProximityChat?.onTabChange?.(tab);
 }
 
-// ─── Live Track Map (F1-style) ───────────────────────────────────────────
-// Scaffold only — dot positions are simulated so the widget can be seen
-// and iterated on before a real PRC API key exists. To go live later:
-//   1. Replace _trackMapBuildCarList()'s progress/speed simulation with
-//      real per-driver world coordinates from PRC.
-//   2. Add a function that maps a PRC world (x,y) to a point on/along
-//      TRACK_MAP_PATH (either by projecting onto the path, or — better —
-//      by re-deriving the path's control points directly from real
-//      trackside reference coordinates so PRC (x,y) maps 1:1 to SVG (x,y)
-//      via a simple affine transform instead of a "progress %" fake-out).
-//   3. Feed real positions into renderTrackMapDots() on each PRC poll/SSE
-//      tick instead of _trackMapTick()'s simulated interval.
+// ─── Live Track Map ──────────────────────────────────────────────────────
+// Uses the official ER:LC map images from https://api.erlc.gg/maps
+// (fall/snow/spring/summer × blank/postals) so the map always matches the game.
+//
+// COORDINATES: live positions arrive from flagApi.js as { x, y }. The overlay
+// is drawn in IMAGE PIXELS, so world coords must be converted:
+//     px = x * a + bx      py = y * c + by
+// Calibrate by clicking two known spots on the map (pixel coords are printed
+// to the dev console + shown in the badge) and comparing them with the world
+// coords of those same spots. If flagApi.js already sends pixel coords, leave
+// TRACK_MAP_CALIB as the identity transform.
+const TRACK_MAP_BASE = "https://api.erlc.gg/maps";
+const TRACK_MAP_CALIB = { a: 1, bx: 0, c: 1, by: 0 };
+const TRACK_MAP_REF_WIDTH = 460;   // dot sizes were designed for a 460px-wide viewBox
 
-let _trackMapInterval = null;
-let _trackMapPathLen = 0;
-let _trackMapCars = []; // [{ id, name, number, callsign, color, progress, speed }] (sim) or [{ name, number, callsign, color, x, y }] (live)
+let _trackMapCars = []; // [{ name, number, callsign, color, x, y }]
 let _trackMapLive = false;
 let _trackMapLiveWatchdog = null;
+let _trackMapDotScale = 1;
 
 const TRACK_MAP_COLORS = ["#3d8bff", "#ff2d55", "#10e58a", "#ffcc00", "#ff8a1e", "#a855f7", "#22d3ee", "#f472b6"];
 
-// Called when a real __track_positions__ SSE broadcast arrives from
-// flagApi.js (PRC v2 polling). Switches the map out of simulated mode and
-// renders drivers at their real coordinates. If no further update arrives
-// within 20s (race not running, bot offline, etc.) it falls back to the
-// simulator so the widget never just freezes/goes blank.
-function applyLiveTrackPositions(positions) {
-  // Always accept the broadcast, even if the Track tab isn't open right
-  // now — otherwise a race that starts before you click over to the tab
-  // gets silently dropped and you're stuck watching test data forever.
-  _trackMapLive = true;
-  if (_trackMapInterval) { clearInterval(_trackMapInterval); _trackMapInterval = null; }
+function _trackMapSetBadge(live) {
+  const badge = document.querySelector(".track-map-badge");
+  if (!badge) return;
+  badge.textContent = live ? "🟢 Live" : "⏳ Waiting for live data";
+  badge.classList.toggle("is-live", !!live);
+}
 
+function _trackMapLoadPrefs() {
+  let prefs = {};
+  try { prefs = JSON.parse(localStorage.getItem("rc_trackmap_style") || "{}"); } catch (e) {}
+  const season = document.getElementById("tm-season");
+  const variant = document.getElementById("tm-variant");
+  if (season && prefs.season) season.value = prefs.season;
+  if (variant && prefs.variant) variant.value = prefs.variant;
+}
+
+function setTrackMapStyle() {
+  const img = document.getElementById("track-map-img");
+  const season = document.getElementById("tm-season")?.value || "fall";
+  const variant = document.getElementById("tm-variant")?.value || "blank";
+  try { localStorage.setItem("rc_trackmap_style", JSON.stringify({ season, variant })); } catch (e) {}
+  if (!img) return;
+  const errEl = document.getElementById("track-map-error");
+  if (errEl) errEl.style.display = "none";
+  img.style.display = "";
+  img.onload = () => {
+    const svg = document.getElementById("track-map-svg");
+    if (svg && img.naturalWidth) {
+      svg.setAttribute("viewBox", `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
+      _trackMapDotScale = img.naturalWidth / TRACK_MAP_REF_WIDTH;
+    }
+    renderTrackMapDots();
+  };
+  img.onerror = () => {
+    img.style.display = "none";
+    if (errEl) errEl.style.display = "block";
+  };
+  img.src = `${TRACK_MAP_BASE}/${season}_${variant}.png`;
+}
+
+// Click anywhere on the map to read its image-pixel coordinates (for calibration).
+function _trackMapInitClick() {
+  const img = document.getElementById("track-map-img");
+  if (!img || img._tmClickBound) return;
+  img._tmClickBound = true;
+  img.parentElement.style.cursor = "crosshair";
+  img.parentElement.addEventListener("click", (e) => {
+    if (!img.naturalWidth) return;
+    const r = img.getBoundingClientRect();
+    const px = Math.round((e.clientX - r.left) / r.width * img.naturalWidth);
+    const py = Math.round((e.clientY - r.top) / r.height * img.naturalHeight);
+    console.log(`[TrackMap] pixel (${px}, ${py})`);
+    const badge = document.querySelector(".track-map-badge");
+    if (badge) {
+      badge.textContent = `px ${px}, ${py}`;
+      setTimeout(() => _trackMapSetBadge(_trackMapLive), 2500);
+    }
+  });
+}
+
+// Called when a real __track_positions__ SSE broadcast arrives from
+// flagApi.js (PRC v2 polling). If nothing arrives for 20s (race not running,
+// bot offline, etc.) the dots are cleared rather than left frozen.
+function applyLiveTrackPositions(positions) {
+  _trackMapLive = true;
   _trackMapCars = positions.map((p, i) => ({
     name: p.name,
     number: p.number,
@@ -6501,10 +6566,8 @@ function applyLiveTrackPositions(positions) {
     y: p.y,
   }));
 
-  const tabOpen = document.getElementById("d-tab-track")?.classList.contains("active");
-  if (tabOpen) {
-    const badge = document.querySelector(".track-map-badge");
-    if (badge) { badge.textContent = "🟢 Live"; badge.classList.add("is-live"); }
+  if (document.getElementById("d-tab-track")?.classList.contains("active")) {
+    _trackMapSetBadge(true);
     renderTrackMapLegend();
     renderTrackMapDots();
   }
@@ -6512,67 +6575,31 @@ function applyLiveTrackPositions(positions) {
   clearTimeout(_trackMapLiveWatchdog);
   _trackMapLiveWatchdog = setTimeout(() => {
     _trackMapLive = false;
-    const badge = document.querySelector(".track-map-badge");
-    if (badge) { badge.textContent = "🧪 Test data"; badge.classList.remove("is-live"); }
-    if (document.getElementById("d-tab-track")?.classList.contains("active")) startTrackMapSim();
+    _trackMapCars = [];
+    if (document.getElementById("d-tab-track")?.classList.contains("active")) {
+      _trackMapSetBadge(false);
+      renderTrackMapLegend();
+      renderTrackMapDots();
+    }
   }, 20000);
 }
 
-function _trackMapBuildCarList() {
-  // Uses real driver names/numbers/callsigns when a race is loaded, purely
-  // so the preview looks realistic — the positions themselves are still simulated.
-  const drivers = (_lastRaceState?.drivers || []).filter(d => !d.dnf);
-  const count = Math.min(8, Math.max(drivers.length, 5));
-  const cars = [];
-  for (let i = 0; i < count; i++) {
-    const d = drivers[i];
-    cars.push({
-      id: i,
-      name: d?.name || `Car ${i + 1}`,
-      callsign: d?.callsign || `CAR${i + 1}`,
-      number: d?.number || (i + 1),
-      color: TRACK_MAP_COLORS[i % TRACK_MAP_COLORS.length],
-      progress: Math.random(),
-      speed: 0.00035 + Math.random() * 0.00025,
-    });
-  }
-  return cars;
-}
-
+// Kept under the old names so setDriverTab() and other callers keep working.
 function startTrackMapSim() {
-  if (_trackMapLive) {
-    // Real data already arrived (possibly while this tab was closed) —
-    // just paint the latest known positions instead of faking new ones.
-    const badge = document.querySelector(".track-map-badge");
-    if (badge) { badge.textContent = "🟢 Live"; badge.classList.add("is-live"); }
-    renderTrackMapLegend();
-    renderTrackMapDots();
-    return;
-  }
-  const path = document.getElementById("track-map-path");
-  if (!path) return;
-  _trackMapPathLen = path.getTotalLength();
-  _trackMapCars = _trackMapBuildCarList();
+  _trackMapLoadPrefs();
+  _trackMapInitClick();
+  const img = document.getElementById("track-map-img");
+  if (img && !img.getAttribute("src")) setTrackMapStyle();
+  _trackMapSetBadge(_trackMapLive);
   renderTrackMapLegend();
-  if (_trackMapInterval) clearInterval(_trackMapInterval);
-  _trackMapInterval = setInterval(_trackMapTick, 50);
-  _trackMapTick();
-}
-
-function stopTrackMapSim() {
-  if (_trackMapInterval) { clearInterval(_trackMapInterval); _trackMapInterval = null; }
-}
-
-function _trackMapTick() {
-  if (!_trackMapPathLen) return;
-  _trackMapCars.forEach(car => { car.progress = (car.progress + car.speed) % 1; });
   renderTrackMapDots();
 }
 
+function stopTrackMapSim() { /* nothing to stop — no simulator any more */ }
+
 function renderTrackMapDots() {
-  const path = document.getElementById("track-map-path");
   const g = document.getElementById("track-map-dots");
-  if (!g || (!_trackMapLive && (!path || !_trackMapPathLen))) return;
+  if (!g) return;
 
   while (g.children.length > _trackMapCars.length) g.removeChild(g.lastChild);
   while (g.children.length < _trackMapCars.length) {
@@ -6585,10 +6612,12 @@ function renderTrackMapDots() {
     g.appendChild(dot);
   }
 
+  const k = _trackMapDotScale || 1;
   _trackMapCars.forEach((car, i) => {
-    const pt = _trackMapLive ? { x: car.x, y: car.y } : path.getPointAtLength(car.progress * _trackMapPathLen);
+    const px = car.x * TRACK_MAP_CALIB.a + TRACK_MAP_CALIB.bx;
+    const py = car.y * TRACK_MAP_CALIB.c + TRACK_MAP_CALIB.by;
     const dot = g.children[i];
-    dot.setAttribute("transform", `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`);
+    dot.setAttribute("transform", `translate(${px.toFixed(1)},${py.toFixed(1)}) scale(${k.toFixed(3)})`);
     dot.querySelector("circle").setAttribute("fill", car.color);
     dot.querySelector(".track-map-dot-label").textContent = car.number;
     const tag = dot.querySelector(".track-map-dot-tag");
