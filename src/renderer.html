@@ -4509,6 +4509,7 @@ async function toggleActionLogging() {
     // can change it. The backend also pushes __track_map_status__ over SSE so
     // every open app updates instantly.
     window._trackMapGateEnabled = false;
+    setInterval(() => loadTrackMapGateState(), 15000); // quick tunnels drop the stream, so re-check now and then
 
     async function loadTrackMapGateState() {
       if (!apiUrl) return;
@@ -6686,6 +6687,24 @@ function applyLiveTrackPositions(positions) {
 }
 
 // Kept under the old names so setDriverTab() and other callers keep working.
+let _tmFetchTimer = null;
+// Cloudflare quick tunnels can't carry the event stream, so while the Track tab is open
+// we ask the bot for the latest positions every 3 s instead. (The stream still works if
+// you move to a named tunnel — both paths feed the same function.)
+async function fetchTrackMapPositions() {
+  if (!apiUrl) return;
+  try {
+    const res = await fetch(`${apiUrl}/track-map`, { cache: "no-store", headers: user?.id ? { "x-discord-id": user.id } : {} });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    window._trackMapFetch = { at: Date.now(), ok: true, n: d.positions?.length || 0, age: d.ageMs };
+    if (!!d.enabled !== !!window._trackMapGateEnabled) { window._trackMapGateEnabled = !!d.enabled; updateTrackMapGateUi(); }
+    if (d.positions?.length) applyLiveTrackPositions(d.positions);
+  } catch (e) {
+    window._trackMapFetch = { at: Date.now(), ok: false, err: String(e.message || e) };
+  }
+}
+
 let _tmDiagTimer = null;
 function _trackMapDiag() {
   const el = document.getElementById("track-map-diag");
@@ -6699,11 +6718,13 @@ function _trackMapDiag() {
     `stream: ${st} · opened ${ago(ss.openedAt)} · errors: ${ss.errors || 0}\n` +
     `server hello: ${ago(ss.connectedAt)} · heartbeat: ${ago(ss.hbAt)} (${ss.hbCount || 0})\n` +
     `flag events: ${ss.count || 0} · last: ${ss.lastFlag ? `${ss.lastFlag} ${ago(ss.lastAt)}` : "never"}\n` +
-    `map gate: ${window._trackMapGateEnabled ? "ON" : "OFF"} · cars: ${_trackMapCars.length} · api: ${host}`;
+    `poll: ${window._trackMapFetch ? (window._trackMapFetch.ok ? `ok ${ago(window._trackMapFetch.at)} · ${window._trackMapFetch.n} car(s) from bot` : `FAILED ${window._trackMapFetch.err}`) : "not yet"}\n` +
+    `map gate: ${window._trackMapGateEnabled ? "ON" : "OFF"} · cars shown: ${_trackMapCars.length} · api: ${host}`;
 }
 
 function startTrackMapSim() {
   clearInterval(_tmDiagTimer); _tmDiagTimer = setInterval(_trackMapDiag, 1000); _trackMapDiag();
+  clearInterval(_tmFetchTimer); _tmFetchTimer = setInterval(fetchTrackMapPositions, 3000); fetchTrackMapPositions();
   _trackMapLoadPrefs();
   _trackMapInitClick();
   const img = document.getElementById("track-map-img");
@@ -6713,7 +6734,7 @@ function startTrackMapSim() {
   renderTrackMapDots();
 }
 
-function stopTrackMapSim() { clearInterval(_tmDiagTimer); _tmDiagTimer = null; }
+function stopTrackMapSim() { clearInterval(_tmDiagTimer); _tmDiagTimer = null; clearInterval(_tmFetchTimer); _tmFetchTimer = null; }
 
 function renderTrackMapDots() {
   const g = document.getElementById("track-map-dots");
