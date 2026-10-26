@@ -3607,19 +3607,38 @@ function applyDriverPanelStyle() {
       const evtSource = new EventSource(`${apiUrl}/events?type=app`);
       _sseSource = evtSource;
 
-evtSource.addEventListener("flag", e => {
-  console.log("[SSE] Received flag event:", e.data);
-  try {
-    const d = JSON.parse(e.data);
-    window._sseStats = window._sseStats || { count: 0 };
-    window._sseStats.count++; window._sseStats.lastAt = Date.now(); window._sseStats.lastFlag = d.flag;
-    onFlagEvent(d.flag, d);
-  }
-  catch (err) { console.error("[SSE] Failed to parse flag event:", err, e.data); }
-});
+window._sseStats = window._sseStats || { count: 0, hbCount: 0, errors: 0 };
+
+      evtSource.onopen = () => {
+        window._sseStats.openedAt = Date.now();
+        console.log("[SSE] connection opened →", apiUrl);
+      };
+      evtSource.addEventListener("connected", () => {
+        window._sseStats.connectedAt = Date.now();
+        console.log("[SSE] server said hello (stream is delivering data)");
+      });
+      evtSource.addEventListener("hb", () => {
+        window._sseStats.hbAt = Date.now();
+        window._sseStats.hbCount++;
+      });
+
+      evtSource.addEventListener("flag", e => {
+        const st = window._sseStats;
+        st.count++; st.lastAt = Date.now();
+        try {
+          const d = JSON.parse(e.data);
+          st.lastFlag = d.flag;
+          if (d.flag !== "__track_positions__") console.log("[SSE] Received flag event:", e.data);
+          else if (st.count % 10 === 1) console.log(`[SSE] track positions (${d.positions?.length || 0} car(s)) — logging every 10th`);
+          onFlagEvent(d.flag, d);
+        }
+        catch (err) { console.error("[SSE] Failed to handle flag event:", err, e.data); }
+      });
 
       evtSource.onerror = () => {
-        console.warn("[SSE] Connection lost — reconnecting in 5s...");
+        window._sseStats.errors++;
+        window._sseStats.lastErrorAt = Date.now();
+        console.warn(`[SSE] Connection lost (readyState ${evtSource.readyState}) — reconnecting in 5s...`);
         evtSource.close();
         _sseSource = null;
         setTimeout(_connectSSE, 5000);
@@ -6671,11 +6690,16 @@ let _tmDiagTimer = null;
 function _trackMapDiag() {
   const el = document.getElementById("track-map-diag");
   if (!el) return;
-  const st = ["connecting", "open", "closed"][_sseSource?.readyState] ?? "no stream";
-  const ss = window._sseStats;
-  const last = ss?.lastAt ? `${Math.round((Date.now() - ss.lastAt) / 1000)}s ago (${ss.lastFlag})` : "never";
+  const ss = window._sseStats || {};
+  const ago = (t) => t ? `${Math.round((Date.now() - t) / 1000)}s ago` : "never";
+  const st = _sseSource ? ["connecting", "open", "closed"][_sseSource.readyState] : "reconnecting";
   let host = "none"; try { host = new URL(apiUrl).host; } catch (e) {}
-  el.textContent = `stream: ${st} · events: ${ss?.count || 0} · last: ${last} · cars: ${_trackMapCars.length} · api: ${host}`;
+  el.style.whiteSpace = "pre-line";
+  el.textContent =
+    `stream: ${st} · opened ${ago(ss.openedAt)} · errors: ${ss.errors || 0}\n` +
+    `server hello: ${ago(ss.connectedAt)} · heartbeat: ${ago(ss.hbAt)} (${ss.hbCount || 0})\n` +
+    `flag events: ${ss.count || 0} · last: ${ss.lastFlag ? `${ss.lastFlag} ${ago(ss.lastAt)}` : "never"}\n` +
+    `map gate: ${window._trackMapGateEnabled ? "ON" : "OFF"} · cars: ${_trackMapCars.length} · api: ${host}`;
 }
 
 function startTrackMapSim() {
