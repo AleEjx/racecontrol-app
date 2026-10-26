@@ -652,6 +652,7 @@
     .tm-img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
     .tm-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
     .tm-wrap .track-map-badge{line-height:1.2}
+    .tm-diag{margin-top:8px;font:11px/1.4 monospace;opacity:.65;word-break:break-all}
     .tm-error{display:none;padding:16px;text-align:center;line-height:1.4;font-size:12px;color:var(--text)}
   </style>
   <div class="tm-controls">
@@ -675,6 +676,7 @@
   </div>
   <div class="tm-error" id="track-map-error">Couldn't load the map image from api.erlc.gg. Check your connection and try again.</div>
   <div class="track-map-legend" id="track-map-legend"></div>
+  <div id="track-map-diag" class="tm-diag"></div>
 </div>
 
 <div class="d-tab-panel" id="d-tab-voice"></div>
@@ -1089,6 +1091,14 @@
           <button id="party-mode-gate-toggle-btn" onclick="togglePartyModeGate()" class="toggle-button"></button>
         </div>
         <div id="party-mode-gate-status" class="text-muted-sm mt-4"></div>
+        <div class="card-row-between mt-6" style="border-top:1px solid var(--border);padding-top:8px;">
+          <span class="font-11">🗺️ Live Track Map</span>
+          <span style="display:flex;gap:6px;">
+            <button id="track-map-start-btn" onclick="setTrackMapGate(true)" class="toggle-button">Start Map Tracking</button>
+            <button id="track-map-stop-btn" onclick="setTrackMapGate(false)" class="toggle-button">Disable</button>
+          </span>
+        </div>
+        <div id="track-map-gate-status" class="text-muted-sm mt-4"></div>
       </div>
 
       <div class="dev-card" id="dev-custom-themes">
@@ -3599,7 +3609,12 @@ function applyDriverPanelStyle() {
 
 evtSource.addEventListener("flag", e => {
   console.log("[SSE] Received flag event:", e.data);
-  try { const d = JSON.parse(e.data); onFlagEvent(d.flag, d); }
+  try {
+    const d = JSON.parse(e.data);
+    window._sseStats = window._sseStats || { count: 0 };
+    window._sseStats.count++; window._sseStats.lastAt = Date.now(); window._sseStats.lastFlag = d.flag;
+    onFlagEvent(d.flag, d);
+  }
   catch (err) { console.error("[SSE] Failed to parse flag event:", err, e.data); }
 });
 
@@ -4470,6 +4485,70 @@ async function toggleActionLogging() {
       }
     }
 
+    // ── Live Track Map gate — backend's _trackMapEnabled. Everyone reads it
+    // (to lock/unlock the Track tab); only the admin buttons in the dev panel
+    // can change it. The backend also pushes __track_map_status__ over SSE so
+    // every open app updates instantly.
+    window._trackMapGateEnabled = false;
+
+    async function loadTrackMapGateState() {
+      if (!apiUrl) return;
+      try {
+        const res = await fetch(`${apiUrl}/panel-status`);
+        const data = await res.json();
+        window._trackMapGateEnabled = !!data.trackMap;
+        updateTrackMapGateUi();
+      } catch {}
+    }
+
+    function updateTrackMapGateUi() {
+      const on = !!window._trackMapGateEnabled;
+
+      // Track tab button: dimmed + blocked while disabled
+      const tabBtn = document.getElementById("d-tab-btn-track");
+      if (tabBtn) { tabBtn.style.opacity = on ? "" : "0.4"; tabBtn.title = on ? "" : "Live Track Map is currently disabled"; }
+
+      // Dev buttons
+      const startBtn = document.getElementById("track-map-start-btn");
+      const stopBtn  = document.getElementById("track-map-stop-btn");
+      const st       = document.getElementById("track-map-gate-status");
+      const style = (b, active, color) => {
+        if (!b) return;
+        b.style.background  = active ? `rgba(${color === "green" ? "0,230,118" : "255,23,68"},0.15)` : "";
+        b.style.borderColor = active ? `var(--${color})` : "";
+        b.style.color       = active ? `var(--${color})` : "";
+      };
+      style(startBtn, on, "green");
+      style(stopBtn, !on, "red");
+      if (st) st.textContent = on ? "✓ Tracking is live — drivers can open the Track tab" : "Disabled — the Track tab is locked and polling is stopped";
+
+      if (!on) {
+        try { // drop any stale dots and bounce anyone sitting on the tab
+          clearTimeout(_trackMapLiveWatchdog);
+          _trackMapLive = false; _trackMapCars = [];
+          _trackMapSetBadge(false); renderTrackMapLegend(); renderTrackMapDots();
+        } catch {}
+        if (document.getElementById("d-tab-track")?.classList.contains("active")) setDriverTab("overview");
+      }
+    }
+
+    async function setTrackMapGate(enable) {
+      if (!user?.token) { const ok = await devAutoAuth(); if (!ok) return showToast("❌ Dev auth failed", "err"); }
+      try {
+        const res = await fetch(`${apiUrl}/admin/track-map`, { method: "POST", headers: { "Content-Type": "application/json", "x-discord-id": user.id, "x-discord-token": user.token }, body: JSON.stringify({ enabled: enable }) });
+        const data = await res.json();
+        if (res.ok) {
+          window._trackMapGateEnabled = !!data.enabled;
+          updateTrackMapGateUi();
+          showToast(data.enabled ? "✓ Map tracking started" : "✓ Map tracking disabled", "ok");
+        } else {
+          showToast(`✗ ${data.error || "Failed"}`, "err");
+        }
+      } catch {
+        showToast("✗ Bot unreachable", "err");
+      }
+    }
+
     async function syncDriverDBFromServer() {
       if (!apiUrl) return;
       try {
@@ -4664,6 +4743,7 @@ setInterval(async () => {
 }
       loadUserTabPrefs();
       loadPartyModeGateState();
+      loadTrackMapGateState();
       fetchCustomThemes();
 
       document.getElementById("s-api").value = config.apiUrl || "";
@@ -6458,6 +6538,10 @@ function launchSpectatePanel(startPoll = true) {
 }
 
 function setDriverTab(tab) {
+  if (tab === "track" && !window._trackMapGateEnabled) {
+    showToast("🗺️ Live Track Map is currently disabled", "err");
+    return;
+  }
   document.getElementById("d-tab-btn-overview")?.classList.toggle("active", tab === "overview");
   document.getElementById("d-tab-btn-field")?.classList.toggle("active", tab === "field");
   document.getElementById("d-tab-btn-track")?.classList.toggle("active", tab === "track");
@@ -6583,7 +6667,19 @@ function applyLiveTrackPositions(positions) {
 }
 
 // Kept under the old names so setDriverTab() and other callers keep working.
+let _tmDiagTimer = null;
+function _trackMapDiag() {
+  const el = document.getElementById("track-map-diag");
+  if (!el) return;
+  const st = ["connecting", "open", "closed"][_sseSource?.readyState] ?? "no stream";
+  const ss = window._sseStats;
+  const last = ss?.lastAt ? `${Math.round((Date.now() - ss.lastAt) / 1000)}s ago (${ss.lastFlag})` : "never";
+  let host = "none"; try { host = new URL(apiUrl).host; } catch (e) {}
+  el.textContent = `stream: ${st} · events: ${ss?.count || 0} · last: ${last} · cars: ${_trackMapCars.length} · api: ${host}`;
+}
+
 function startTrackMapSim() {
+  clearInterval(_tmDiagTimer); _tmDiagTimer = setInterval(_trackMapDiag, 1000); _trackMapDiag();
   _trackMapLoadPrefs();
   _trackMapInitClick();
   const img = document.getElementById("track-map-img");
@@ -6593,7 +6689,7 @@ function startTrackMapSim() {
   renderTrackMapDots();
 }
 
-function stopTrackMapSim() { /* nothing to stop — no simulator any more */ }
+function stopTrackMapSim() { clearInterval(_tmDiagTimer); _tmDiagTimer = null; }
 
 function renderTrackMapDots() {
   const g = document.getElementById("track-map-dots");
@@ -7822,6 +7918,12 @@ if (flag === "__driver_db_update__") {
       return;
     }
 
+if (flag === "__track_map_status__" && customData) {
+  window._trackMapGateEnabled = !!customData.enabled;
+  updateTrackMapGateUi();
+  return;
+}
+
 if (flag === "__track_positions__" && customData?.positions) {
   applyLiveTrackPositions(customData.positions);
   return;
@@ -8420,6 +8522,7 @@ async function submitDNF(onTrack = false) {
           await loadActionLoggingState();
           await loadWatchMarshalState();
           await loadPartyModeGateState();
+          await loadTrackMapGateState();
           await fetchActiveLeague();
           const headers = { "x-discord-id": user.id, "x-discord-token": user.token };
           const [ai, si, li, dl] = await Promise.all([
