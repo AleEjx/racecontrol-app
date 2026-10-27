@@ -649,7 +649,13 @@
     .tm-controls{display:flex;gap:8px;margin:0 0 8px}
     .tm-controls select{flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);padding:6px 8px;font-family:inherit;font-size:12px}
     .tm-wrap{position:relative;width:100%;line-height:0;background:var(--surface);border:1px solid var(--border);overflow:hidden}
+    .tm-stage{position:relative;transform-origin:0 0;will-change:transform}
     .tm-img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+    .tm-zoom-ctl{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px;z-index:3}
+    .tm-zoom-ctl button{width:26px;height:26px;line-height:1;padding:0;border-radius:6px;cursor:pointer;background:rgba(10,10,14,.78);color:var(--text);border:1px solid var(--border);font-size:15px}
+    .tm-zoom-ctl button:hover{border-color:var(--text)}
+    .tm-readout{position:absolute;left:8px;bottom:8px;z-index:3;pointer-events:none;font:11px/1.2 monospace;color:var(--text);background:rgba(10,10,14,.78);border:1px solid var(--border);border-radius:6px;padding:3px 6px;display:none}
+    .tm-hint{margin-top:6px;font-size:10px;opacity:.5;line-height:1.3}
     .tm-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
     .tm-wrap .track-map-badge{line-height:1.2}
     .tm-diag{margin-top:8px;font:11px/1.4 monospace;opacity:.65;word-break:break-all}
@@ -667,13 +673,22 @@
       <option value="postals">Postals</option>
     </select>
   </div>
-  <div class="track-map-wrap tm-wrap">
-    <img id="track-map-img" class="tm-img" alt="ER:LC map" draggable="false" />
-    <svg id="track-map-svg" class="tm-overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none">
-      <g id="track-map-dots"></g>
-    </svg>
+  <div class="track-map-wrap tm-wrap" id="track-map-viewport">
+    <div class="tm-stage" id="track-map-stage">
+      <img id="track-map-img" class="tm-img" alt="ER:LC map" draggable="false" />
+      <svg id="track-map-svg" class="tm-overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+        <g id="track-map-dots"></g>
+      </svg>
+    </div>
     <div class="track-map-badge">⏳ Waiting for live data</div>
+    <div class="tm-zoom-ctl">
+      <button type="button" onclick="tmZoomBy(1.5)" title="Zoom in">+</button>
+      <button type="button" onclick="tmZoomBy(1/1.5)" title="Zoom out">−</button>
+      <button type="button" onclick="tmZoomReset()" title="Reset view">⟲</button>
+    </div>
+    <div class="tm-readout" id="track-map-readout"></div>
   </div>
+  <div class="tm-hint">Ctrl + scroll, +/−, or double-click to zoom · drag to pan once zoomed</div>
   <div class="tm-error" id="track-map-error">Couldn't load the map image from api.erlc.gg. Check your connection and try again.</div>
   <div class="track-map-legend" id="track-map-legend"></div>
   <div id="track-map-diag" class="tm-diag"></div>
@@ -6585,6 +6600,92 @@ function setDriverTab(tab) {
 const TRACK_MAP_BASE = "https://api.erlc.gg/maps";
 const TRACK_MAP_REF_WIDTH = 460;   // dot sizes were designed for a 460px-wide viewBox
 
+// ── Zoom & pan ─────────────────────────────────────────────────────────────
+// The image + dot overlay live in one "stage" that is scaled/shifted with a CSS transform,
+// so everything stays aligned. Dots are counter-scaled so they keep their size when zoomed.
+// getBoundingClientRect() on the image reflects the transform, so the click readout and
+// the calibration helpers keep giving correct fractions at any zoom.
+let _tmZoom = 1, _tmPanX = 0, _tmPanY = 0, _tmZoomInit = false;
+const TM_ZOOM_MAX = 14;
+
+function _tmApplyView() {
+  const vp = document.getElementById("track-map-viewport");
+  const stage = document.getElementById("track-map-stage");
+  if (!vp || !stage) return;
+  const sw = stage.offsetWidth * _tmZoom, sh = stage.offsetHeight * _tmZoom;
+  _tmPanX = Math.min(0, Math.max(vp.clientWidth - sw, _tmPanX));
+  _tmPanY = Math.min(0, Math.max(vp.clientHeight - sh, _tmPanY));
+  stage.style.transform = `translate(${_tmPanX}px, ${_tmPanY}px) scale(${_tmZoom})`;
+  vp.style.cursor = _tmZoom > 1 ? "grab" : "crosshair";
+  renderTrackMapDots();
+}
+
+function tmZoomAt(factor, cx, cy) {
+  const next = Math.min(TM_ZOOM_MAX, Math.max(1, _tmZoom * factor));
+  const ratio = next / _tmZoom;
+  _tmPanX = cx - (cx - _tmPanX) * ratio;
+  _tmPanY = cy - (cy - _tmPanY) * ratio;
+  _tmZoom = next;
+  _tmApplyView();
+}
+function tmZoomBy(factor) {
+  const vp = document.getElementById("track-map-viewport");
+  if (vp) tmZoomAt(factor, vp.clientWidth / 2, vp.clientHeight / 2);
+}
+function tmZoomReset() { _tmZoom = 1; _tmPanX = 0; _tmPanY = 0; _tmApplyView(); }
+
+function _tmInitZoom() {
+  const vp = document.getElementById("track-map-viewport");
+  const img = document.getElementById("track-map-img");
+  if (!vp || !img || _tmZoomInit) return;
+  _tmZoomInit = true;
+
+  // Ctrl+scroll always zooms; plain scroll zooms only once you're already zoomed in,
+  // so the panel can still be scrolled normally at 1x.
+  vp.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey && _tmZoom === 1) return;
+    e.preventDefault();
+    const r = vp.getBoundingClientRect();
+    tmZoomAt(e.deltaY < 0 ? 1.25 : 0.8, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+
+  vp.addEventListener("dblclick", (e) => {
+    const r = vp.getBoundingClientRect();
+    tmZoomAt(2, e.clientX - r.left, e.clientY - r.top);
+  });
+
+  // Drag to pan. A drag must not count as a click (the click readout / calibration
+  // clicks), so the click is swallowed in the capture phase when the pointer moved.
+  let drag = null, moved = false;
+  vp.addEventListener("pointerdown", (e) => {
+    if (_tmZoom === 1 || e.button !== 0 || e.target.closest(".tm-zoom-ctl")) return;
+    drag = { x: e.clientX, y: e.clientY, px: _tmPanX, py: _tmPanY }; moved = false;
+    vp.setPointerCapture(e.pointerId); vp.style.cursor = "grabbing";
+  });
+  vp.addEventListener("pointermove", (e) => {
+    if (drag) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      _tmPanX = drag.px + dx; _tmPanY = drag.py + dy; _tmApplyView();
+    }
+    // Live readout of the position under the cursor, as fractions of the whole image.
+    const ro = document.getElementById("track-map-readout");
+    if (ro && img.naturalWidth) {
+      const r = img.getBoundingClientRect();
+      const u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height;
+      ro.style.display = "block";
+      ro.textContent = `u ${u.toFixed(4)} · v ${v.toFixed(4)} · ${_tmZoom.toFixed(1)}×`;
+    }
+  });
+  const endDrag = (e) => { if (drag) { drag = null; vp.style.cursor = _tmZoom > 1 ? "grab" : "crosshair"; try { vp.releasePointerCapture(e.pointerId); } catch (_) {} } };
+  vp.addEventListener("pointerup", endDrag);
+  vp.addEventListener("pointercancel", endDrag);
+  vp.addEventListener("pointerleave", () => { const ro = document.getElementById("track-map-readout"); if (ro && !drag) ro.style.display = "none"; });
+  vp.addEventListener("click", (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+
+  window.addEventListener("resize", _tmApplyView);
+}
+
 let _trackMapCars = []; // [{ name, number, callsign, color, x, y }]
 let _trackMapLive = false;
 let _trackMapLiveWatchdog = null;
@@ -6623,7 +6724,7 @@ function setTrackMapStyle() {
       svg.setAttribute("viewBox", `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
       _trackMapDotScale = img.naturalWidth / TRACK_MAP_REF_WIDTH;
     }
-    renderTrackMapDots();
+    _tmApplyView();
   };
   img.onerror = () => {
     img.style.display = "none";
@@ -6643,11 +6744,12 @@ function _trackMapInitClick() {
     const r = img.getBoundingClientRect();
     const px = Math.round((e.clientX - r.left) / r.width * img.naturalWidth);
     const py = Math.round((e.clientY - r.top) / r.height * img.naturalHeight);
-    console.log(`[TrackMap] pixel (${px}, ${py})`);
+    const u = +((e.clientX - r.left) / r.width).toFixed(4), v = +((e.clientY - r.top) / r.height).toFixed(4);
+    console.log(`[TrackMap] pixel (${px}, ${py}) · u ${u} v ${v}`);
     const badge = document.querySelector(".track-map-badge");
     if (badge) {
-      badge.textContent = `px ${px}, ${py}`;
-      setTimeout(() => _trackMapSetBadge(_trackMapLive), 2500);
+      badge.textContent = `u ${u}, v ${v}`;
+      setTimeout(() => _trackMapSetBadge(_trackMapLive), 4000);
     }
   });
 }
@@ -6723,6 +6825,7 @@ function _trackMapDiag() {
 }
 
 function startTrackMapSim() {
+  _tmInitZoom();
   clearInterval(_tmDiagTimer); _tmDiagTimer = setInterval(_trackMapDiag, 1000); _trackMapDiag();
   clearInterval(_tmFetchTimer); _tmFetchTimer = setInterval(fetchTrackMapPositions, 3000); fetchTrackMapPositions();
   _trackMapLoadPrefs();
@@ -6754,7 +6857,7 @@ function renderTrackMapDots() {
   const img = document.getElementById("track-map-img");
   const W = img?.naturalWidth || 0, H = img?.naturalHeight || 0;
   if (!W || !H) return; // image not loaded yet — onload re-renders
-  const k = _trackMapDotScale || 1;
+  const k = (_trackMapDotScale || 1) / (_tmZoom || 1);
   _trackMapCars.forEach((car, i) => {
     const px = car.x * W;
     const py = car.y * H;
