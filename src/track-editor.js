@@ -13,12 +13,13 @@
   var editingStatus = "draft";
   var injected = false;
 
-  function apiUrl() {
-    try { if (typeof window.apiUrl !== "undefined" && window.apiUrl) return window.apiUrl; } catch (e) {}
-    try { if (typeof apiUrl !== "undefined" && apiUrl) return apiUrl; } catch (e) {}
+
+  function getApiBase() {
+    try { if (typeof window.apiUrl === "string" && window.apiUrl) return window.apiUrl; } catch (e) {}
+    try { if (typeof apiUrl === "string" && apiUrl) return apiUrl; } catch (e) {}
     return "";
   }
-  function currentUser() {
+  function getCurrentUser() {
     try { if (typeof window.user !== "undefined" && window.user) return window.user; } catch (e) {}
     try { if (typeof user !== "undefined" && user) return user; } catch (e) {}
     return null;
@@ -26,7 +27,7 @@
 
   var DEV_USER_ID_FALLBACK = "790254318389166111";
   function isCommittee() {
-    var u = currentUser();
+    var u = getCurrentUser();
     if (u && u.id === DEV_USER_ID_FALLBACK) return true;
     try { if (typeof DEV_USER_ID !== "undefined" && u && u.id === DEV_USER_ID) return true; } catch (e) {}
     try { if (typeof window._committeeAccess !== "undefined" && window._committeeAccess) return true; } catch (e) {}
@@ -41,7 +42,7 @@
     if (el) el.textContent = msg;
   }
   function headers() {
-    var u = currentUser();
+    var u = getCurrentUser();
     var h = { "Content-Type": "application/json" };
     if (u && u.id) h["x-discord-id"] = u.id;
     if (u && u.token) h["x-discord-token"] = u.token;
@@ -267,7 +268,7 @@
 
   // ── Loading / saving ──────────────────────────────────────────────────
   async function loadTracks() {
-    var base = apiUrl();
+    var base = getApiBase();
     if (!base) return;
     try {
       var include = isCommittee() ? "?includeDrafts=1" : "";
@@ -298,7 +299,7 @@
     var payload = currentDraftPayload();
     if (!payload.name) { toast("Type a track name first.", "err"); return; }
     if (payload.trackPoints.length < 3) { toast("Draw the track first (at least 3 points).", "err"); return; }
-    var base = apiUrl();
+    var base = getApiBase();
     try {
       var res, url = base + "/committee/tracks" + (editingId ? "/" + editingId : "");
       res = await fetch(url, {
@@ -323,7 +324,7 @@
       await saveDraft();
     }
     try {
-      var res = await fetch(apiUrl() + "/committee/tracks/" + editingId + "/publish", {
+      var res = await fetch(getApiBase() + "/committee/tracks/" + editingId + "/publish", {
         method: "POST", headers: headers(), body: "{}",
       });
       var data = await res.json();
@@ -337,7 +338,7 @@
   async function unpublishTrack() {
     if (!editingId) return;
     try {
-      var res = await fetch(apiUrl() + "/committee/tracks/" + editingId + "/unpublish", {
+      var res = await fetch(getApiBase() + "/committee/tracks/" + editingId + "/unpublish", {
         method: "POST", headers: headers(), body: "{}",
       });
       var data = await res.json();
@@ -352,7 +353,7 @@
     if (!editingId) return;
     if (!window.confirm("Delete this track? This cannot be undone.")) return;
     try {
-      var res = await fetch(apiUrl() + "/committee/tracks/" + editingId, {
+      var res = await fetch(getApiBase() + "/committee/tracks/" + editingId, {
         method: "DELETE", headers: headers(),
       });
       var data = await res.json().catch(function () { return {}; });
@@ -452,7 +453,13 @@
 
   // ── Editor UI (injected into the Track tab) ────────────────────────────
   function injectUI() {
-    if (injected) return;
+    // The driver panel is cloned from <template id="tpl-driver-modern">
+    // into #driver-scroll-body on every applyDriverPanelStyle(), which
+    // does container.innerHTML = "" first. That wipes this bar, so an
+    // injected=true flag that never resets is a bug: re-inject whenever
+    // the bar is actually missing from the DOM.
+    if (document.getElementById("track-editor-bar")) { bindDrawing(); updateVisibility(); return true; }
+    injected = false;
     var controls = document.querySelector("#d-tab-track .tm-controls");
     var svg = svgEl();
     if (!controls || !svg) return;
@@ -527,33 +534,45 @@
     document.getElementById("te-delete").addEventListener("click", deleteTrack);
     bindDrawing();
     updateVisibility();
+    injected = true;
+    return true;
   }
   function updateVisibility() {
     var bar = document.getElementById("track-editor-bar");
     if (!bar) return;
+
     bar.style.display = isCommittee() ? "flex" : "none";
   }
-  function init() {
-    if (document.getElementById("d-tab-track")) injectUI();
-    if (document.getElementById("d-tab-track")) {
-      var btn = document.getElementById("d-tab-btn-track");
-      if (btn && !btn._teBound) {
-        btn._teBound = true;
-        btn.addEventListener("click", function () {
-          setTimeout(function () { updateVisibility(); loadTracks(); }, 300);
-        });
-      }
-    }
-    setTimeout(loadTracks, 800);
+  function tryInit() {
+    var trackTab = document.getElementById("d-tab-track");
+    if (!trackTab) return false;
+    if (!document.querySelector("#d-tab-track .tm-controls")) return false;
+    return !!injectUI();
   }
+  function init() {
+    if (tryInit()) {
+
+      loadTracks();
+    }
+  }
+
+  if (typeof MutationObserver !== "undefined" && document.documentElement) {
+    var teObserver = new MutationObserver(function () { tryInit(); });
+    teObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  setInterval(function () { tryInit(); }, 2000);
+
+  document.addEventListener("click", function (e) {
+    if (e.target && e.target.closest && e.target.closest("#d-tab-btn-track")) {
+      setTimeout(function () { updateVisibility(); loadTracks(); }, 300);
+    }
+  });
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }
-
-  setTimeout(init, 2000);
-  setTimeout(init, 5000);
   window.TrackEditor = {
     loadTracks: loadTracks, renderAllTracks: renderAllTracks,
     beautifyTrack: beautifyTrack, isClosed: isClosed,
