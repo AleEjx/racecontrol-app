@@ -13,7 +13,6 @@
   var editingStatus = "draft";
   var injected = false;
 
-
   function getApiBase() {
     try { if (typeof window.apiUrl === "string" && window.apiUrl) return window.apiUrl; } catch (e) {}
     try { if (typeof apiUrl === "string" && apiUrl) return apiUrl; } catch (e) {}
@@ -55,9 +54,6 @@
   }
 
   // ── Beautify: rough hand drawing -> smooth professional path ──────────
-  // 1) drop near-duplicate points, 2) resample evenly by arc length,
-  // 3) Chaikin smoothing (2 passes, corners cut at 1/4 and 3/4).
-  // Closed tracks wrap around; pit lanes stay open and keep their ends.
   function dist(a, b) {
     var dx = a.u - b.u, dy = a.v - b.v;
     return Math.sqrt(dx * dx + dy * dy);
@@ -453,11 +449,7 @@
 
   // ── Editor UI (injected into the Track tab) ────────────────────────────
   function injectUI() {
-    // The driver panel is cloned from <template id="tpl-driver-modern">
-    // into #driver-scroll-body on every applyDriverPanelStyle(), which
-    // does container.innerHTML = "" first. That wipes this bar, so an
-    // injected=true flag that never resets is a bug: re-inject whenever
-    // the bar is actually missing from the DOM.
+
     if (document.getElementById("track-editor-bar")) { bindDrawing(); updateVisibility(); return true; }
     injected = false;
     var controls = document.querySelector("#d-tab-track .tm-controls");
