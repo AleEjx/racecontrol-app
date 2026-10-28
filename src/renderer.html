@@ -4555,12 +4555,29 @@ async function toggleActionLogging() {
       } catch {}
     }
 
+    // 2026-10-28: committee + dev (you) must NOT be kicked off the Track
+    // tab when live tracking is disabled — that's map-making time.
+    // The old code bounced EVERYONE to Overview whenever the gate was
+    // off, even though setDriverTab() already let committee/dev in.
+    // This ran every 15s (loadTrackMapGateState), on every SSE status
+    // push, and on every position fetch, so it looked like a kick.
+    function hasTrackMapEditAccess() {
+      try { if (typeof _committeeAccess !== "undefined" && _committeeAccess) return true; } catch (e) {}
+      try { if (typeof user !== "undefined" && user && user.id === "790254318389166111") return true; } catch (e) {}
+      try { if (typeof DEV_USER_ID !== "undefined" && typeof user !== "undefined" && user && user.id === DEV_USER_ID) return true; } catch (e) {}
+      return false;
+    }
     function updateTrackMapGateUi() {
       const on = !!window._trackMapGateEnabled;
+      const canEdit = hasTrackMapEditAccess();
 
-      // Track tab button: dimmed + blocked while disabled
+      // Track tab button: dimmed + blocked while disabled — EXCEPT for
+      // committee/dev, who stay full-bright so they can make maps.
       const tabBtn = document.getElementById("d-tab-btn-track");
-      if (tabBtn) { tabBtn.style.opacity = on ? "" : "0.4"; tabBtn.title = on ? "" : "Live Track Map is currently disabled"; }
+      if (tabBtn) {
+        tabBtn.style.opacity = (on || canEdit) ? "" : "0.4";
+        tabBtn.title = on ? "" : canEdit ? "Live tracking is off — committee/dev map-making mode" : "Live Track Map is currently disabled";
+      }
 
       // Dev buttons
       const startBtn = document.getElementById("track-map-start-btn");
@@ -4574,15 +4591,17 @@ async function toggleActionLogging() {
       };
       style(startBtn, on, "green");
       style(stopBtn, !on, "red");
-      if (st) st.textContent = on ? "✓ Tracking is live — drivers can open the Track tab" : "Disabled — the Track tab is locked and polling is stopped";
+      if (st) st.textContent = on ? "✓ Tracking is live — drivers can open the Track tab" : canEdit ? "Disabled for drivers — committee/dev can still open the Track tab to make maps" : "Disabled — the Track tab is locked and polling is stopped";
 
       if (!on) {
-        try { // drop any stale dots and bounce anyone sitting on the tab
+        try { // drop any stale live dots (draft tracks are separate, untouched)
           clearTimeout(_trackMapLiveWatchdog);
           _trackMapLive = false; _trackMapCars = [];
           _trackMapSetBadge(false); renderTrackMapLegend(); renderTrackMapDots();
         } catch {}
-        if (document.getElementById("d-tab-track")?.classList.contains("active")) setDriverTab("overview");
+        // Only bounce regular drivers. Committee/dev stay on the Track
+        // tab to draw maps, even with live tracking off.
+        if (!canEdit && document.getElementById("d-tab-track")?.classList.contains("active")) setDriverTab("overview");
       }
     }
 
@@ -6592,7 +6611,7 @@ function launchSpectatePanel(startPoll = true) {
 }
 
 function setDriverTab(tab) {
-  if (tab === "track" && !window._trackMapGateEnabled && !_committeeAccess && user?.id !== DEV_USER_ID) {
+  if (tab === "track" && !window._trackMapGateEnabled && !_committeeAccess && user?.id !== DEV_USER_ID && !(typeof hasTrackMapEditAccess === "function" && hasTrackMapEditAccess())) {
     showToast("🗺️ Live Track Map is currently disabled", "err");
     return;
   }
