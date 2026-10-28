@@ -1,6 +1,7 @@
 
 (function () {
   "use strict";
+  console.log("[TrackEditor] v3.1 - pencil in zoom controls, Shift/Space pan");
 
   // ── State ─────────────────────────────────────────────────────────────
   var editOn = false;
@@ -12,6 +13,8 @@
   var editingId = null;
   var editingStatus = "draft";
   var injected = false;
+  var lastAddedTool = "track";
+  var lastPointAddedAt = 0;
 
   function getApiBase() {
     try { if (typeof window.apiUrl === "string" && window.apiUrl) return window.apiUrl; } catch (e) {}
@@ -23,7 +26,6 @@
     try { if (typeof user !== "undefined" && user) return user; } catch (e) {}
     return null;
   }
-
   var DEV_USER_ID_FALLBACK = "790254318389166111";
   function isCommittee() {
     var u = getCurrentUser();
@@ -54,6 +56,9 @@
   }
 
   // ── Beautify: rough hand drawing -> smooth professional path ──────────
+  // 1) drop near-duplicate points, 2) resample evenly by arc length,
+  // 3) Chaikin smoothing (2 passes, corners cut at 1/4 and 3/4).
+  // Closed tracks wrap around; pit lanes stay open and keep their ends.
   function dist(a, b) {
     var dx = a.u - b.u, dy = a.v - b.v;
     return Math.sqrt(dx * dx + dy * dy);
@@ -421,10 +426,16 @@
     vp.addEventListener("pointerdown", function (e) {
       if (!editOn) return;
       if (e.target && e.target.closest && e.target.closest(".tm-zoom-ctl")) return;
+      // Shift-drag, Alt-drag, or Space-drag = pan, not draw. The map's
+      // own pan handler is allowed to run in those cases (see the
+      // renderer guard), so do not start a stroke here.
+      if (e.shiftKey || e.altKey || window._trackSpacePan) return;
       if (e.button !== 0) return;
       var p = pointerToUV(e);
       if (!p) return;
       drawing = { tool: tool };
+      lastAddedTool = tool;
+      lastPointAddedAt = Date.now();
       var arr = tool === "pits" ? draftPits : draftTrack;
       // Start a fresh stroke for pits; for the track, continue the same
       // loop unless the user pressed New / selected another track.
@@ -445,12 +456,64 @@
     var end = function () { drawing = null; renderDraftPreview(); };
     vp.addEventListener("pointerup", end);
     vp.addEventListener("pointercancel", end);
+    // Double-click zoom is restored (renderer guard removed for pencil
+    // mode). A double-click would otherwise leave a stray point from
+    // its first click, so remove that point and let the map zoom.
+    // Do NOT stopPropagation here: the map's own dblclick handler must run.
+    vp.addEventListener("dblclick", function () {
+      if (!editOn) return;
+      if (Date.now() - lastPointAddedAt > 600) return;
+      var arr = lastAddedTool === "pits" ? draftPits : draftTrack;
+      arr.pop();
+      renderAllTracks();
+    });
+  }
+  // Hold Space (not while typing in an input) to pan while drawing.
+  if (!window._teSpaceBound) {
+    window._teSpaceBound = true;
+    document.addEventListener("keydown", function (e) {
+      if (e.code !== "Space") return;
+      var tag = document.activeElement && document.activeElement.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (editOn) window._trackSpacePan = true;
+    });
+    document.addEventListener("keyup", function (e) {
+      if (e.code === "Space") window._trackSpacePan = false;
+    });
+    window.addEventListener("blur", function () { window._trackSpacePan = false; });
   }
 
   // ── Editor UI (injected into the Track tab) ────────────────────────────
+  function syncPencilButton() {
+    var btn = document.getElementById("te-pencil");
+    if (!btn) return;
+    btn.classList.toggle("on", !!editOn);
+    btn.title = editOn
+      ? "Pencil: ON — drag to draw, Shift-drag / Space-drag to pan, double-click to zoom"
+      : "Pencil: OFF — click to draw tracks";
+    btn.style.display = isCommittee() ? "" : "none";
+    var controls = document.getElementById("te-edit-controls");
+    if (controls) controls.style.display = editOn ? "flex" : "none";
+    var hint = document.getElementById("track-editor-hint");
+    if (hint) hint.style.display = editOn ? "block" : "none";
+  }
+  function togglePencil() {
+    if (!isCommittee()) { toast("You need the Race Committee role to draw tracks.", "err"); return; }
+    editOn = !editOn;
+    window._trackEditOn = editOn;
+    syncPencilButton();
+    var vp = document.getElementById("track-map-viewport");
+    if (vp) vp.style.cursor = editOn ? "crosshair" : "";
+    if (editOn) loadTracks();
+    renderAllTracks();
+  }
   function injectUI() {
-
-    if (document.getElementById("track-editor-bar")) { bindDrawing(); updateVisibility(); return true; }
+    // The driver panel is cloned from <template id="tpl-driver-modern">
+    // into #driver-scroll-body on every applyDriverPanelStyle(), which
+    // does container.innerHTML = "" first. That wipes this bar, so an
+    // injected=true flag that never resets is a bug: re-inject whenever
+    // the bar is actually missing from the DOM.
+    if (document.getElementById("track-editor-bar")) { bindDrawing(); syncPencilButton(); updateVisibility(); return true; }
     injected = false;
     var controls = document.querySelector("#d-tab-track .tm-controls");
     var svg = svgEl();
@@ -461,7 +524,6 @@
     bar.id = "track-editor-bar";
     bar.style.cssText = "display:none;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:8px;background:rgba(255,214,10,0.06);";
     bar.innerHTML =
-      '<button type="button" id="te-pencil" style="padding:6px 10px;cursor:pointer;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:inherit;">✏️ Pencil: OFF</button>' +
       '<span id="te-edit-controls" style="display:none;flex-wrap:wrap;gap:6px;align-items:center;">' +
       '<select id="te-select" style="padding:6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:inherit;"></select>' +
       '<input id="te-name" placeholder="Track name" maxlength="80" style="padding:6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:inherit;" />' +
@@ -479,21 +541,33 @@
     var hint = document.createElement("div");
     hint.id = "track-editor-hint";
     hint.style.cssText = "display:none;font-size:11px;opacity:0.6;margin:4px 0 8px;line-height:1.4;";
-    hint.textContent = "Pencil on: drag on the map to draw. Track = the loop, Pits = pit lane. Save draft to keep it committee-only, Publish to show it to everyone.";
+    hint.textContent = "Pencil on: drag to draw. Shift-drag or hold Space to pan, double-click to zoom, Ctrl+scroll to zoom. Track = the loop, Pits = pit lane. Save draft = committee-only, Publish = everyone.";
     bar.parentNode.insertBefore(hint, bar.nextSibling);
 
-    document.getElementById("te-pencil").addEventListener("click", function () {
-      if (!isCommittee()) { toast("You need the Race Committee role to draw tracks.", "err"); return; }
-      editOn = !editOn;
-      window._trackEditOn = editOn;
-      this.textContent = editOn ? "✏️ Pencil: ON" : "✏️ Pencil: OFF";
-      document.getElementById("te-edit-controls").style.display = editOn ? "flex" : "none";
-      document.getElementById("track-editor-hint").style.display = editOn ? "block" : "none";
-      var vp = document.getElementById("track-map-viewport");
-      if (vp) vp.style.cursor = editOn ? "crosshair" : "";
-      if (editOn) loadTracks();
-      renderAllTracks();
-    });
+    // Pencil button lives in the map's own zoom-control stack, next to
+    // + / - / reset, not in a separate bar above the map.
+    var zoomCtl = document.querySelector("#d-tab-track .tm-zoom-ctl");
+    var pencilBtn = document.getElementById("te-pencil");
+    if (!pencilBtn && zoomCtl) {
+      pencilBtn = document.createElement("button");
+      pencilBtn.type = "button";
+      pencilBtn.id = "te-pencil";
+      pencilBtn.textContent = "✏️";
+      zoomCtl.appendChild(pencilBtn);
+    }
+    if (!pencilBtn) {
+      // Fallback if the zoom stack is missing for some reason.
+      pencilBtn = document.createElement("button");
+      pencilBtn.type = "button";
+      pencilBtn.id = "te-pencil";
+      pencilBtn.textContent = "✏️ Pencil";
+      bar.insertBefore(pencilBtn, bar.firstChild);
+    }
+    if (!pencilBtn._teBound) {
+      pencilBtn._teBound = true;
+      pencilBtn.addEventListener("click", togglePencil);
+    }
+    syncPencilButton();
     document.getElementById("te-select").addEventListener("change", function () {
       if (this.value) selectTrack(this.value); else newTrack();
     });
@@ -532,8 +606,12 @@
   function updateVisibility() {
     var bar = document.getElementById("track-editor-bar");
     if (!bar) return;
-
-    bar.style.display = isCommittee() ? "flex" : "none";
+    // Editor controls are committee-only AND only shown while pencil
+    // is on. The pencil button itself (in the zoom stack) is what
+    // turns them on. Published tracks still render for everyone via
+    // renderAllTracks(), which runs on loadTracks().
+    bar.style.display = (isCommittee() && editOn) ? "flex" : "none";
+    syncPencilButton();
   }
   function tryInit() {
     var trackTab = document.getElementById("d-tab-track");
@@ -543,7 +621,8 @@
   }
   function init() {
     if (tryInit()) {
-
+      // Still load published tracks for everyone, even if the user is
+      // not committee (the bar itself stays hidden for them).
       loadTracks();
     }
   }
@@ -566,6 +645,7 @@
     init();
   }
   window.TrackEditor = {
+    version: "3.1-zoomctl",
     loadTracks: loadTracks, renderAllTracks: renderAllTracks,
     beautifyTrack: beautifyTrack, isClosed: isClosed,
   };
