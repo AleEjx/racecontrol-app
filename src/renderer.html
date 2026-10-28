@@ -6592,7 +6592,7 @@ function launchSpectatePanel(startPoll = true) {
 }
 
 function setDriverTab(tab) {
-  if (tab === "track" && !window._trackMapGateEnabled && !_committeeAccess) {
+  if (tab === "track" && !window._trackMapGateEnabled && !_committeeAccess && user?.id !== DEV_USER_ID) {
     showToast("🗺️ Live Track Map is currently disabled", "err");
     return;
   }
