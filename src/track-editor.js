@@ -1,7 +1,24 @@
+// ── Track Editor — pencil mode for the Driver > Track tab ─────────────
+// Load it in renderer__3.html, after proximity-chat.js:
+//   <script src="track-editor.js"></script>
+//
+// It needs NO other changes except the two 1-line guards in INTEGRATION.md
+// (so map pan / double-click zoom do not fight with drawing).
+//
+// How it works, in your existing terms:
+//  * Coordinates are u/v fractions (0-1) of the erlc.gg map image, exactly
+//    like live car positions in flagApi.js. That is why a track drawn once
+//    still lines up after you switch season/variant, zoom, or pan.
+//  * The SVG overlay #track-map-svg already has its viewBox set to the
+//    image's natural size by setTrackMapStyle(), so all drawing here is
+//    in that same pixel space: px = u * naturalWidth, py = v * naturalHeight.
+//  * Drafts are committee-only. Published tracks are rendered for everyone.
+//    The backend enforces that; this file only hides/shows the editor UI
+//    based on the _committeeAccess flag you already compute.
 
 (function () {
   "use strict";
-  console.log("[TrackEditor] v3.1 - pencil in zoom controls, Shift/Space pan");
+  console.log("[TrackEditor] v3.2 - pencil in zoom controls, Shift/Space pan, smaller save payload");
 
   // ── State ─────────────────────────────────────────────────────────────
   var editOn = false;
@@ -16,6 +33,11 @@
   var lastAddedTool = "track";
   var lastPointAddedAt = 0;
 
+  // NOTE: this helper must NOT be named apiUrl. The renderer already has a
+  // string variable called apiUrl (let apiUrl = "" at renderer line ~2517).
+  // A function named apiUrl shadows that string, and fetch() then
+  // stringifies the function itself into the URL, producing exactly the
+  // "function apiUrl() {...}" ERR_FILE_NOT_FOUND in the console.
   function getApiBase() {
     try { if (typeof window.apiUrl === "string" && window.apiUrl) return window.apiUrl; } catch (e) {}
     try { if (typeof apiUrl === "string" && apiUrl) return apiUrl; } catch (e) {}
@@ -26,6 +48,10 @@
     try { if (typeof user !== "undefined" && user) return user; } catch (e) {}
     return null;
   }
+  // Dev bypass: 790254318389166111 is the DEV_BYPASS_ID in flagApi.js
+  // and DEV_USER_ID in the renderer. This user can draw maps even
+  // without the Race Committee role, even if _committeeAccess is
+  // false/stale for any reason. The backend enforces the same rule.
   var DEV_USER_ID_FALLBACK = "790254318389166111";
   function isCommittee() {
     var u = getCurrentUser();
@@ -287,12 +313,13 @@
     var nameEl = document.getElementById("te-name");
     var name = nameEl ? nameEl.value.trim() : "";
     var closed = isClosed(draftTrack);
+    // 2026-10-28: do NOT send smoothedPoints — the renderer recomputes
+    // them from trackPoints/pitPoints on load (beautifyTrack), so sending
+    // them only doubled the save body and caused 413s. Raw points only.
     return {
       name: name,
       trackPoints: draftTrack,
       pitPoints: draftPits,
-      smoothedPoints: beautifyTrack(draftTrack),
-      smoothedPitPoints: draftPits.length >= 2 ? beautifyTrack(draftPits) : [],
       closed: closed,
     };
   }
@@ -308,8 +335,9 @@
         headers: headers(),
         body: JSON.stringify(payload),
       });
-      var data = await res.json();
+      var data = await res.json().catch(function () { return {}; });
       if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      if (!data.track) throw new Error("HTTP " + res.status + " — server did not return the saved track");
       editingId = data.track.id;
       editingStatus = data.track.status;
       toast(editingId ? "Draft saved." : "Draft saved.");
@@ -626,14 +654,21 @@
       loadTracks();
     }
   }
-
+  // The Track tab does not exist at page load: it is cloned from a
+  // <template> only after login, when applyDriverPanelStyle() runs, and
+  // it is wiped again every time that function re-runs. So watch for it
+  // instead of only checking at load + 2s/5s.
   if (typeof MutationObserver !== "undefined" && document.documentElement) {
     var teObserver = new MutationObserver(function () { tryInit(); });
     teObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
-
+  // Poll as a backstop (observer can miss a re-render in some Electron
+  // versions, and it is cheap: tryInit returns immediately if the bar
+  // already exists).
   setInterval(function () { tryInit(); }, 2000);
-
+  // Document-level click delegation: the Track tab button itself is
+  // re-cloned with the template, so binding directly to it once does
+  // not survive a re-render.
   document.addEventListener("click", function (e) {
     if (e.target && e.target.closest && e.target.closest("#d-tab-btn-track")) {
       setTimeout(function () { updateVisibility(); loadTracks(); }, 300);
@@ -645,7 +680,7 @@
     init();
   }
   window.TrackEditor = {
-    version: "3.1-zoomctl",
+    version: "3.2-smallpayload",
     loadTracks: loadTracks, renderAllTracks: renderAllTracks,
     beautifyTrack: beautifyTrack, isClosed: isClosed,
   };
