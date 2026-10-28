@@ -6670,7 +6670,7 @@ function _tmInitZoom() {
   }, { passive: false });
 
   vp.addEventListener("dblclick", (e) => {
-    if (_tmPick || window._trackEditOn) return; // two taps would drop two pins
+    if (_tmPick) return; // two taps would drop two pins
     const r = vp.getBoundingClientRect();
     tmZoomAt(2, e.clientX - r.left, e.clientY - r.top);
   });
@@ -6679,7 +6679,7 @@ function _tmInitZoom() {
   // clicks), so the click is swallowed in the capture phase when the pointer moved.
   let drag = null, moved = false;
   vp.addEventListener("pointerdown", (e) => {
-    if (window._trackEditOn) return;
+    if (window._trackEditOn && !e.shiftKey && !e.altKey && !window._trackSpacePan) return;
     if (_tmZoom === 1 || e.button !== 0 || e.target.closest(".tm-zoom-ctl")) return;
     drag = { x: e.clientX, y: e.clientY, px: _tmPanX, py: _tmPanY }; moved = false;
     vp.setPointerCapture(e.pointerId); vp.style.cursor = "grabbing";
