@@ -1,7 +1,26 @@
+// ── Telemetry HUD v1.1 — follow/trails, flag readability, pit window ─────
+// Load in renderer__3.html, after session-watcher.js:
+//   <script src="telemetry-hud.js?v=2"></script>
+//
+// v1.1 changes, per user 2026-10-28:
+//  - REMOVED: Timing Tower (original Field leaderboard is back, untouched,
+//    never hidden), Relative box (duplicate of the existing Nearby panel),
+//    and Cockpit HUD.
+//  - KEPT: derived est. speed, track progress, battle detection, pit
+//    window, map Follow + Trails, flag pattern / colourblind / flash.
+//    Battles + pit window now live in a small info bar above the
+//    original Field leaderboard, instead of replacing it.
+//  - Still excluded: stewarding, spoken cues, sectors. Flag audio cues
+//    already exist in the app and are not duplicated.
+//
+// PRC only sends LocationX/LocationZ, so speed is derived from position
+// change over time (studs/s -> est. mph, smoothed, teleport-filtered)
+// and labelled "est." on purpose. Track progress projects each live car
+// onto the published drawn track from /tracks.
 
 (function () {
   "use strict";
-  console.log("[TelemetryHUD] v1.1 - follow/trails, flag readability, pit window (tower/relative/HUD removed)");
+  console.log("[TelemetryHUD] v1.2 - follow/trails THICKER, flag readability, pit window (tower/relative/HUD removed)");
 
   var state = {
     colorblind: false,
@@ -125,7 +144,9 @@
       "body.th-colorblind .flag-card.yellow { border-style:dashed !important; border-width:3px !important; }",
       "body.th-colorblind .flag-card.red { border-style:solid !important; border-width:3px !important; }",
       "body.th-colorblind .flag-card.blue { border-style:dotted !important; border-width:3px !important; }",
-      "#th-trails polyline { fill:none; stroke-linejoin:round; stroke-linecap:round; opacity:.55; }",
+      "#th-trails polyline { fill:none; stroke-linejoin:round; stroke-linecap:round; opacity:.95; }",
+      "#th-trails .th-trail-outline { opacity:.85; }",
+      "#th-trails .th-trail-core { opacity:.98; }",
       ".tm-zoom-ctl button.th-on { background:rgba(255,46,77,.20) !important; border-color:var(--red) !important; color:#fff !important; }",
     ].join("\n");
     document.head.appendChild(s);
@@ -186,7 +207,7 @@
           var last = tr[tr.length - 1];
           if (!last || Math.abs(last.x - car.x) + Math.abs(last.y - car.y) > 0.002) {
             tr.push({ x: car.x, y: car.y });
-            if (tr.length > 45) tr.shift();
+            if (tr.length > 70) tr.shift();
           }
         }
         if (state.trackPoints) {
@@ -347,7 +368,12 @@
       var car = cars.find(function (c) { return c.name === name; });
       var color = car ? car.color : "#8b91a9";
       var d = pts.map(function (p) { return (p.x * W).toFixed(1) + "," + (p.y * H).toFixed(1); }).join(" ");
-      return '<polyline points="' + d + '" stroke="' + color + '" stroke-width="' + Math.max(3, W * 0.0015).toFixed(1) + '"/>';
+      var core = Math.max(10, W * 0.006);
+      var outline = (core * 1.9).toFixed(1);
+      // Outline first (dark, wider, so the line pops on light and dark map
+      // areas), then the bright team-colour core on top.
+      return '<polyline class="th-trail-outline" points="' + d + '" stroke="#000000" stroke-width="' + outline + '"/>' +
+             '<polyline class="th-trail-core" points="' + d + '" stroke="' + color + '" stroke-width="' + core.toFixed(1) + '"/>';
     }).join("");
   }
   function followCar() {
@@ -434,7 +460,7 @@
   fetchTrack();
 
   window.TelemetryHUD = {
-    version: "1.1-notower",
+    version: "1.2-thicktrails",
     speedMph: speedMph,
     projectProgress: projectProgress,
     getState: function () { return state; },
